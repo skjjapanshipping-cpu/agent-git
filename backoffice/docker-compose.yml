@@ -1,0 +1,148 @@
+version: "3.7"
+
+networks:
+  skeleton-docker.network:
+    driver: bridge
+
+services:
+  php:
+    build:
+      context: .
+      dockerfile: ./docker/php/Dockerfile
+      target: ${APP_BUILD_TARGET:-development}
+    container_name: skeleton-docker.php74
+    depends_on:
+      - mysql
+    # - postgres
+    # - redis
+    # - mariadb
+    networks:
+      - skeleton-docker.network
+    ports:
+      - "9000:9000"
+    working_dir: /var/www/app.dev/
+    volumes:
+      - .:/var/www/app.dev
+    # command: sh -c "composer install"
+
+  nginx:
+    build: ./docker/nginx
+    container_name: skeleton-docker.nginx74
+    restart: always
+    tty: true
+    depends_on:
+      - php
+      - mysql
+      # - postgres
+      # - redis
+      # - mariadb
+    ports:
+      - "9999:80"
+      - "4433:443"
+    volumes:
+      - .:/var/www/app.dev
+    networks:
+      - skeleton-docker.network
+
+  # apache:
+  #   build: ./docker/apache
+  #   restart: always
+  #   container_name: skeleton-docker.apache
+  #   networks:
+  #     - skeleton-docker.network
+  #   depends_on:
+  #     - php
+  #     # - mysql
+  #     # - postgres
+  #     # - redis
+  #     # - mariadb
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - .:/var/www/app.dev
+
+  #  mariadb:
+  #    image: mariadb
+  #    tty: true
+  #    restart: always
+  #    container_name: skeleton-docker.mariadb
+  #    networks:
+  #      - skeleton-docker.network
+  #    ports:
+  #      - '3306:3306'
+  #    volumes:
+  #      - './docker/mysql/config/mariadb.cnf:/etc/mysql/conf.d/custom.cnf:ro'
+  #      - './docker/mysql/dbdata:/var/lib/mysql'
+  #    environment:
+  #      - MYSQL_PASSWORD=root
+  #      - MYSQL_ROOT_PASSWORD=root
+  #      - MYSQL_DATABASE=development
+
+  mysql:
+    build: ./docker/mysql
+    tty: true
+    restart: always
+    container_name: skeleton-docker.mysql74
+    networks:
+      - skeleton-docker.network
+    ports:
+      - "3306:3306"
+    volumes:
+      - "./docker/mysql/config/mysql.cnf:/etc/mysql/conf.d/custom.cnf:ro"
+      - "./docker/mysql/dbdata:/var/lib/mysql"
+      - ./docker/mysql/sqlfile:/docker-entrypoint-initdb.d
+    environment:
+      - MYSQL_USER=user
+      - MYSQL_PASSWORD=1234
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=development
+
+  phpmyadmin:
+    image: library/phpmyadmin
+    container_name: skeleton-docker.phpmyadmin74
+    tty: true
+    networks:
+      - skeleton-docker.network
+    depends_on:
+      - mysql
+    environment:
+      PMA_HOSTS: mysql
+      PMA_PORT: 3306
+      PMA_ARBITRARY: 1
+      MYSQL_USER: user
+      MYSQL_PASSWORD: 1234
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - '8888:80'
+
+  # postgres:
+  #   build: ./docker/postgres
+  #   container_name: skeleton-docker.postgres
+  #   tty: true
+  #   restart: always
+  #   networks:
+  #     - skeleton-docker.network
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - "./docker/postgres/dbdata:/var/lib/postgresql/data"
+  #   environment:
+  #     - POSTGRES_USER=root
+  #     - POSTGRES_PASSWORD=root
+  #     - POSTGRES_DB=development
+
+  # redis:
+  #   image: bitnami/redis:latest
+  #   restart: always
+  #   tty: true
+  #   container_name: skeleton-docker.redis
+  #   volumes:
+  #     - ./docker/redis:/bitnami/redis/data
+  #   networks:
+  #     - skeleton-docker.network
+  #   environment:
+  #     - ALLOW_EMPTY_PASSWORD=no
+  #     - REDIS_PASSWORD=root
+  #   ports:
+  #     - "6379:6379"

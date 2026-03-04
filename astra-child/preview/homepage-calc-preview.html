@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preview - Homepage with Price Calculator | SKJ Japan</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --skj-red: #C9301D;
+            --skj-red-dark: #A52714;
+            --skj-red-light: #ef4444;
+            --skj-dark: #1a1a2e;
+            --skj-navy: #0f172a;
+            --skj-white: #ffffff;
+            --skj-light: #f8fafc;
+            --skj-gray-100: #f1f5f9;
+            --skj-gray-200: #e2e8f0;
+            --skj-gray-300: #cbd5e1;
+            --skj-gray-500: #64748b;
+            --skj-gray-700: #334155;
+            --skj-gray-900: #1e293b;
+            --skj-shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+            --skj-shadow-md: 0 4px 16px rgba(0,0,0,0.1);
+            --skj-shadow-lg: 0 12px 40px rgba(0,0,0,0.12);
+            --skj-radius: 16px;
+            --skj-radius-sm: 10px;
+            --skj-transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            --gray-50: #f8fafc;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Noto Sans Thai', sans-serif;
+            color: var(--skj-gray-900);
+            line-height: 1.7;
+            background: #fff;
+        }
+        img { max-width: 100%; height: auto; }
+
+        /* Topbar */
+        .skj-topbar {
+            display: flex; position: fixed; top: 0; left: 0; right: 0; z-index: 99999;
+            background: #C9301D; color: #fff; height: 38px; align-items: center;
+            justify-content: center; padding: 0 24px; font-size: 0.8rem; font-weight: 500;
+        }
+
+        /* Header */
+        .header {
+            position: fixed; top: 38px; left: 0; right: 0; z-index: 999;
+            background: rgba(255,255,255,0.95); backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(0,0,0,0.06);
+            box-shadow: 0 1px 20px rgba(0,0,0,0.06);
+        }
+        .header-inner {
+            max-width: 1200px; margin: 0 auto; padding: 12px 24px;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .header .logo img { height: 48px; }
+        .header .nav { display: flex; gap: 24px; }
+        .header .nav a { text-decoration: none; color: var(--skj-gray-700); font-weight: 500; font-size: 0.9rem; }
+        .header .nav a.active { color: var(--skj-red); }
+
+        .header-spacer { height: 110px; }
+
+        /* Section */
+        .section { padding: 60px 0; }
+        .section-inner { max-width: 1100px; margin: 0 auto; padding: 0 20px; }
+        .section-header { text-align: center; margin-bottom: 40px; }
+        .section-header .eyebrow {
+            display: inline-block; padding: 4px 16px; background: #fee2e2;
+            color: var(--skj-red); border-radius: 20px; font-size: 0.78rem;
+            font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;
+        }
+        .section-header h2 { font-size: clamp(1.5rem, 4vw, 2.2rem); font-weight: 800; margin-bottom: 8px; }
+        .section-header p { color: var(--skj-gray-500); font-size: 1rem; }
+
+        /* Steps */
+        .steps-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+        .step-card {
+            text-align: center; padding: 28px 20px; background: #fff;
+            border-radius: var(--skj-radius); box-shadow: var(--skj-shadow-sm);
+            border: 1px solid var(--skj-gray-200);
+        }
+        .step-number {
+            width: 48px; height: 48px; background: linear-gradient(135deg, var(--skj-red), var(--skj-red-dark));
+            color: #fff; border-radius: 50%; display: inline-flex; align-items: center;
+            justify-content: center; font-size: 1.2rem; font-weight: 800; margin-bottom: 14px;
+        }
+        .step-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 6px; }
+        .step-card p { font-size: 0.85rem; color: var(--skj-gray-500); }
+
+        /* ========== CALCULATOR ========== */
+        .calc-wrapper { max-width: 800px; margin: 0 auto; }
+        .calc-card {
+            background: #fff;
+            border-radius: var(--skj-radius);
+            box-shadow: var(--skj-shadow-md);
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        .calc-card-head {
+            padding: 14px 20px; font-weight: 700; font-size: 0.95rem;
+            display: flex; align-items: center; gap: 10px;
+            border-bottom: 1px solid var(--skj-gray-200);
+        }
+        .calc-card-head i { font-size: 1rem; }
+        .calc-card-head.calc-red { background: #fed7d7; color: #c53030; }
+        .calc-card-head.calc-blue { background: #bee3f8; color: #2b6cb0; }
+        .calc-card-head.calc-green { background: #c6f6d5; color: #276749; }
+        .calc-card-body { padding: 20px; }
+        .calc-url-row { display: flex; gap: 10px; }
+        .calc-input {
+            width: 100%; padding: 10px 14px; border: 2px solid var(--skj-gray-200);
+            border-radius: 8px; font-size: 0.92rem; font-family: inherit;
+            transition: border-color 0.2s; background: #fff;
+        }
+        .calc-input:focus { outline: none; border-color: var(--skj-red); }
+        .calc-url-input { flex: 1; }
+        .calc-btn-fetch {
+            padding: 10px 22px; background: var(--skj-red); color: #fff; border: none;
+            border-radius: 8px; font-family: inherit; font-size: 0.92rem; font-weight: 600;
+            cursor: pointer; white-space: nowrap; display: flex; align-items: center; gap: 8px;
+            transition: background 0.2s;
+        }
+        .calc-btn-fetch:hover { background: var(--skj-red-dark); }
+        .calc-sites { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; font-size: 0.8rem; color: var(--skj-gray-500); align-items: center; }
+        .calc-site-tag {
+            display: inline-flex; align-items: center; gap: 5px; padding: 4px 12px;
+            background: var(--skj-gray-100); border: 1px solid var(--skj-gray-200);
+            border-radius: 20px; font-size: 0.78rem; color: var(--skj-gray-500);
+        }
+        .calc-error { display: none; margin-top: 12px; padding: 10px 14px; background: #fed7d7; border: 1px solid #fc8181; border-radius: 8px; font-size: 0.85rem; color: #9b2c2c; }
+        .calc-error.show { display: block; }
+        .calc-preview { display: none; margin-top: 14px; padding: 14px; background: var(--skj-gray-100); border-radius: 10px; border: 1px solid var(--skj-gray-200); }
+        .calc-preview.show { display: flex; gap: 14px; align-items: flex-start; }
+        .calc-preview img { width: 90px; height: 90px; object-fit: cover; border-radius: 8px; border: 1px solid var(--skj-gray-200); flex-shrink: 0; }
+        .calc-preview-info { flex: 1; }
+        .calc-badge { display: inline-block; padding: 2px 10px; background: var(--skj-red); color: #fff; border-radius: 20px; font-size: 0.72rem; font-weight: 600; margin-bottom: 4px; }
+        .calc-preview-info h4 { font-size: 0.9rem; font-weight: 600; line-height: 1.4; margin: 0; }
+        .calc-preview-prices { margin-top: 6px; display: flex; gap: 16px; }
+        .calc-preview-prices small { display: block; font-size: 0.75rem; color: var(--skj-gray-500); font-weight: 400; }
+        .calc-preview-prices strong { font-size: 1rem; }
+        .calc-price-red { color: var(--skj-red); }
+        .calc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        .calc-field { display: flex; flex-direction: column; }
+        .calc-field label { font-size: 0.82rem; font-weight: 600; color: var(--skj-gray-500); margin-bottom: 5px; }
+        .calc-btn-run {
+            width: 100%; padding: 12px; background: #2b6cb0; color: #fff; border: none;
+            border-radius: 8px; font-family: inherit; font-size: 0.95rem; font-weight: 700;
+            cursor: pointer; margin-top: 10px; transition: background 0.2s;
+        }
+        .calc-btn-run:hover { background: #2c5282; }
+        .calc-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--skj-gray-200); font-size: 0.9rem; }
+        .calc-row:last-child { border-bottom: none; }
+        .calc-row span { color: var(--skj-gray-500); }
+        .calc-row strong { font-weight: 600; }
+        .calc-row small { font-size: 0.78rem; color: var(--skj-gray-500); font-weight: 400; }
+        .calc-row-highlight { background: var(--skj-gray-100); margin: 0 -20px; padding: 10px 20px; }
+        .calc-section-label { font-weight: 700; font-size: 0.9rem; margin-bottom: 4px; }
+        .calc-divider { height: 1px; background: var(--skj-gray-200); margin: 14px 0; }
+        .calc-total-box {
+            padding: 16px 20px;
+            background: linear-gradient(135deg, var(--skj-red), var(--skj-red-dark));
+            border-radius: 10px; color: #fff; display: flex;
+            justify-content: space-between; align-items: center;
+        }
+        .calc-total-label { font-size: 0.95rem; font-weight: 600; }
+        .calc-total-value { font-size: 1.4rem; font-weight: 700; }
+        .calc-note { margin-top: 10px; padding: 10px 14px; background: #fffbeb; border: 1px solid #f6e05e; border-radius: 8px; font-size: 0.82rem; color: #744210; }
+
+        /* Shops */
+        .shops-section { padding: 60px 0; }
+        .shops-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px; }
+        .shop-item {
+            width: 100px; height: 100px; background: #fff; border-radius: 12px;
+            box-shadow: var(--skj-shadow-sm); border: 1px solid var(--skj-gray-200);
+            display: flex; align-items: center; justify-content: center; padding: 12px;
+        }
+        .shop-item img { max-width: 100%; max-height: 100%; object-fit: contain; }
+
+        /* Label for demo */
+        .demo-label {
+            position: fixed; top: 38px; right: 20px; z-index: 9999;
+            background: #000; color: #fff; padding: 6px 16px; border-radius: 0 0 8px 8px;
+            font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .steps-grid { grid-template-columns: 1fr 1fr; }
+            .calc-url-row { flex-direction: column; }
+            .calc-btn-fetch { justify-content: center; }
+            .calc-grid { grid-template-columns: 1fr; }
+            .calc-total-box { flex-direction: column; text-align: center; gap: 6px; }
+        }
+        @media (max-width: 480px) {
+            .steps-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="demo-label">PREVIEW MODE</div>
+
+<!-- Topbar -->
+<div class="skj-topbar">
+    <span>เปิดให้บริการทุกวัน ปิดตู้ทุกสัปดาห์ &nbsp;|&nbsp; SKJ Japan Shipping</span>
+</div>
+
+<!-- Header -->
+<header class="header">
+    <div class="header-inner">
+        <a href="#" class="logo" style="display:flex;align-items:center;gap:10px;text-decoration:none;">
+            <div style="width:40px;height:40px;background:var(--skj-red);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:1rem;">SKJ</div>
+            <span style="font-weight:700;color:var(--skj-gray-900);font-size:0.95rem;">SKJ Japan Shipping</span>
+        </a>
+        <nav class="nav" style="display:flex;gap:24px;">
+            <a href="#" class="active" style="text-decoration:none;color:var(--skj-red);font-weight:600;font-size:0.9rem;">หน้าแรก</a>
+            <a href="#" style="text-decoration:none;color:var(--skj-gray-700);font-weight:500;font-size:0.9rem;">เกี่ยวกับเรา</a>
+            <a href="#" style="text-decoration:none;color:var(--skj-gray-700);font-weight:500;font-size:0.9rem;">บริการของเรา</a>
+            <a href="#" style="text-decoration:none;color:var(--skj-gray-700);font-weight:500;font-size:0.9rem;">บทความ</a>
+            <a href="#" style="text-decoration:none;color:var(--skj-gray-700);font-weight:500;font-size:0.9rem;">ติดต่อเรา</a>
+        </nav>
+    </div>
+</header>
+
+<div class="header-spacer"></div>
+
+<!-- Simulated "How It Works" section above calculator -->
+<section class="section" style="background:#fff;">
+    <div class="section-inner">
+        <div class="section-header">
+            <div class="eyebrow">How It Works</div>
+            <h2>วิธีสั่งซื้อสินค้าจากญี่ปุ่น</h2>
+            <p>ขั้นตอนง่ายๆ เพียง 4 ขั้นตอน</p>
+        </div>
+        <div class="steps-grid">
+            <div class="step-card"><div class="step-number">1</div><h3>สมัครสมาชิก</h3><p>ลงทะเบียนเข้าสู่ระบบ SKJ Japan</p></div>
+            <div class="step-card"><div class="step-number">2</div><h3>แจ้งสั่งซื้อสินค้า</h3><p>ส่งลิงก์สินค้าให้ทีมงานจัดซื้อ</p></div>
+            <div class="step-card"><div class="step-number">3</div><h3>สินค้าเข้าคลัง</h3><p>เข้าคลังญี่ปุ่น รอรวมตู้ส่งทางเรือ</p></div>
+            <div class="step-card"><div class="step-number">4</div><h3>ได้รับสินค้า</h3><p>สินค้าถึงไทย ส่งถึงบ้านคุณ!</p></div>
+        </div>
+    </div>
+</section>
+
+<!-- ★★★ PRICE CALCULATOR SECTION ★★★ -->
+<section class="section" id="calculator" style="background: var(--gray-50, #f8fafc);">
+    <div class="section-inner">
+        <div class="section-header">
+            <div class="eyebrow">Price Calculator</div>
+            <h2>คำนวณค่าสินค้าและค่าขนส่ง</h2>
+            <p>ประมาณค่าใช้จ่ายทั้งหมดก่อนสั่งซื้อ วาง URL สินค้า หรือกรอกราคาเอง</p>
+        </div>
+
+        <div class="calc-wrapper">
+            <!-- URL Fetch -->
+            <div class="calc-card">
+                <div class="calc-card-head calc-red"><i class="fas fa-link"></i> วาง URL สินค้า — ดึงราคาอัตโนมัติ</div>
+                <div class="calc-card-body">
+                    <div class="calc-url-row">
+                        <input type="url" id="calcUrl" class="calc-input calc-url-input" placeholder="วาง URL จาก Yahoo Auctions, Mercari, Rakuten, Amazon JP...">
+                        <button class="calc-btn-fetch" onclick="demoFetch()">
+                            <i class="fas fa-search"></i> ดึงราคา
+                        </button>
+                    </div>
+                    <div class="calc-sites">
+                        <span>รองรับ:</span>
+                        <span class="calc-site-tag"><i class="fas fa-gavel"></i> Yahoo Auctions</span>
+                        <span class="calc-site-tag"><i class="fas fa-store"></i> Mercari</span>
+                        <span class="calc-site-tag"><i class="fas fa-shopping-bag"></i> Rakuten</span>
+                        <span class="calc-site-tag"><i class="fas fa-box"></i> Amazon JP</span>
+                    </div>
+                    <div class="calc-error" id="calcError"></div>
+                    <div class="calc-preview" id="calcPreview">
+                        <img id="calcPreviewImg" src="https://placehold.co/200x200/fee2e2/c53030?text=ITEM" alt="">
+                        <div class="calc-preview-info">
+                            <span class="calc-badge" id="calcPreviewSite">Yahoo! Auctions</span>
+                            <h4 id="calcPreviewTitle">ตัวอย่าง - Nintendo Switch OLED Model White</h4>
+                            <div class="calc-preview-prices">
+                                <div><small>ราคาสินค้า</small><strong id="calcPreviewPrice" class="calc-price-red">5,500 เยน</strong></div>
+                                <div><small>ค่าส่งในญี่ปุ่น</small><strong id="calcPreviewShip">1,580 เยน</strong></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Fields -->
+            <div class="calc-card">
+                <div class="calc-card-head calc-blue"><i class="fas fa-sliders-h"></i> กรอกรายละเอียด</div>
+                <div class="calc-card-body">
+                    <div class="calc-grid">
+                        <div class="calc-field">
+                            <label>ราคาสินค้า (เยน)</label>
+                            <input type="number" id="calcPrice" class="calc-input" value="5500" min="0" oninput="calcRun()">
+                        </div>
+                        <div class="calc-field">
+                            <label>ค่าส่งในญี่ปุ่น (เยน)</label>
+                            <input type="number" id="calcShipJP" class="calc-input" value="1580" min="0" oninput="calcRun()">
+                        </div>
+                        <div class="calc-field">
+                            <label>เรทเยน (บาท/เยน)</label>
+                            <input type="number" id="calcRate" class="calc-input" value="0.235" min="0" step="0.001" oninput="calcRun()">
+                        </div>
+                        <div class="calc-field">
+                            <label>น้ำหนัก (กก.)</label>
+                            <input type="number" id="calcWeight" class="calc-input" value="1" min="0.1" step="0.1" oninput="calcRun()">
+                        </div>
+                        <div class="calc-field">
+                            <label>ค่านำเข้า (บาท/กก.)</label>
+                            <input type="number" id="calcImport" class="calc-input" value="150" min="0" oninput="calcRun()">
+                        </div>
+                        <div class="calc-field">
+                            <label>ค่าส่งในไทย (บาท)</label>
+                            <input type="number" id="calcThaiShip" class="calc-input" value="25" min="0" oninput="calcRun()">
+                        </div>
+                    </div>
+                    <button class="calc-btn-run" onclick="calcRun()"><i class="fas fa-calculator"></i> คำนวณ</button>
+                </div>
+            </div>
+
+            <!-- Results -->
+            <div class="calc-card">
+                <div class="calc-card-head calc-green"><i class="fas fa-receipt"></i> สรุปค่าใช้จ่ายโดยประมาณ</div>
+                <div class="calc-card-body">
+                    <div class="calc-section-label" style="color:var(--skj-red);"><i class="fas fa-yen-sign"></i> ฝั่งญี่ปุ่น</div>
+                    <div class="calc-row"><span>ราคาสินค้า</span><strong><span id="cr_price">5,500</span> เยน</strong></div>
+                    <div class="calc-row"><span>ค่าส่งในญี่ปุ่น (มาโกดัง SKJ)</span><strong><span id="cr_shipjp">1,580</span> เยน</strong></div>
+                    <div class="calc-row calc-row-highlight"><span>รวมเยน</span><strong style="color:var(--skj-red);"><span id="cr_totalyen">7,080</span> เยน</strong></div>
+                    <div class="calc-row"><span>คิดเป็นเงินบาท <small>(เรท <span id="cr_rate">0.235</span>)</small></span><strong><span id="cr_totalbaht">1,663.80</span> บาท</strong></div>
+
+                    <div class="calc-divider"></div>
+                    <div class="calc-section-label" style="color:#2b6cb0;"><i class="fas fa-truck"></i> ฝั่งไทย</div>
+                    <div class="calc-row"><span>ค่านำเข้า ญี่ปุ่น→ไทย <small>(<span id="cr_imprate">150</span> × <span id="cr_wt">1</span> กก.)</small></span><strong><span id="cr_impcost">150.00</span> บาท</strong></div>
+                    <div class="calc-row"><span>ค่าส่งพัสดุในไทย</span><strong><span id="cr_thship">25</span> บาท</strong></div>
+
+                    <div class="calc-divider"></div>
+                    <div class="calc-total-box">
+                        <div>
+                            <div class="calc-total-label"><i class="fas fa-check-circle"></i> รวมทั้งหมดโดยประมาณ</div>
+                        </div>
+                        <div class="calc-total-value" id="cr_grand">1,838.80 บาท</div>
+                    </div>
+                    <div class="calc-note"><i class="fas fa-info-circle"></i> <strong>หมายเหตุ:</strong> เป็นการคำนวณเพื่อประเมินค่าใช้จ่ายเบื้องต้นเท่านั้น</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Simulated Shopping Sites section below -->
+<section class="section" style="background:#fff;">
+    <div class="section-inner">
+        <div class="section-header">
+            <div class="eyebrow">Partner Sites</div>
+            <h2>รวมเว็บไซต์ชอปปิ้งญี่ปุ่น</h2>
+            <p>สั่งซื้อได้จากทุกเว็บไซต์ยอดนิยมในญี่ปุ่น</p>
+        </div>
+        <div class="shops-grid">
+            <div class="shop-item"><img src="https://placehold.co/80x80/fff/C9301D?text=Yahoo" alt="Yahoo"></div>
+            <div class="shop-item"><img src="https://placehold.co/80x80/fff/C9301D?text=Mercari" alt="Mercari"></div>
+            <div class="shop-item"><img src="https://placehold.co/80x80/fff/C9301D?text=Rakuten" alt="Rakuten"></div>
+            <div class="shop-item"><img src="https://placehold.co/80x80/fff/C9301D?text=Amazon" alt="Amazon"></div>
+            <div class="shop-item"><img src="https://placehold.co/80x80/fff/C9301D?text=PayPay" alt="PayPay"></div>
+            <div class="shop-item"><img src="https://placehold.co/80x80/fff/C9301D?text=Suruga" alt="Suruga"></div>
+        </div>
+    </div>
+</section>
+
+<script>
+    function demoFetch() {
+        document.getElementById('calcPreview').classList.add('show');
+        document.getElementById('calcPrice').value = 5500;
+        document.getElementById('calcShipJP').value = 1580;
+        calcRun();
+    }
+
+    function calcRun() {
+        var p = parseFloat(document.getElementById('calcPrice').value) || 0;
+        var s = parseFloat(document.getElementById('calcShipJP').value) || 0;
+        var r = parseFloat(document.getElementById('calcRate').value) || 0.235;
+        var w = parseFloat(document.getElementById('calcWeight').value) || 1;
+        var ir = parseFloat(document.getElementById('calcImport').value) || 150;
+        var ts = parseFloat(document.getElementById('calcThaiShip').value) || 25;
+        var tYen = p + s, tBaht = tYen * r, impC = ir * w, grand = tBaht + impC + ts;
+        document.getElementById('cr_price').textContent = cNf(p);
+        document.getElementById('cr_shipjp').textContent = cNf(s);
+        document.getElementById('cr_totalyen').textContent = cNf(tYen);
+        document.getElementById('cr_rate').textContent = r;
+        document.getElementById('cr_totalbaht').textContent = cNf2(tBaht);
+        document.getElementById('cr_imprate').textContent = cNf(ir);
+        document.getElementById('cr_wt').textContent = w;
+        document.getElementById('cr_impcost').textContent = cNf2(impC);
+        document.getElementById('cr_thship').textContent = cNf(ts);
+        document.getElementById('cr_grand').textContent = cNf2(grand) + ' บาท';
+    }
+
+    function cNf(n) { return Math.round(n).toLocaleString('en-US'); }
+    function cNf2(n) { return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+
+    calcRun();
+</script>
+
+</body>
+</html>

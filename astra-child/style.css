@@ -1,0 +1,770 @@
+/*
+ Theme Name:   Astra Child - SKJ Japan
+ Theme URI:    https://skjjapanshipping.com
+ Description:  Modern redesign child theme for SKJ Japan Shipping
+ Author:       SKJ Japan
+ Author URI:   https://skjjapanshipping.com
+ Template:     astra
+ Version:      1.0.0
+ Text Domain:  astra-child
+*/
+
+/* =============================================
+   SKJ JAPAN - MODERN REDESIGN
+   Color Palette:
+   - Primary Red:    #C9301D
+   - Dark Red:       #A52714
+   - Dark BG:        #1a1a2e
+   - Dark Navy:      #0f172a
+   - White:          #ffffff
+   - Light Gray:     #f8fafc
+   - Text Dark:      #1e293b
+   - Text Muted:     #64748b
+   ============================================= */
+
+/* ---- Google Fonts ---- */
+/* Google Fonts loaded via functions.php wp_enqueue - do not duplicate here */
+
+/* ---- CSS Variables ---- */
+:root {
+    --skj-red: #C9301D;
+    --skj-red-dark: #A52714;
+    --skj-red-light: #ef4444;
+    --skj-dark: #1a1a2e;
+    --skj-navy: #0f172a;
+    --skj-white: #ffffff;
+    --skj-light: #f8fafc;
+    --skj-gray-100: #f1f5f9;
+    --skj-gray-200: #e2e8f0;
+    --skj-gray-300: #cbd5e1;
+    --skj-gray-500: #64748b;
+    --skj-gray-700: #334155;
+    --skj-gray-900: #1e293b;
+    --skj-shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+    --skj-shadow-md: 0 4px 16px rgba(0,0,0,0.1);
+    --skj-shadow-lg: 0 12px 40px rgba(0,0,0,0.12);
+    --skj-shadow-xl: 0 20px 60px rgba(0,0,0,0.15);
+    --skj-radius: 16px;
+    --skj-radius-sm: 10px;
+    --skj-radius-lg: 24px;
+    --skj-transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* =============================================
+   GLOBAL RESET & BASE STYLES
+   ============================================= */
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+    font-family: 'Noto Sans Thai', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+    color: var(--skj-gray-900);
+    line-height: 1.7;
+    overflow-x: hidden;
+}
+
+/* Selection */
+::selection {
+    background: var(--skj-red);
+    color: white;
+}
+
+/* Smooth image rendering */
+img {
+    max-width: 100%;
+    height: auto;
+}
+
+/* =============================================
+   TYPOGRAPHY
+   ============================================= */
+h1, h2, h3, h4, h5, h6,
+.entry-title,
+.ast-archive-title {
+    font-family: 'Noto Sans Thai', sans-serif !important;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.3;
+    color: var(--skj-gray-900);
+}
+
+h1, .elementor-heading-title.elementor-size-xxl { font-size: clamp(2rem, 5vw, 3.2rem); }
+h2, .elementor-heading-title.elementor-size-xl { font-size: clamp(1.6rem, 4vw, 2.5rem); }
+h3, .elementor-heading-title.elementor-size-large { font-size: clamp(1.3rem, 3vw, 1.8rem); }
+
+p {
+    color: var(--skj-gray-500);
+    font-size: 1rem;
+    line-height: 1.8;
+}
+
+a {
+    transition: var(--skj-transition);
+}
+
+/* =============================================
+   HEADER / NAVIGATION
+   ============================================= */
+.ast-primary-header-bar,
+.site-header,
+#ast-desktop-header .ast-main-header-wrap .ast-primary-header-bar {
+    background: rgba(255, 255, 255, 0.92) !important;
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
+    box-shadow: 0 1px 20px rgba(0, 0, 0, 0.06) !important;
+    transition: var(--skj-transition);
+}
+
+/* Sticky header effect */
+.ast-header-sticked .ast-primary-header-bar,
+.ast-header-sticked .site-header {
+    background: rgba(255, 255, 255, 0.97) !important;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Logo */
+.site-branding img,
+.custom-logo {
+    max-height: 55px !important;
+    transition: var(--skj-transition);
+}
+
+.ast-header-sticked .site-branding img,
+.ast-header-sticked .custom-logo {
+    max-height: 48px !important;
+}
+
+/* Navigation Links */
+.ast-header-sections-navigation .menu-item > a,
+.main-header-menu .menu-item > a,
+.ast-nav-menu .menu-item > a,
+.main-navigation .menu-item > a {
+    font-family: 'Noto Sans Thai', sans-serif !important;
+    font-weight: 600 !important;
+    font-size: 0.92rem !important;
+    color: var(--skj-gray-700) !important;
+    padding: 8px 18px !important;
+    border-radius: 10px !important;
+    transition: var(--skj-transition) !important;
+    position: relative;
+    letter-spacing: 0.01em;
+}
+
+.main-header-menu .menu-item > a:hover,
+.ast-nav-menu .menu-item > a:hover,
+.main-navigation .menu-item > a:hover {
+    color: var(--skj-red) !important;
+    background: rgba(201, 48, 29, 0.06) !important;
+}
+
+.main-header-menu .current-menu-item > a,
+.ast-nav-menu .current-menu-item > a {
+    color: var(--skj-red) !important;
+    background: rgba(201, 48, 29, 0.08) !important;
+}
+
+/* =============================================
+   MOBILE HEADER
+   ============================================= */
+.ast-mobile-header-content .menu-item > a,
+.ast-mobile-popup-content .menu-item > a {
+    font-family: 'Noto Sans Thai', sans-serif !important;
+    font-weight: 600 !important;
+    font-size: 1rem !important;
+    padding: 14px 20px !important;
+    color: var(--skj-gray-700) !important;
+    border-bottom: 1px solid var(--skj-gray-100) !important;
+    transition: var(--skj-transition);
+}
+
+.ast-mobile-popup-content .menu-item > a:hover {
+    color: var(--skj-red) !important;
+    padding-left: 28px !important;
+}
+
+/* Hamburger menu */
+.ast-mobile-menu-trigger-minimal,
+.ast-button-wrap .ast-mobile-menu-trigger-minimal {
+    color: var(--skj-gray-700) !important;
+}
+
+/* =============================================
+   BUTTONS (Global)
+   ============================================= */
+.elementor-button,
+.ast-button,
+button,
+input[type="submit"],
+.wp-block-button__link,
+.elementor-widget-button .elementor-button {
+    font-family: 'Noto Sans Thai', sans-serif !important;
+    font-weight: 600 !important;
+    border-radius: var(--skj-radius-sm) !important;
+    padding: 14px 32px !important;
+    font-size: 0.95rem !important;
+    letter-spacing: 0.02em;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Primary Red Button */
+.elementor-button:hover,
+.ast-button:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 8px 25px rgba(201, 48, 29, 0.35) !important;
+}
+
+.elementor-button:active {
+    transform: translateY(0) !important;
+}
+
+/* =============================================
+   ELEMENTOR SECTIONS
+   ============================================= */
+.elementor-section {
+    transition: var(--skj-transition);
+}
+
+/* Elementor inner sections - better spacing */
+.elementor-section .elementor-container {
+    max-width: 1200px;
+}
+
+/* Section padding improvements */
+.elementor-section > .elementor-container {
+    padding-top: 20px;
+    padding-bottom: 20px;
+}
+
+/* =============================================
+   ELEMENTOR WIDGETS - ENHANCED
+   ============================================= */
+
+/* Icon boxes */
+.elementor-widget-icon-box .elementor-icon {
+    transition: var(--skj-transition) !important;
+}
+
+.elementor-widget-icon-box:hover .elementor-icon {
+    transform: scale(1.1) !important;
+}
+
+/* Image widgets */
+.elementor-widget-image img {
+    transition: var(--skj-transition);
+}
+
+.elementor-animation-grow:hover {
+    transform: scale(1.08) !important;
+}
+
+/* Heading widgets */
+.elementor-widget-heading .elementor-heading-title {
+    font-family: 'Noto Sans Thai', sans-serif !important;
+}
+
+/* Text editor widgets */
+.elementor-widget-text-editor {
+    font-family: 'Noto Sans Thai', sans-serif !important;
+    line-height: 1.8;
+}
+
+/* =============================================
+   CARDS & BOXES
+   ============================================= */
+.elementor-widget-wrap {
+    transition: var(--skj-transition);
+}
+
+/* Card hover effect for columns that look like cards */
+.elementor-column .elementor-widget-wrap[style*="background"] {
+    border-radius: var(--skj-radius) !important;
+    transition: var(--skj-transition) !important;
+}
+
+.elementor-column .elementor-widget-wrap[style*="background"]:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--skj-shadow-lg) !important;
+}
+
+/* =============================================
+   SWIPER / CAROUSEL (Testimonials)
+   ============================================= */
+.swiper-slide {
+    transition: var(--skj-transition);
+}
+
+.swiper-slide:hover {
+    transform: scale(1.02);
+}
+
+.swiper-slide-image {
+    border-radius: var(--skj-radius) !important;
+    box-shadow: var(--skj-shadow-md);
+    transition: var(--skj-transition);
+}
+
+.swiper-slide-image:hover {
+    box-shadow: var(--skj-shadow-lg);
+}
+
+/* Swiper navigation */
+.elementor-swiper-button {
+    background: var(--skj-white) !important;
+    color: var(--skj-red) !important;
+    width: 48px !important;
+    height: 48px !important;
+    border-radius: 50% !important;
+    box-shadow: var(--skj-shadow-md) !important;
+    transition: var(--skj-transition) !important;
+}
+
+.elementor-swiper-button:hover {
+    background: var(--skj-red) !important;
+    color: var(--skj-white) !important;
+    transform: scale(1.1);
+}
+
+/* =============================================
+   FORMS (WPForms / Contact Form)
+   ============================================= */
+.wpforms-container input[type="text"],
+.wpforms-container input[type="email"],
+.wpforms-container input[type="tel"],
+.wpforms-container textarea,
+.wpcf7 input[type="text"],
+.wpcf7 input[type="email"],
+.wpcf7 textarea {
+    font-family: 'Noto Sans Thai', sans-serif !important;
+    border: 2px solid var(--skj-gray-200) !important;
+    border-radius: var(--skj-radius-sm) !important;
+    padding: 14px 18px !important;
+    font-size: 0.95rem !important;
+    transition: var(--skj-transition) !important;
+    background: var(--skj-white) !important;
+}
+
+.wpforms-container input:focus,
+.wpforms-container textarea:focus,
+.wpcf7 input:focus,
+.wpcf7 textarea:focus {
+    border-color: var(--skj-red) !important;
+    box-shadow: 0 0 0 4px rgba(201, 48, 29, 0.1) !important;
+    outline: none !important;
+}
+
+.wpforms-container .wpforms-submit,
+.wpcf7 input[type="submit"] {
+    background: linear-gradient(135deg, var(--skj-red), var(--skj-red-dark)) !important;
+    color: var(--skj-white) !important;
+    border: none !important;
+    border-radius: var(--skj-radius-sm) !important;
+    padding: 16px 40px !important;
+    font-size: 1rem !important;
+    font-weight: 700 !important;
+    cursor: pointer;
+    transition: var(--skj-transition) !important;
+}
+
+.wpforms-container .wpforms-submit:hover,
+.wpcf7 input[type="submit"]:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 8px 25px rgba(201, 48, 29, 0.4) !important;
+}
+
+/* =============================================
+   FOOTER
+   ============================================= */
+.site-footer,
+.ast-footer-overlay,
+footer.site-footer {
+    background: var(--skj-navy) !important;
+    color: rgba(255, 255, 255, 0.7) !important;
+    font-family: 'Noto Sans Thai', sans-serif !important;
+}
+
+.site-footer a {
+    color: rgba(255, 255, 255, 0.7) !important;
+    transition: var(--skj-transition);
+}
+
+.site-footer a:hover {
+    color: var(--skj-red-light) !important;
+}
+
+.ast-small-footer,
+.site-below-footer-wrap {
+    background: var(--skj-dark) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.06) !important;
+}
+
+.ast-footer-copyright {
+    color: rgba(255, 255, 255, 0.4) !important;
+    font-size: 0.85rem !important;
+}
+
+/* =============================================
+   SCROLL TO TOP (if using WP plugin)
+   ============================================= */
+#ast-scroll-top,
+.ast-scroll-top-icon,
+a.ast-scroll-top-icon {
+    background: var(--skj-red) !important;
+    color: var(--skj-white) !important;
+    border-radius: 14px !important;
+    width: 48px !important;
+    height: 48px !important;
+    box-shadow: 0 4px 20px rgba(201, 48, 29, 0.4) !important;
+    transition: var(--skj-transition) !important;
+}
+
+#ast-scroll-top:hover {
+    transform: translateY(-3px) scale(1.05) !important;
+    box-shadow: 0 8px 30px rgba(201, 48, 29, 0.5) !important;
+}
+
+/* =============================================
+   ANIMATIONS
+   ============================================= */
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideInLeft {
+    from { opacity: 0; transform: translateX(-30px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slideInRight {
+    from { opacity: 0; transform: translateX(30px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+/* Apply entrance animation to main content */
+.elementor-widget {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+/* =============================================
+   LOADING / PAGE TRANSITION
+   ============================================= */
+.site-content {
+    animation: fadeIn 0.5s ease-out;
+}
+
+/* =============================================
+   BLOG / ARTICLES PAGE
+   ============================================= */
+.ast-article-post,
+.ast-article-single {
+    background: var(--skj-white);
+    border-radius: var(--skj-radius) !important;
+    overflow: hidden;
+    box-shadow: var(--skj-shadow-sm);
+    transition: var(--skj-transition);
+    margin-bottom: 24px !important;
+}
+
+.ast-article-post:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--skj-shadow-lg);
+}
+
+.ast-article-post .post-thumb img {
+    transition: var(--skj-transition);
+}
+
+.ast-article-post:hover .post-thumb img {
+    transform: scale(1.05);
+}
+
+.ast-article-post .entry-title a {
+    color: var(--skj-gray-900) !important;
+    font-weight: 700;
+    transition: var(--skj-transition);
+}
+
+.ast-article-post .entry-title a:hover {
+    color: var(--skj-red) !important;
+}
+
+.ast-article-post .entry-meta * {
+    color: var(--skj-gray-500) !important;
+    font-size: 0.85rem !important;
+}
+
+/* =============================================
+   BREADCRUMBS
+   ============================================= */
+.ast-breadcrumbs,
+.trail-items {
+    font-size: 0.85rem !important;
+    color: var(--skj-gray-500) !important;
+}
+
+.ast-breadcrumbs a {
+    color: var(--skj-red) !important;
+}
+
+/* =============================================
+   RESPONSIVE - TABLET
+   ============================================= */
+@media (max-width: 921px) {
+    .elementor-section > .elementor-container {
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+
+    h1, .elementor-heading-title.elementor-size-xxl {
+        font-size: clamp(1.6rem, 5vw, 2.2rem);
+    }
+
+    h2, .elementor-heading-title.elementor-size-xl {
+        font-size: clamp(1.3rem, 4vw, 1.8rem);
+    }
+}
+
+/* =============================================
+   RESPONSIVE - MOBILE
+   ============================================= */
+@media (max-width: 544px) {
+    .elementor-section > .elementor-container {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    .elementor-button,
+    .ast-button {
+        padding: 12px 24px !important;
+        font-size: 0.9rem !important;
+    }
+
+    .ast-article-post {
+        border-radius: var(--skj-radius-sm) !important;
+    }
+
+    .swiper-slide-image {
+        border-radius: var(--skj-radius-sm) !important;
+    }
+}
+
+/* =============================================
+   UTILITY CLASSES (use in Elementor)
+   ============================================= */
+.skj-glass {
+    background: rgba(255, 255, 255, 0.05) !important;
+    backdrop-filter: blur(40px) !important;
+    -webkit-backdrop-filter: blur(40px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.skj-card {
+    background: var(--skj-white) !important;
+    border-radius: var(--skj-radius) !important;
+    box-shadow: var(--skj-shadow-md) !important;
+    padding: 32px !important;
+    transition: var(--skj-transition) !important;
+}
+
+.skj-card:hover {
+    transform: translateY(-4px) !important;
+    box-shadow: var(--skj-shadow-lg) !important;
+}
+
+.skj-gradient-red {
+    background: linear-gradient(135deg, var(--skj-red), var(--skj-red-dark)) !important;
+}
+
+.skj-gradient-dark {
+    background: linear-gradient(135deg, var(--skj-dark), var(--skj-navy)) !important;
+}
+
+.skj-text-red {
+    color: var(--skj-red) !important;
+}
+
+.skj-text-muted {
+    color: var(--skj-gray-500) !important;
+}
+
+/* =============================================
+   PRICE CALCULATOR (Homepage)
+   ============================================= */
+.calc-wrapper { max-width: 800px; margin: 0 auto; }
+.calc-card {
+    background: #fff;
+    border-radius: var(--skj-radius, 16px);
+    box-shadow: var(--skj-shadow-md, 0 4px 16px rgba(0,0,0,0.1));
+    margin-bottom: 20px;
+    overflow: hidden;
+}
+.calc-card-head {
+    padding: 14px 20px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid var(--skj-gray-200, #e2e8f0);
+}
+.calc-card-head i { font-size: 1rem; }
+.calc-card-head.calc-red { background: #fed7d7; color: #c53030; }
+.calc-card-head.calc-blue { background: #bee3f8; color: #2b6cb0; }
+.calc-card-head.calc-green { background: #c6f6d5; color: #276749; }
+.calc-card-body { padding: 20px; }
+
+/* URL row */
+.calc-url-row { display: flex; gap: 10px; }
+.calc-input {
+    width: 100%;
+    padding: 10px 14px !important;
+    border: 2px solid var(--skj-gray-200, #e2e8f0) !important;
+    border-radius: 8px !important;
+    font-size: 0.92rem !important;
+    font-family: inherit !important;
+    transition: border-color 0.2s !important;
+    background: #fff !important;
+}
+.calc-input:focus { outline: none !important; border-color: var(--skj-red, #C9301D) !important; }
+.calc-url-input { flex: 1; }
+.calc-btn-fetch {
+    padding: 10px 22px !important;
+    background: var(--skj-red, #C9301D) !important;
+    color: #fff !important;
+    border: none !important;
+    border-radius: 8px !important;
+    font-family: inherit !important;
+    font-size: 0.92rem !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background 0.2s !important;
+}
+.calc-btn-fetch:hover { background: var(--skj-red-dark, #A52714) !important; transform: none !important; box-shadow: none !important; }
+.calc-btn-fetch:disabled { opacity: 0.6; cursor: wait !important; }
+.calc-spinner {
+    display: none;
+    width: 16px; height: 16px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: calcSpin 0.6s linear infinite;
+}
+.calc-btn-fetch.loading .calc-spinner { display: inline-block; }
+.calc-btn-fetch.loading .calc-btn-text { display: none; }
+@keyframes calcSpin { to { transform: rotate(360deg); } }
+
+/* Site tags */
+.calc-sites { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; font-size: 0.8rem; color: var(--skj-gray-500, #64748b); align-items: center; }
+.calc-site-tag {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 12px;
+    background: var(--skj-gray-100, #f1f5f9);
+    border: 1px solid var(--skj-gray-200, #e2e8f0);
+    border-radius: 20px;
+    font-size: 0.78rem;
+    color: var(--skj-gray-500, #64748b);
+}
+
+/* Error */
+.calc-error { display: none; margin-top: 12px; padding: 10px 14px; background: #fed7d7; border: 1px solid #fc8181; border-radius: 8px; font-size: 0.85rem; color: #9b2c2c; }
+.calc-error.show { display: block; }
+
+/* Preview */
+.calc-preview { display: none; margin-top: 14px; padding: 14px; background: var(--skj-gray-100, #f1f5f9); border-radius: 10px; border: 1px solid var(--skj-gray-200, #e2e8f0); }
+.calc-preview.show { display: flex; gap: 14px; align-items: flex-start; }
+.calc-preview img { width: 90px; height: 90px; object-fit: cover; border-radius: 8px; border: 1px solid var(--skj-gray-200, #e2e8f0); flex-shrink: 0; }
+.calc-preview-info { flex: 1; }
+.calc-badge { display: inline-block; padding: 2px 10px; background: var(--skj-red, #C9301D); color: #fff; border-radius: 20px; font-size: 0.72rem; font-weight: 600; margin-bottom: 4px; }
+.calc-preview-info h4 { font-size: 0.9rem; font-weight: 600; line-height: 1.4; margin: 0; }
+.calc-preview-prices { margin-top: 6px; display: flex; gap: 16px; }
+.calc-preview-prices small { display: block; font-size: 0.75rem; color: var(--skj-gray-500, #64748b); font-weight: 400; }
+.calc-preview-prices strong { font-size: 1rem; }
+.calc-price-red { color: var(--skj-red, #C9301D); }
+
+/* Grid */
+.calc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.calc-field { display: flex; flex-direction: column; }
+.calc-field label { font-size: 0.82rem; font-weight: 600; color: var(--skj-gray-500, #64748b); margin-bottom: 5px; }
+.calc-btn-run {
+    width: 100%;
+    padding: 12px !important;
+    background: #2b6cb0 !important;
+    color: #fff !important;
+    border: none !important;
+    border-radius: 8px !important;
+    font-family: inherit !important;
+    font-size: 0.95rem !important;
+    font-weight: 700 !important;
+    cursor: pointer !important;
+    margin-top: 10px;
+    transition: background 0.2s !important;
+}
+.calc-btn-run:hover { background: #2c5282 !important; transform: none !important; box-shadow: none !important; }
+
+/* Result rows */
+.calc-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--skj-gray-200, #e2e8f0); font-size: 0.9rem; }
+.calc-row:last-child { border-bottom: none; }
+.calc-row span { color: var(--skj-gray-500, #64748b); }
+.calc-row strong { font-weight: 600; }
+.calc-row small { font-size: 0.78rem; color: var(--skj-gray-500, #64748b); font-weight: 400; }
+.calc-row-highlight { background: var(--skj-gray-100, #f1f5f9); margin: 0 -20px; padding: 10px 20px; }
+.calc-section-label { font-weight: 700; font-size: 0.9rem; margin-bottom: 4px; }
+.calc-divider { height: 1px; background: var(--skj-gray-200, #e2e8f0); margin: 14px 0; }
+
+/* Total */
+.calc-total-box {
+    padding: 16px 20px;
+    background: linear-gradient(135deg, var(--skj-red, #C9301D), var(--skj-red-dark, #A52714));
+    border-radius: 10px;
+    color: #fff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.calc-total-label { font-size: 0.95rem; font-weight: 600; }
+.calc-total-value { font-size: 1.4rem; font-weight: 700; }
+
+/* Note */
+.calc-note { margin-top: 10px; padding: 10px 14px; background: #fffbeb; border: 1px solid #f6e05e; border-radius: 8px; font-size: 0.82rem; color: #744210; }
+
+/* Responsive */
+@media (max-width: 600px) {
+    .calc-url-row { flex-direction: column; }
+    .calc-btn-fetch { justify-content: center; }
+    .calc-grid { grid-template-columns: 1fr; }
+    .calc-preview.show { flex-direction: column; }
+    .calc-preview img { width: 100%; height: 160px; }
+    .calc-total-box { flex-direction: column; text-align: center; gap: 6px; }
+    .calc-row-highlight { margin: 0 -20px; padding: 10px 20px; }
+}
+
+/* =============================================
+   PRELOADER OVERRIDE
+   ============================================= */
+.ast-page-builder-template .site-content > .ast-container {
+    max-width: 100%;
+}

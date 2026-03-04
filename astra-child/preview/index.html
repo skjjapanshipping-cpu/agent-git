@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#C9301D">
+    <title>SKJ JAPAN - บริการขนส่งสินค้าจากญี่ปุ่นมาไทย</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --skj-red: #C9301D;
+            --skj-red-dark: #A52714;
+            --skj-red-light: #ef4444;
+            --skj-dark: #1a1a2e;
+            --skj-navy: #0f172a;
+            --skj-white: #ffffff;
+            --skj-light: #f8fafc;
+            --skj-gray-100: #f1f5f9;
+            --skj-gray-200: #e2e8f0;
+            --skj-gray-300: #cbd5e1;
+            --skj-gray-500: #64748b;
+            --skj-gray-700: #334155;
+            --skj-gray-900: #1e293b;
+            --skj-shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+            --skj-shadow-md: 0 4px 16px rgba(0,0,0,0.1);
+            --skj-shadow-lg: 0 12px 40px rgba(0,0,0,0.12);
+            --skj-radius: 16px;
+            --skj-radius-sm: 10px;
+            --skj-radius-lg: 24px;
+            --skj-transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Noto Sans Thai', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: var(--skj-gray-900);
+            line-height: 1.7;
+            background: var(--skj-white);
+            overflow-x: hidden;
+        }
+
+        ::selection { background: var(--skj-red); color: white; }
+
+        /* ---- HEADER ---- */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            background: rgba(255,255,255,0.92);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border-bottom: 1px solid rgba(0,0,0,0.06);
+            transition: var(--skj-transition);
+        }
+
+        .header.scrolled {
+            background: rgba(255,255,255,0.97);
+            box-shadow: 0 4px 30px rgba(0,0,0,0.08);
+        }
+
+        .header-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 24px;
+        }
+
+        .logo img {
+            height: 55px;
+            transition: var(--skj-transition);
+        }
+
+        .header.scrolled .logo img { height: 48px; }
+
+        .nav { display: flex; gap: 4px; }
+        .nav a {
+            font-weight: 600;
+            font-size: 0.92rem;
+            color: var(--skj-gray-700);
+            padding: 8px 18px;
+            border-radius: 10px;
+            text-decoration: none;
+            transition: var(--skj-transition);
+            letter-spacing: 0.01em;
+        }
+        .nav a:hover, .nav a.active {
+            color: var(--skj-red);
+            background: rgba(201,48,29,0.06);
+        }
+
+        /* Mobile menu */
+        .mobile-toggle { display: none; background: none; border: none; font-size: 1.5rem; color: var(--skj-gray-700); cursor: pointer; }
+
+        /* ---- HERO ---- */
+        .hero {
+            position: relative;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            background: linear-gradient(135deg, var(--skj-dark) 0%, #16213e 50%, #0f3460 100%);
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(ellipse at 20% 50%, rgba(201,48,29,0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 20%, rgba(239,68,68,0.1) 0%, transparent 50%);
+            animation: heroPulse 8s ease-in-out infinite alternate;
+        }
+
+        @keyframes heroPulse {
+            0% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+
+        .hero-particles {
+            position: absolute;
+            inset: 0;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .hero-particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: rgba(201,48,29,0.3);
+            border-radius: 50%;
+            animation: particleFloat linear infinite;
+        }
+        .hero-particle:nth-child(1) { left: 10%; animation-duration: 12s; }
+        .hero-particle:nth-child(2) { left: 30%; animation-duration: 15s; animation-delay: 2s; width: 6px; height: 6px; }
+        .hero-particle:nth-child(3) { left: 50%; animation-duration: 10s; animation-delay: 4s; }
+        .hero-particle:nth-child(4) { left: 70%; animation-duration: 14s; animation-delay: 1s; width: 5px; height: 5px; }
+        .hero-particle:nth-child(5) { left: 90%; animation-duration: 11s; animation-delay: 3s; }
+
+        @keyframes particleFloat {
+            0% { transform: translateY(100vh); opacity: 0; }
+            10% { opacity: 0.6; }
+            90% { opacity: 0.6; }
+            100% { transform: translateY(-10vh); opacity: 0; }
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 1;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 120px 24px 80px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+            align-items: center;
+        }
+
+        .hero-text h1 {
+            font-size: clamp(2.2rem, 5vw, 3.5rem);
+            font-weight: 900;
+            color: white;
+            line-height: 1.2;
+            margin-bottom: 12px;
+        }
+
+        .hero-text h1 span { color: var(--skj-red-light); }
+
+        .hero-text .tagline {
+            font-size: 1.15rem;
+            color: rgba(255,255,255,0.6);
+            margin-bottom: 32px;
+            line-height: 1.8;
+        }
+
+        .hero-text .tagline strong { color: rgba(255,255,255,0.9); }
+
+        .hero-buttons { display: flex; gap: 14px; flex-wrap: wrap; }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 16px 32px;
+            border-radius: var(--skj-radius-sm);
+            font-family: inherit;
+            font-size: 0.95rem;
+            font-weight: 700;
+            text-decoration: none;
+            cursor: pointer;
+            border: none;
+            transition: var(--skj-transition);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--skj-red), var(--skj-red-dark));
+            color: white;
+            box-shadow: 0 4px 20px rgba(201,48,29,0.4);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px rgba(201,48,29,0.5);
+        }
+
+        .btn-outline-white {
+            background: rgba(255,255,255,0.08);
+            color: white;
+            border: 1.5px solid rgba(255,255,255,0.2);
+        }
+
+        .btn-outline-white:hover {
+            background: rgba(255,255,255,0.15);
+            border-color: rgba(255,255,255,0.4);
+            transform: translateY(-2px);
+        }
+
+        .hero-visual {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .hero-logo-large {
+            max-width: 350px;
+            filter: drop-shadow(0 20px 40px rgba(0,0,0,0.3));
+            animation: logoFloat 5s ease-in-out infinite;
+        }
+
+        @keyframes logoFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-12px); }
+        }
+
+        /* Stats bar */
+        .stats-bar {
+            display: flex;
+            gap: 40px;
+            margin-top: 40px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 900;
+            color: var(--skj-red-light);
+        }
+
+        .stat-label {
+            font-size: 0.82rem;
+            color: rgba(255,255,255,0.5);
+            margin-top: 2px;
+        }
+
+        /* ---- WHY CHOOSE US ---- */
+        .section {
+            padding: 80px 24px;
+        }
+
+        .section-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 56px;
+        }
+
+        .section-header .badge {
+            display: inline-block;
+            background: rgba(201,48,29,0.08);
+            color: var(--skj-red);
+            padding: 6px 20px;
+            border-radius: 30px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            letter-spacing: 0.03em;
+        }
+
+        .section-header h2 {
+            font-size: clamp(1.6rem, 4vw, 2.4rem);
+            font-weight: 800;
+            color: var(--skj-gray-900);
+            margin-bottom: 12px;
+        }
+
+        .section-header p {
+            color: var(--skj-gray-500);
+            font-size: 1.05rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Feature cards */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+
+        .feature-card {
+            background: var(--skj-white);
+            border: 1px solid var(--skj-gray-200);
+            border-radius: var(--skj-radius);
+            padding: 36px 28px;
+            text-align: center;
+            transition: var(--skj-transition);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--skj-red), var(--skj-red-light));
+            opacity: 0;
+            transition: var(--skj-transition);
+        }
+
+        .feature-card:hover {
+            transform: translateY(-6px);
+            box-shadow: var(--skj-shadow-lg);
+            border-color: transparent;
+        }
+
+        .feature-card:hover::before { opacity: 1; }
+
+        .feature-icon {
+            width: 68px;
+            height: 68px;
+            background: linear-gradient(135deg, rgba(201,48,29,0.08), rgba(201,48,29,0.04));
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: var(--skj-red);
+            margin: 0 auto 20px;
+            transition: var(--skj-transition);
+        }
+
+        .feature-card:hover .feature-icon {
+            background: linear-gradient(135deg, var(--skj-red), var(--skj-red-dark));
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .feature-card h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .feature-card p {
+            font-size: 0.9rem;
+            color: var(--skj-gray-500);
+            line-height: 1.7;
+        }
+
+        /* ---- SERVICES ---- */
+        .section-dark {
+            background: linear-gradient(135deg, var(--skj-dark), var(--skj-navy));
+            color: white;
+        }
+
+        .section-dark .section-header h2 { color: white; }
+        .section-dark .section-header p { color: rgba(255,255,255,0.5); }
+
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+
+        .service-card {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: var(--skj-radius);
+            padding: 36px 28px;
+            text-align: center;
+            transition: var(--skj-transition);
+            backdrop-filter: blur(10px);
+        }
+
+        .service-card:hover {
+            background: rgba(255,255,255,0.08);
+            transform: translateY(-6px);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .service-icon {
+            width: 72px;
+            height: 72px;
+            background: linear-gradient(135deg, var(--skj-red), var(--skj-red-dark));
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+            color: white;
+            margin: 0 auto 20px;
+            box-shadow: 0 8px 25px rgba(201,48,29,0.4);
+            transition: var(--skj-transition);
+        }
+
+        .service-card:hover .service-icon {
+            transform: scale(1.1) rotate(5deg);
+        }
+
+        .service-card h3 {
+            color: white;
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .service-card p {
+            color: rgba(255,255,255,0.5);
+            font-size: 0.9rem;
+        }
+
+        /* ---- SPEED SECTION ---- */
+        .speed-section {
+            background: var(--skj-light);
+        }
+
+        .speed-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+            align-items: center;
+        }
+
+        .speed-text h2 {
+            font-size: clamp(1.6rem, 4vw, 2.4rem);
+            margin-bottom: 16px;
+        }
+
+        .speed-text h2 span { color: var(--skj-red); }
+
+        .speed-text p {
+            font-size: 1.05rem;
+            margin-bottom: 28px;
+        }
+
+        .speed-features {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .speed-feature {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .speed-feature .check {
+            width: 32px;
+            height: 32px;
+            background: rgba(201,48,29,0.1);
+            color: var(--skj-red);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            flex-shrink: 0;
+        }
+
+        .speed-feature span {
+            font-weight: 500;
+            color: var(--skj-gray-700);
+        }
+
+        .speed-visual {
+            position: relative;
+            display: flex;
+            justify-content: center;
+        }
+
+        .speed-badge {
+            background: linear-gradient(135deg, var(--skj-red), var(--skj-red-dark));
+            color: white;
+            border-radius: var(--skj-radius-lg);
+            padding: 48px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(201,48,29,0.3);
+        }
+
+        .speed-badge .days {
+            font-size: 4rem;
+            font-weight: 900;
+            line-height: 1;
+        }
+
+        .speed-badge .unit {
+            font-size: 1.2rem;
+            font-weight: 600;
+            opacity: 0.8;
+        }
+
+        .speed-badge .desc {
+            font-size: 0.9rem;
+            opacity: 0.7;
+            margin-top: 8px;
+        }
+
+        /* ---- SHOPPING SITES ---- */
+        .shops-grid {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 16px;
+        }
+
+        .shop-logo {
+            width: 80px;
+            height: 80px;
+            background: var(--skj-white);
+            border: 1px solid var(--skj-gray-200);
+            border-radius: var(--skj-radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px;
+            transition: var(--skj-transition);
+            cursor: pointer;
+        }
+
+        .shop-logo:hover {
+            transform: translateY(-4px) scale(1.05);
+            box-shadow: var(--skj-shadow-md);
+            border-color: var(--skj-red);
+        }
+
+        .shop-logo img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        /* ---- TESTIMONIALS ---- */
+        .testimonials-section {
+            background: var(--skj-light);
+        }
+
+        .testimonials-scroll {
+            display: flex;
+            gap: 20px;
+            overflow-x: auto;
+            padding: 10px 0 20px;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+        }
+
+        .testimonial-card {
+            flex-shrink: 0;
+            width: 300px;
+            border-radius: var(--skj-radius);
+            overflow: hidden;
+            box-shadow: var(--skj-shadow-md);
+            transition: var(--skj-transition);
+        }
+
+        .testimonial-card:hover {
+            transform: scale(1.03);
+            box-shadow: var(--skj-shadow-lg);
+        }
+
+        .testimonial-card img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        /* ---- CTA ---- */
+        .cta-section {
+            background: linear-gradient(135deg, var(--skj-red), var(--skj-red-dark));
+            text-align: center;
+            padding: 80px 24px;
+        }
+
+        .cta-section h2 {
+            color: white;
+            font-size: clamp(1.6rem, 4vw, 2.2rem);
+            margin-bottom: 12px;
+        }
+
+        .cta-section p {
+            color: rgba(255,255,255,0.75);
+            font-size: 1.05rem;
+            margin-bottom: 32px;
+        }
+
+        .btn-white {
+            background: white;
+            color: var(--skj-red);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+
+        .btn-white:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+        }
+
+        /* ---- FOOTER ---- */
+        .footer {
+            background: var(--skj-navy);
+            color: rgba(255,255,255,0.6);
+            padding: 60px 24px 24px;
+        }
+
+        .footer-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            gap: 40px;
+            padding-bottom: 40px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .footer h4 {
+            color: white;
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
+
+        .footer p { font-size: 0.9rem; line-height: 1.8; }
+
+        .footer a {
+            color: rgba(255,255,255,0.6);
+            text-decoration: none;
+            transition: var(--skj-transition);
+            display: block;
+            padding: 4px 0;
+            font-size: 0.9rem;
+        }
+
+        .footer a:hover { color: var(--skj-red-light); padding-left: 6px; }
+
+        .footer-bottom {
+            max-width: 1200px;
+            margin: 0 auto;
+            text-align: center;
+            padding-top: 24px;
+            font-size: 0.82rem;
+            color: rgba(255,255,255,0.3);
+        }
+
+        .social-links { display: flex; gap: 12px; margin-top: 16px; }
+        .social-links a {
+            width: 40px;
+            height: 40px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255,255,255,0.5);
+            font-size: 1rem;
+            transition: var(--skj-transition);
+            padding: 0;
+        }
+        .social-links a:hover {
+            background: var(--skj-red);
+            color: white;
+            transform: translateY(-2px);
+            padding-left: 0;
+        }
+
+        /* ---- RESPONSIVE ---- */
+        @media (max-width: 768px) {
+            .nav { display: none; }
+            .mobile-toggle { display: block; }
+            .hero-content { grid-template-columns: 1fr; text-align: center; padding-top: 100px; }
+            .hero-visual { order: -1; }
+            .hero-logo-large { max-width: 200px; }
+            .hero-buttons { justify-content: center; }
+            .stats-bar { justify-content: center; }
+            .features-grid, .services-grid { grid-template-columns: 1fr; }
+            .speed-content { grid-template-columns: 1fr; }
+            .speed-visual { order: -1; }
+            .footer-inner { grid-template-columns: 1fr 1fr; }
+        }
+
+        @media (max-width: 480px) {
+            .footer-inner { grid-template-columns: 1fr; }
+            .stats-bar { flex-direction: column; gap: 16px; }
+        }
+
+        /* Page indicator */
+        .page-indicator {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 30px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            z-index: 999;
+            backdrop-filter: blur(10px);
+        }
+    </style>
+</head>
+<body>
+    <div class="page-indicator">📐 Preview - SKJ Japan Redesign</div>
+
+    <!-- HEADER -->
+    <header class="header" id="header">
+        <div class="header-inner">
+            <div class="logo">
+                <img src="https://skjjapanshipping.com/wp-content/uploads/2024/03/ดีไซน์ที่ยังไม่ได้ตั้งชื่อ-150x150.png" alt="SKJ Japan">
+            </div>
+            <nav class="nav">
+                <a href="#" class="active">หน้าแรก</a>
+                <a href="#">เกี่ยวกับเรา</a>
+                <a href="#">บริการของเรา</a>
+                <a href="#">บทความ</a>
+                <a href="#">ติดต่อเรา</a>
+            </nav>
+            <button class="mobile-toggle"><i class="fas fa-bars"></i></button>
+        </div>
+    </header>
+
+    <!-- HERO -->
+    <section class="hero">
+        <div class="hero-particles">
+            <div class="hero-particle"></div>
+            <div class="hero-particle"></div>
+            <div class="hero-particle"></div>
+            <div class="hero-particle"></div>
+            <div class="hero-particle"></div>
+        </div>
+        <div class="hero-content">
+            <div class="hero-text">
+                <h1>SKJ <span>JAPAN</span><br>SHIPPING</h1>
+                <p class="tagline">
+                    <strong>"รวดเร็ว ปลอดภัย ใส่ใจคุณ"</strong><br>
+                    บริการขนส่งสินค้าจากญี่ปุ่นมาไทย ด้วยความเร็วเพียง 14-20 วัน<br>
+                    พร้อมปิดตู้ทุกสัปดาห์ เช็คสถานะ Real-time
+                </p>
+                <div class="hero-buttons">
+                    <a href="#" class="btn btn-primary"><i class="fas fa-search"></i> Track & Trace</a>
+                    <a href="#" class="btn btn-outline-white"><i class="fas fa-info-circle"></i> เกี่ยวกับเรา</a>
+                </div>
+                <div class="stats-bar">
+                    <div class="stat-item">
+                        <div class="stat-number">5+</div>
+                        <div class="stat-label">ปีประสบการณ์</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">10K+</div>
+                        <div class="stat-label">พัสดุที่ส่งแล้ว</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">500+</div>
+                        <div class="stat-label">ลูกค้าที่ไว้วางใจ</div>
+                    </div>
+                </div>
+            </div>
+            <div class="hero-visual">
+                <img class="hero-logo-large" src="https://skjjapanshipping.com/wp-content/uploads/2023/12/SKJ-LOGO-FULL-1.png" alt="SKJ Japan Logo">
+            </div>
+        </div>
+    </section>
+
+    <!-- WHY CHOOSE US -->
+    <section class="section">
+        <div class="section-inner">
+            <div class="section-header">
+                <div class="badge">Why Choose Us?</div>
+                <h2>ทำไมต้องเลือกเรา</h2>
+                <p>เราพร้อมให้บริการขนส่งสินค้าจากญี่ปุ่นอย่างมืออาชีพ</p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-bolt"></i></div>
+                    <h3>รวดเร็วทันใจ</h3>
+                    <p>ส่งถึงมือคุณภายใน 14-20 วัน พร้อมปิดตู้ทุกสัปดาห์</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-shield-halved"></i></div>
+                    <h3>ปลอดภัย 100%</h3>
+                    <p>แพ็คสินค้าอย่างดี ดูแลทุกขั้นตอนการขนส่ง</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-headset"></i></div>
+                    <h3>ใส่ใจบริการ</h3>
+                    <p>ทีมงานพร้อมให้บริการ ตอบทุกคำถามอย่างรวดเร็ว</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-location-dot"></i></div>
+                    <h3>เช็คสถานะ Real-time</h3>
+                    <p>ติดตามสถานะพัสดุแบบเรียลไทม์ ผ่านระบบ Track & Trace</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-tags"></i></div>
+                    <h3>ราคาเป็นกันเอง</h3>
+                    <p>อัตราค่าบริการที่คุ้มค่า ไม่มีค่าใช้จ่ายแอบแฝง</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-bell"></i></div>
+                    <h3>LINE แจ้งเตือน</h3>
+                    <p>รับแจ้งเตือนอัตโนมัติผ่าน LINE เมื่อสินค้าเข้าระบบ</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SPEED SECTION -->
+    <section class="section speed-section">
+        <div class="section-inner">
+            <div class="speed-content">
+                <div class="speed-text">
+                    <div style="display: inline-block; background: rgba(201,48,29,0.08); color: var(--skj-red); padding: 6px 20px; border-radius: 30px; font-size: 0.82rem; font-weight: 700; margin-bottom: 16px;">Fastest Express</div>
+                    <h2>ความเร็วที่คุณ<span>ไว้วางใจ</span></h2>
+                    <p>พร้อมปิดตู้ทุกสัปดาห์ มั่นใจว่าคุณลูกค้าจะได้รับสินค้าไว ไม่ต้องรอนาน</p>
+                    <div class="speed-features">
+                        <div class="speed-feature">
+                            <div class="check"><i class="fas fa-check"></i></div>
+                            <span>ปิดตู้ทุกสัปดาห์</span>
+                        </div>
+                        <div class="speed-feature">
+                            <div class="check"><i class="fas fa-check"></i></div>
+                            <span>เช็คสถานะ Real-time</span>
+                        </div>
+                        <div class="speed-feature">
+                            <div class="check"><i class="fas fa-check"></i></div>
+                            <span>LINE แจ้งเตือนอัตโนมัติ</span>
+                        </div>
+                        <div class="speed-feature">
+                            <div class="check"><i class="fas fa-check"></i></div>
+                            <span>จัดส่งทั่วประเทศ</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="speed-visual">
+                    <div class="speed-badge">
+                        <div class="days">14-20</div>
+                        <div class="unit">วัน</div>
+                        <div class="desc">หลังปิดตู้สินค้า</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SERVICES -->
+    <section class="section section-dark">
+        <div class="section-inner">
+            <div class="section-header">
+                <div class="badge" style="background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.8);">Our Services</div>
+                <h2>บริการของเรา</h2>
+                <p>ครบวงจรสำหรับทุกความต้องการขนส่งสินค้าจากญี่ปุ่น</p>
+            </div>
+            <div class="services-grid">
+                <div class="service-card">
+                    <div class="service-icon"><i class="fas fa-ship"></i></div>
+                    <h3>ขนส่งทางเรือ</h3>
+                    <p>ขนส่งสินค้าจากญี่ปุ่นมาไทยทางเรือ ราคาประหยัด</p>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon"><i class="fas fa-cart-shopping"></i></div>
+                    <h3>รับสั่งซื้อสินค้า</h3>
+                    <p>บริการสั่งซื้อสินค้าจากเว็บไซต์ญี่ปุ่น ครบทุกเว็บ</p>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon"><i class="fas fa-warehouse"></i></div>
+                    <h3>คลังสินค้าญี่ปุ่น</h3>
+                    <p>มีคลังสินค้าที่ญี่ปุ่น เก็บรวบรวมก่อนส่ง ประหยัดค่าขนส่ง</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SHOPPING SITES -->
+    <section class="section">
+        <div class="section-inner">
+            <div class="section-header">
+                <div class="badge">Partner Sites</div>
+                <h2>รวมเว็บไซต์ชอปปิ้งญี่ปุ่น</h2>
+                <p>สั่งซื้อได้จากทุกเว็บไซต์ยอดนิยมในญี่ปุ่น</p>
+            </div>
+            <div class="shops-grid">
+                <div class="shop-logo"><img src="https://skjjapanshipping.com/wp-content/uploads/2024/02/1-1.jpg" alt="Yahoo Auctions"></div>
+                <div class="shop-logo"><img src="https://skjjapanshipping.com/wp-content/uploads/2024/02/2-1.jpg" alt="Mercari"></div>
+                <div class="shop-logo"><img src="https://skjjapanshipping.com/wp-content/uploads/2024/02/3-1.jpg" alt="Rakuten"></div>
+                <div class="shop-logo"><img src="https://skjjapanshipping.com/wp-content/uploads/2024/02/4-1.jpg" alt="Amazon JP"></div>
+                <div class="shop-logo"><img src="https://skjjapanshipping.com/wp-content/uploads/2024/02/5-1.jpg" alt="GU"></div>
+                <div class="shop-logo"><img src="https://skjjapanshipping.com/wp-content/uploads/2024/02/6-1.jpg" alt="Suruga-ya"></div>
+                <div class="shop-logo"><img src="https://skjjapanshipping.com/wp-content/uploads/2024/02/7-1.jpg" alt="AmiAmi"></div>
+                <div class="shop-logo"><img src="https://skjjapanshipping.com/wp-content/uploads/2024/02/8.jpg" alt="Uniqlo"></div>
+                <div class="shop-logo"><img src="https://skjjapanshipping.com/wp-content/uploads/2023/12/9.jpg" alt="Disney"></div>
+                <div class="shop-logo"><img src="https://skjjapanshipping.com/wp-content/uploads/2023/12/10.jpg" alt="Yahoo Shopping"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="cta-section">
+        <h2>พร้อมเริ่มส่งสินค้ากับเราแล้วหรือยัง?</h2>
+        <p>สมัครสมาชิกวันนี้ รับบริการขนส่งสินค้าจากญี่ปุ่นที่ดีที่สุด</p>
+        <a href="#" class="btn btn-white"><i class="fas fa-user-plus"></i> สมัครสมาชิก</a>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="footer-inner">
+            <div>
+                <h4>SKJ JAPAN SHIPPING</h4>
+                <p>"รวดเร็ว ปลอดภัย ใส่ใจคุณ"<br>บริการขนส่งสินค้าจากญี่ปุ่นมาไทย</p>
+                <div class="social-links">
+                    <a href="#"><i class="fab fa-facebook-f"></i></a>
+                    <a href="#"><i class="fab fa-line"></i></a>
+                    <a href="#"><i class="fab fa-instagram"></i></a>
+                </div>
+            </div>
+            <div>
+                <h4>เมนู</h4>
+                <a href="#">หน้าแรก</a>
+                <a href="#">เกี่ยวกับเรา</a>
+                <a href="#">บริการของเรา</a>
+                <a href="#">บทความ</a>
+                <a href="#">ติดต่อเรา</a>
+            </div>
+            <div>
+                <h4>บริการ</h4>
+                <a href="#">ขนส่งทางเรือ</a>
+                <a href="#">รับสั่งซื้อสินค้า</a>
+                <a href="#">Track & Trace</a>
+            </div>
+            <div>
+                <h4>ติดต่อ</h4>
+                <p><i class="fas fa-phone"></i> 082-460-9940</p>
+                <p><i class="fab fa-line"></i> @skj.japan</p>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            &copy; 2026 SKJ Japan Shipping Company. All rights reserved.
+        </div>
+    </footer>
+
+    <script>
+        // Sticky header
+        window.addEventListener('scroll', function() {
+            document.getElementById('header').classList.toggle('scrolled', window.scrollY > 80);
+        }, { passive: true });
+
+        // Scroll animation
+        const observer = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('.feature-card, .service-card, .shop-logo, .speed-feature').forEach(function(el, i) {
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(25px)';
+            el.style.transition = 'all 0.5s ease ' + (i * 0.08) + 's';
+            observer.observe(el);
+        });
+    </script>
+</body>
+</html>

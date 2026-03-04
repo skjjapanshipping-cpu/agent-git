@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ดินแดนแห่งโมเดล กันดั้ม และฟิกเกอร์ - SKJ JAPAN</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --red: #C9301D;
+            --red-dark: #A52714;
+            --red-light: #ff6b6b;
+            --dark: #1e293b;
+            --gray-50: #f8fafc;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --gray-300: #cbd5e1;
+            --gray-400: #94a3b8;
+            --gray-500: #64748b;
+            --gray-600: #475569;
+            --gray-700: #334155;
+            --gray-900: #0f172a;
+            --white: #ffffff;
+            --radius: 16px;
+            --radius-sm: 10px;
+            --radius-lg: 24px;
+            --shadow: 0 2px 12px rgba(0,0,0,0.06);
+            --shadow-md: 0 4px 24px rgba(0,0,0,0.08);
+            --shadow-lg: 0 12px 40px rgba(0,0,0,0.1);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Noto Sans Thai', sans-serif;
+            color: var(--dark);
+            background: var(--gray-50);
+            line-height: 1.7;
+            overflow-x: hidden;
+        }
+        ::selection { background: var(--red); color: white; }
+        img { max-width: 100%; height: auto; }
+        a { text-decoration: none; transition: var(--transition); }
+
+        /* ===== TOP BAR ===== */
+        .topbar {
+            background: var(--red); color: white; font-size: 0.8rem;
+            padding: 0 24px; height: 38px;
+            display: flex; align-items: center; justify-content: space-between;
+            font-weight: 500; position: fixed;
+            top: 0; left: 0; right: 0; z-index: 9991;
+        }
+        .topbar-left { display: flex; align-items: center; gap: 6px; }
+        .topbar-right { display: flex; align-items: center; gap: 12px; }
+        .topbar-right a { color: white; font-size: 0.9rem; opacity: 0.8; transition: var(--transition); }
+        .topbar-right a:hover { opacity: 1; }
+        .topbar a { color: white; text-decoration: none; }
+        .topbar i { margin-right: 4px; }
+
+        /* ===== HEADER ===== */
+        .header {
+            position: fixed; top: 38px; left: 0; right: 0;
+            z-index: 9990; background: var(--white);
+            border-bottom: 1px solid var(--gray-200); transition: var(--transition);
+        }
+        .header.scrolled { box-shadow: 0 2px 20px rgba(0,0,0,0.08); }
+        .header-spacer { height: 110px; }
+        main { position: relative; z-index: 1; }
+        .header-inner {
+            max-width: 1200px; margin: 0 auto;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 8px 24px;
+        }
+        .logo img { height: 56px; }
+        .nav-wrap { display: flex; align-items: center; gap: 4px; }
+        .nav { display: flex; align-items: center; gap: 0; }
+        .nav a {
+            color: var(--gray-700); font-weight: 600; font-size: 0.88rem;
+            padding: 8px 14px; border-radius: 6px; line-height: 1;
+            border-bottom: 2px solid transparent;
+        }
+        .nav a:hover { color: var(--red); border-bottom-color: var(--red); }
+        .nav a.active { color: var(--red); border-bottom-color: var(--red); }
+        .nav-actions { display: flex; gap: 8px; align-items: center; margin-left: 12px; }
+        .btn {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 10px 24px; border-radius: 8px;
+            font-family: inherit; font-size: 0.9rem; font-weight: 700;
+            cursor: pointer; border: none; transition: var(--transition);
+        }
+        .btn-red { background: var(--red); color: white; }
+        .btn-red:hover { background: var(--red-dark); transform: translateY(-1px); box-shadow: 0 4px 15px rgba(201,48,29,0.3); }
+        .btn-outline { background: transparent; color: var(--red); border: 2px solid var(--red); }
+        .btn-outline:hover { background: var(--red); color: white; }
+        .mobile-toggle { display: none; background: none; border: none; font-size: 1.4rem; color: var(--gray-700); cursor: pointer; }
+
+        /* ===== PAGE HERO ===== */
+        .page-hero {
+            background: linear-gradient(135deg, var(--gray-900) 0%, #1a2332 100%);
+            padding: 80px 24px 60px; text-align: center;
+            position: relative; overflow: hidden;
+        }
+        .page-hero::before {
+            content: ''; position: absolute; top: -100px; right: -100px;
+            width: 400px; height: 400px;
+            background: rgba(201,48,29,0.1); border-radius: 50%;
+        }
+        .page-hero .eyebrow {
+            display: inline-flex; align-items: center; gap: 8px;
+            color: var(--red-light); font-size: 0.85rem; font-weight: 700;
+            margin-bottom: 12px; letter-spacing: 0.05em; text-transform: uppercase;
+            position: relative;
+        }
+        .page-hero .eyebrow::before, .page-hero .eyebrow::after {
+            content: ''; width: 24px; height: 2px;
+            background: var(--red-light); border-radius: 2px;
+        }
+        .page-hero h1 {
+            font-size: clamp(1.4rem, 3.5vw, 2.2rem); font-weight: 900;
+            color: white; margin-bottom: 16px; position: relative;
+            max-width: 700px; margin-left: auto; margin-right: auto;
+            line-height: 1.5;
+        }
+        .breadcrumb {
+            display: flex; justify-content: center; gap: 8px;
+            margin-top: 16px; font-size: 0.82rem;
+            color: rgba(255,255,255,0.5); position: relative;
+        }
+        .breadcrumb a { color: rgba(255,255,255,0.5); }
+        .breadcrumb a:hover { color: var(--red-light); }
+        .post-meta-hero {
+            display: flex; justify-content: center; gap: 20px;
+            margin-top: 16px; font-size: 0.82rem;
+            color: rgba(255,255,255,0.5); position: relative;
+        }
+        .post-meta-hero i { margin-right: 4px; color: var(--red-light); }
+
+        /* ===== ARTICLE ===== */
+        .article-wrap {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 24px 80px;
+            position: relative;
+            z-index: 2;
+        }
+        .article-card {
+            background: var(--white);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            overflow: hidden;
+        }
+        .article-featured-img {
+            width: 100%;
+            height: 360px;
+            object-fit: cover;
+            display: block;
+            border-bottom: 2px solid var(--gray-200);
+        }
+        .article-body {
+            padding: 40px;
+        }
+        .article-body p {
+            font-size: 1rem;
+            line-height: 2;
+            color: var(--gray-600);
+            margin-bottom: 20px;
+        }
+        .article-body p strong {
+            color: var(--gray-900);
+            font-weight: 700;
+        }
+        .article-body figure {
+            margin: 24px 0;
+            border-radius: var(--radius);
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            border: 2px solid var(--gray-200);
+        }
+        .article-body figure img {
+            width: 100%;
+            height: 360px;
+            object-fit: cover;
+            display: block;
+        }
+        .article-body h2 {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: var(--gray-900);
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--red);
+        }
+        .article-body h3 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin: 24px 0 12px;
+        }
+        .article-body ul, .article-body ol {
+            margin: 16px 0;
+            padding-left: 24px;
+            color: var(--gray-600);
+        }
+        .article-body li {
+            margin-bottom: 8px;
+            line-height: 1.8;
+        }
+        .article-body a {
+            color: var(--red);
+            font-weight: 600;
+            border-bottom: 1px solid transparent;
+        }
+        .article-body a:hover {
+            border-bottom-color: var(--red);
+        }
+        .article-body blockquote {
+            background: #fef2f2;
+            border-left: 4px solid var(--red);
+            padding: 20px 24px;
+            margin: 24px 0;
+            border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+            font-style: italic;
+            color: var(--gray-700);
+        }
+
+        /* ===== SHARE ===== */
+        .share-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding-top: 24px;
+            margin-top: 32px;
+            border-top: 1px solid var(--gray-200);
+        }
+        .share-bar .share-label {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--gray-500);
+            margin-right: 4px;
+        }
+        .share-bar .share-label i { margin-right: 4px; }
+        .share-btn {
+            width: 42px; height: 42px;
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            transition: var(--transition);
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .share-btn img {
+            width: 100%; height: 100%;
+            object-fit: cover;
+            border-radius: 12px;
+        }
+        .share-btn.copy {
+            background: var(--gray-100);
+            border: 1px solid var(--gray-200);
+            color: var(--gray-500);
+            font-size: 1rem;
+        }
+        .share-btn:hover { transform: translateY(-3px) scale(1.08); box-shadow: 0 6px 20px rgba(0,0,0,0.15); }
+
+        /* ===== RELATED POSTS ===== */
+        .related-section {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 0 24px 80px;
+        }
+        .related-section h2 {
+            font-size: 1.3rem;
+            font-weight: 800;
+            color: var(--gray-900);
+            margin-bottom: 24px;
+        }
+        .related-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+        .related-card {
+            background: var(--white);
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius);
+            overflow: hidden;
+            transition: var(--transition);
+            display: flex;
+            flex-direction: column;
+        }
+        .related-card:hover {
+            box-shadow: var(--shadow-md);
+            transform: translateY(-3px);
+            border-color: var(--red);
+        }
+        .related-card img {
+            width: 100%;
+            height: 160px;
+            object-fit: cover;
+        }
+        .related-card .rc-content {
+            padding: 16px;
+            flex: 1;
+        }
+        .related-card h3 {
+            font-size: 0.88rem;
+            font-weight: 700;
+            line-height: 1.5;
+            color: var(--gray-900);
+            margin-bottom: 8px;
+        }
+        .related-card:hover h3 { color: var(--red); }
+        .related-card .rc-date {
+            font-size: 0.75rem;
+            color: var(--gray-400);
+        }
+
+        /* ===== FOOTER ===== */
+        .footer {
+            background: var(--gray-900); color: rgba(255,255,255,0.6);
+            padding: 56px 24px 24px;
+        }
+        .footer-inner {
+            max-width: 1100px; margin: 0 auto;
+            display: grid; grid-template-columns: 2fr 1fr 1fr 1.2fr;
+            gap: 40px; padding-bottom: 40px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+        .footer h4 { color: white; font-size: 0.95rem; font-weight: 700; margin-bottom: 14px; }
+        .footer p { font-size: 0.88rem; line-height: 1.8; }
+        .footer a { color: rgba(255,255,255,0.6); display: block; padding: 4px 0; font-size: 0.88rem; }
+        .footer a:hover { color: var(--red-light); padding-left: 4px; }
+        .footer-logo img { height: 48px; margin-bottom: 12px; filter: brightness(0) invert(1); }
+        .social-links { display: flex; gap: 10px; margin-top: 14px; }
+        .social-links a {
+            width: 36px; height: 36px; background: rgba(255,255,255,0.08);
+            border-radius: 8px; display: flex; align-items: center; justify-content: center;
+            color: rgba(255,255,255,0.6); font-size: 0.9rem; padding: 0;
+        }
+        .social-links a:hover { background: var(--red); color: white; transform: translateY(-2px); padding: 0; }
+        .footer-bottom {
+            max-width: 1100px; margin: 20px auto 0;
+            text-align: center; font-size: 0.8rem; color: rgba(255,255,255,0.3);
+        }
+
+        /* ===== SCROLL TO TOP ===== */
+        .scroll-top {
+            position: fixed; bottom: 24px; right: 24px;
+            width: 44px; height: 44px; background: var(--red); color: white;
+            border: none; border-radius: 12px; font-size: 1rem;
+            cursor: pointer; box-shadow: 0 4px 15px rgba(201,48,29,0.4);
+            transition: var(--transition); opacity: 0; pointer-events: none; z-index: 50;
+        }
+        .scroll-top.show { opacity: 1; pointer-events: auto; }
+        .scroll-top:hover { transform: translateY(-3px); }
+
+        /* ===== MOBILE NAV OVERLAY ===== */
+        .mobile-nav-overlay {
+            display: none; position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5); z-index: 99999;
+            opacity: 0; transition: opacity 0.3s ease;
+        }
+        .mobile-nav-overlay.open { display: block; opacity: 1; }
+        .mobile-nav-panel {
+            position: absolute; top: 0; right: 0;
+            width: 300px; max-width: 85vw; height: 100%;
+            background: var(--white); box-shadow: -4px 0 30px rgba(0,0,0,0.15);
+            transform: translateX(100%); transition: transform 0.3s ease;
+            overflow-y: auto; display: flex; flex-direction: column;
+        }
+        .mobile-nav-overlay.open .mobile-nav-panel { transform: translateX(0); }
+        .mobile-nav-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 16px 20px; border-bottom: 1px solid var(--gray-200);
+        }
+        .mobile-nav-header img { height: 40px; }
+        .mobile-nav-close { background: none; border: none; font-size: 1.3rem; color: var(--gray-500); cursor: pointer; padding: 4px; }
+        .mobile-nav-links { padding: 12px 0; flex: 1; }
+        .mobile-nav-links a {
+            display: flex; align-items: center; gap: 10px;
+            padding: 14px 24px; color: var(--gray-700);
+            font-weight: 600; font-size: 0.95rem;
+            border-bottom: 1px solid var(--gray-100);
+        }
+        .mobile-nav-links a:hover, .mobile-nav-links a.active { color: var(--red); background: #fef2f2; }
+        .mobile-nav-links a i { width: 20px; text-align: center; color: var(--gray-400); }
+        .mobile-nav-links a.active i { color: var(--red); }
+        .mobile-nav-actions {
+            padding: 16px 20px; border-top: 1px solid var(--gray-200);
+            display: flex; flex-direction: column; gap: 10px;
+        }
+        .mobile-nav-actions .btn { justify-content: center; width: 100%; }
+        .mobile-nav-social {
+            padding: 16px 20px; display: flex; gap: 12px; justify-content: center;
+        }
+        .mobile-nav-social a {
+            width: 40px; height: 40px; background: var(--gray-100); border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            color: var(--gray-500); font-size: 1rem;
+        }
+        .mobile-nav-social a:hover { background: var(--red); color: white; }
+
+        /* ===== RESPONSIVE - iPad ===== */
+        @media (max-width: 1024px) {
+            .footer-inner { grid-template-columns: 1fr 1fr; gap: 30px; }
+        }
+        /* ===== RESPONSIVE - Mobile ===== */
+        @media (max-width: 768px) {
+            .topbar { font-size: 0.72rem; padding: 0 12px; }
+            .topbar-left span { display: none; }
+            .topbar-right { gap: 8px; }
+            .header-inner { padding: 6px 16px; }
+            .logo img { height: 44px; }
+            .nav, .nav-actions { display: none; }
+            .mobile-toggle { display: block; }
+            .header-spacer { height: 100px; }
+            .page-hero { padding: 60px 16px 48px; }
+            .page-hero h1 { font-size: 1.3rem; }
+            .post-meta-hero { flex-wrap: wrap; gap: 10px; }
+            .article-wrap { padding: 24px 16px 48px; }
+            .article-body { padding: 24px; }
+            .article-body figure img { height: 240px; }
+            .share-bar { flex-wrap: wrap; }
+            .related-section { padding: 0 16px 48px; }
+            .related-grid { grid-template-columns: 1fr; }
+            .footer-inner { grid-template-columns: 1fr 1fr; gap: 24px; }
+            .footer { padding: 40px 16px 20px; }
+        }
+        @media (max-width: 480px) {
+            .topbar-left { display: none; }
+            .topbar { justify-content: center; }
+            .footer-inner { grid-template-columns: 1fr; }
+            .article-body figure img { height: 180px; }
+        }
+
+        /* ===== ANIMATE ===== */
+        .animate-item {
+            opacity: 0; transform: translateY(20px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        .animate-item.visible { opacity: 1; transform: translateY(0); }
+    </style>
+</head>
+<body>
+    <!-- TOP BAR -->
+    <div class="topbar" id="topbar">
+        <div class="topbar-left">
+            <span>เปิดให้บริการทุกวัน ปิดตู้ทุกสัปดาห์</span>
+            <a href="https://skjjapanshipping.com/skjtrack/tracking" style="margin-left: 10px; background: white; color: var(--red); padding: 3px 14px; border-radius: 20px; font-weight: 700; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 5px;"><i class="fas fa-search"></i> Track & Trace</a>
+        </div>
+        <div class="topbar-right">
+            <a href="https://www.facebook.com/SKJ.Japan" target="_blank"><i class="fab fa-facebook-f"></i></a>
+            <a href="https://www.instagram.com/skj.japan" target="_blank"><i class="fab fa-instagram"></i></a>
+            <a href="https://lin.ee/whDh44F" target="_blank"><i class="fab fa-line"></i></a>
+            <a href="https://www.tiktok.com/@skj.japan" target="_blank"><i class="fab fa-tiktok"></i></a>
+            <a href="https://www.youtube.com/@SKJJAPANShipping" target="_blank"><i class="fab fa-youtube"></i></a>
+            <span style="opacity: 0.5;">|</span>
+            <a href="#" style="font-size: 0.78rem; font-weight: 700;">TH</a>
+        </div>
+    </div>
+
+    <!-- HEADER -->
+    <header class="header" id="header">
+        <div class="header-inner">
+            <a href="https://skjjapanshipping.com" class="logo">
+                <img src="https://skjjapanshipping.com/wp-content/uploads/2026/02/skj-logo-white.png" alt="SKJ Japan">
+            </a>
+            <div class="nav-wrap">
+                <nav class="nav">
+                    <a href="fujiking-style.html">หน้าแรก</a>
+                    <a href="about.html">เกี่ยวกับเรา</a>
+                    <a href="services.html">บริการของเรา</a>
+                    <a href="blog.html" class="active">บทความ</a>
+                    <a href="#">ติดต่อเรา</a>
+                </nav>
+                <div class="nav-actions">
+                    <a href="https://skjjapanshipping.com/skjtrack/login" class="btn btn-outline" style="padding: 8px 18px; font-size: 0.82rem;"><i class="fas fa-sign-in-alt"></i> เข้าสู่ระบบ</a>
+                    <a href="https://skjjapanshipping.com/skjtrack/register" class="btn btn-red" style="padding: 8px 18px; font-size: 0.82rem;"><i class="fas fa-user-plus"></i> สมัครสมาชิก</a>
+                </div>
+            </div>
+            <button class="mobile-toggle" onclick="document.getElementById('mobileNav').classList.add('open')"><i class="fas fa-bars"></i></button>
+        </div>
+    </header>
+
+    <!-- MOBILE NAV -->
+    <div class="mobile-nav-overlay" id="mobileNav" onclick="if(event.target===this)this.classList.remove('open')">
+        <div class="mobile-nav-panel">
+            <div class="mobile-nav-header">
+                <img src="https://skjjapanshipping.com/wp-content/uploads/2026/02/skj-logo-white.png" alt="SKJ Japan">
+                <button class="mobile-nav-close" onclick="document.getElementById('mobileNav').classList.remove('open')"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="mobile-nav-links">
+                <a href="fujiking-style.html"><i class="fas fa-home"></i> หน้าแรก</a>
+                <a href="about.html"><i class="fas fa-info-circle"></i> เกี่ยวกับเรา</a>
+                <a href="services.html"><i class="fas fa-concierge-bell"></i> บริการของเรา</a>
+                <a href="blog.html" class="active"><i class="fas fa-newspaper"></i> บทความ</a>
+                <a href="contact.html"><i class="fas fa-envelope"></i> ติดต่อเรา</a>
+                <a href="https://skjjapanshipping.com/skjtrack/tracking"><i class="fas fa-search"></i> Track & Trace</a>
+            </div>
+            <div class="mobile-nav-actions">
+                <a href="https://skjjapanshipping.com/skjtrack/login" class="btn btn-outline"><i class="fas fa-sign-in-alt"></i> เข้าสู่ระบบ</a>
+                <a href="https://skjjapanshipping.com/skjtrack/register" class="btn btn-red"><i class="fas fa-user-plus"></i> สมัครสมาชิก</a>
+            </div>
+            <div class="mobile-nav-social">
+                <a href="https://www.facebook.com/SKJ.Japan" target="_blank"><i class="fab fa-facebook-f"></i></a>
+                <a href="https://lin.ee/whDh44F" target="_blank"><i class="fab fa-line"></i></a>
+                <a href="https://www.instagram.com/skj.japan" target="_blank"><i class="fab fa-instagram"></i></a>
+                <a href="https://www.tiktok.com/@skj.japan" target="_blank"><i class="fab fa-tiktok"></i></a>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN -->
+    <main>
+    <div class="header-spacer"></div>
+
+    <!-- PAGE HERO -->
+    <section class="page-hero">
+        <div class="eyebrow">บทความ</div>
+        <h1>ดินแดนแห่งโมเดล กันดั้ม และฟิกเกอร์ ทั้งออนไลน์ และหน้าร้าน ห้ามพลาด!!</h1>
+        <div class="post-meta-hero">
+            <span><i class="far fa-calendar"></i> 20 ธ.ค. 2023</span>
+            <span><i class="far fa-user"></i> SKJ JAPAN</span>
+            <span><i class="far fa-folder"></i> บทความ</span>
+        </div>
+        <div class="breadcrumb">
+            <a href="fujiking-style.html">หน้าแรก</a>
+            <span>/</span>
+            <a href="blog.html">บทความ</a>
+            <span>/</span>
+            <span style="color: rgba(255,255,255,0.8);">ดินแดนแห่งโมเดล กันดั้ม...</span>
+        </div>
+    </section>
+
+    <!-- ARTICLE -->
+    <div class="article-wrap">
+        <article class="article-card animate-item">
+            <div class="article-body">
+                <figure>
+                    <img src="https://skjjapanshipping.com/wp-content/uploads/2023/12/1-7.png" alt="ดินแดนแห่งโมเดล กันดั้ม และฟิกเกอร์">
+                </figure>
+
+                <figure>
+                    <img src="https://skjjapanshipping.com/wp-content/uploads/2023/12/2-7.png" alt="กันดั้ม โตเกียว">
+                </figure>
+
+                <figure>
+                    <img src="https://skjjapanshipping.com/wp-content/uploads/2023/12/3-6.png" alt="ร้านโมเดล">
+                </figure>
+
+                <figure>
+                    <img src="https://skjjapanshipping.com/wp-content/uploads/2023/12/4-6.png" alt="ฟิกเกอร์ญี่ปุ่น">
+                </figure>
+
+                <p><strong>ชี้เป้า! แหล่งซื้อกันดั้ม โตเกียว ที่ดีที่สุด พร้อมแนะนำ กันดั้ม โอไดบะ ตัวใหม่</strong></p>
+
+                <p>SKJ JAPAN การรีวิว วันนี้ขอนำเสนอแหล่งซื้อกันดั้ม โตเกียว ซึ่งเป็นที่รู้จักกันดีในหมู่สาวกกันดั้มชาวไทย และชาวญี่ปุ่นทั้งหลาย เพราะที่นี่คือแหล่งรวมโมเดลกันดั้มราคาถูกเอาไว้มากมาย ตั้งอยู่บนชั้น 6 ของห้าง Yodobashi ย่าน อากิฮาบาระ (Akihabara) เรียกว่าเป็นอาณาจักรย่อมๆ เลยก็ว่าได้ ราคาก็ค่อนข้างถูกกว่าที่ The Gundum Base Tokyo โอไดบะด้วยค่ะ</p>
+
+                <p>นอกจากนี้ใครที่มา ทัวร์ญี่ปุ่น และอยากซื้อเครื่องใช้ไฟฟ้า หรือแกตเจ็ท อุปกรณ์อิเล็กทรอนิกส์ต่างๆ มาที่นี่ได้เลยค่ะ รับรองว่าต้องได้ของติดไม่ติดมือกลับบ้านแน่นอน เป็นอย่างไรกันบ้างคะ กันดั้ม โอไดบะ ตัวใหม่ รุ่น RX-0 หรือ ยูนิคอร์นกันดั้ม ตัวใหญ่อลังการเลยใช่มั้ยคะ</p>
+
+                <blockquote>
+                    ใครไปเที่ยวโตเกียวแวะไปถ่ายรูปเช็คอินกันนะ รวมถึง แหล่งซื้อกันดั้ม โตเกียว ที่เรานำมาฝากกันในวันนี้
+                </blockquote>
+
+                <p>อย่าลืมให้รางวัลแฟนหนุ่มของคุณ ด้วยการพาเขาไปช้อปปิ้งโมเดลกันดั้ม ตามแหล่งช้อปที่เราแนะนำกันนะคะ</p>
+
+                <p>รับรองว่าแฟนของคุณจะปลื้มและประทับใจไม่รู้ลืมเลยล่ะ</p>
+
+                <p><strong>Location: บริเวณลานหน้าห้าง DiverCity Tokyo Plaza</strong></p>
+
+                <!-- Share -->
+                <div class="share-bar">
+                    <span class="share-label"><i class="fas fa-share-nodes"></i> แชร์บทความ:</span>
+                    <a href="https://www.facebook.com/SKJ.Japan" target="_blank" class="share-btn fb"><img src="https://upload.wikimedia.org/wikipedia/commons/0/05/Facebook_Logo_%282019%29.png" alt="Facebook"></a>
+                    <a href="https://lin.ee/whDh44F" target="_blank" class="share-btn line"><img src="https://upload.wikimedia.org/wikipedia/commons/4/41/LINE_logo.svg" alt="LINE"></a>
+                    <a href="https://www.instagram.com/skj.japan" target="_blank" class="share-btn ig"><img src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Instagram_icon.png" alt="Instagram"></a>
+                    <a href="https://www.tiktok.com/@skj.japan" target="_blank" class="share-btn tt"><img src="https://upload.wikimedia.org/wikipedia/en/a/a9/TikTok_logo.svg" alt="TikTok"></a>
+                    <a href="#" class="share-btn copy" onclick="navigator.clipboard.writeText(window.location.href); this.innerHTML='<i class=\'fas fa-check\'></i>'; return false;"><i class="fas fa-link"></i></a>
+                </div>
+            </div>
+        </article>
+    </div>
+
+    <!-- RELATED POSTS -->
+    <div class="related-section">
+        <h2><i class="fas fa-newspaper" style="color: var(--red); margin-right: 8px;"></i> บทความที่เกี่ยวข้อง</h2>
+        <div class="related-grid">
+            <a href="https://skjjapanshipping.com/%e0%b8%a3%e0%b9%89%e0%b8%b2%e0%b8%99%e0%b9%81%e0%b8%9a%e0%b8%a3%e0%b8%99%e0%b8%94%e0%b9%8c%e0%b9%80%e0%b8%99%e0%b8%a1%e0%b8%a1%e0%b8%b7%e0%b8%ad%e0%b8%aa%e0%b8%ad%e0%b8%87%e0%b8%97%e0%b8%b5%e0%b9%88/" class="related-card animate-item" style="text-decoration:none; color:inherit;">
+                <img src="https://skjjapanshipping.com/wp-content/uploads/2023/12/1-6.png" alt="ร้านแบรนด์เนมมือสอง">
+                <div class="rc-content">
+                    <h3>ร้านแบรนด์เนมมือสองที่ใหญ่ที่สุด</h3>
+                    <span class="rc-date"><i class="far fa-calendar"></i> 20 ธ.ค. 2023</span>
+                </div>
+            </a>
+            <a href="https://skjjapanshipping.com/%e0%b9%81%e0%b8%ab%e0%b8%a5%e0%b9%88%e0%b8%87%e0%b8%8a%e0%b8%ad%e0%b8%9b%e0%b8%9b%e0%b8%b4%e0%b8%87%e0%b8%82%e0%b8%b6%e0%b9%89%e0%b8%99%e0%b8%8a%e0%b8%b7%e0%b9%88%e0%b8%ad-%e0%b8%8a%e0%b8%ad-2/" class="related-card animate-item" style="text-decoration:none; color:inherit;">
+                <img src="https://skjjapanshipping.com/wp-content/uploads/2023/12/1-5.png" alt="แหล่งชอปปิงขึ้นชื่อ">
+                <div class="rc-content">
+                    <h3>แหล่งชอปปิงขึ้นชื่อ ชอปชิลๆ หิ้วกลับตัวปลิว (Part 2)</h3>
+                    <span class="rc-date"><i class="far fa-calendar"></i> 20 ธ.ค. 2023</span>
+                </div>
+            </a>
+            <a href="https://skjjapanshipping.com/%e0%b9%81%e0%b8%ab%e0%b8%a5%e0%b9%88%e0%b8%87%e0%b8%8a%e0%b8%ad%e0%b8%9b%e0%b8%9b%e0%b8%b4%e0%b8%87%e0%b8%82%e0%b8%b6%e0%b9%89%e0%b8%99%e0%b8%8a%e0%b8%b7%e0%b9%88%e0%b8%ad-%e0%b8%8a%e0%b8%ad%e0%b8%9b/" class="related-card animate-item" style="text-decoration:none; color:inherit;">
+                <img src="https://skjjapanshipping.com/wp-content/uploads/2023/12/1-4.png" alt="แหล่งชอปปิงขึ้นชื่อ Part 1">
+                <div class="rc-content">
+                    <h3>แหล่งชอปปิงขึ้นชื่อ ชอปชิลๆ หิ้วกลับตัวปลิว (Part 1)</h3>
+                    <span class="rc-date"><i class="far fa-calendar"></i> 20 ธ.ค. 2023</span>
+                </div>
+            </a>
+            <a href="https://skjjapanshipping.com/%e0%b8%ad%e0%b8%b1%e0%b8%9b%e0%b9%80%e0%b8%94%e0%b8%95%e0%b9%80%e0%b8%97%e0%b8%a3%e0%b8%99%e0%b8%94%e0%b9%8c%e0%b8%82%e0%b8%ad%e0%b8%87%e0%b8%9d%e0%b8%b2%e0%b8%81%e0%b8%aa%e0%b8%b8%e0%b8%94%e0%b8%ae-2/" class="related-card animate-item" style="text-decoration:none; color:inherit;">
+                <img src="https://skjjapanshipping.com/wp-content/uploads/2023/12/1-3.png" alt="อัปเดตเทรนด์ของฝากสุดฮิต">
+                <div class="rc-content">
+                    <h3>อัปเดตเทรนด์ของฝากสุดฮิต Part 2</h3>
+                    <span class="rc-date"><i class="far fa-calendar"></i> 20 ธ.ค. 2023</span>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="footer-inner">
+            <div>
+                <div class="footer-logo">
+                    <img src="https://skjjapanshipping.com/wp-content/uploads/2026/02/skj-logo-white.png" alt="SKJ Japan">
+                </div>
+                <p>SKJ JAPAN SHIPPING<br>"รวดเร็ว ปลอดภัย ใส่ใจคุณ"<br>บริการขนส่งสินค้าจากญี่ปุ่นมาไทย</p>
+                <div class="social-links">
+                    <a href="https://www.facebook.com/SKJ.Japan" target="_blank"><i class="fab fa-facebook-f"></i></a>
+                    <a href="https://lin.ee/whDh44F" target="_blank"><i class="fab fa-line"></i></a>
+                    <a href="https://www.instagram.com/skj.japan" target="_blank"><i class="fab fa-instagram"></i></a>
+                    <a href="https://www.tiktok.com/@skj.japan" target="_blank"><i class="fab fa-tiktok"></i></a>
+                </div>
+            </div>
+            <div>
+                <h4>เมนู</h4>
+                <a href="fujiking-style.html">หน้าแรก</a>
+                <a href="about.html">เกี่ยวกับเรา</a>
+                <a href="services.html">บริการของเรา</a>
+                <a href="blog.html">บทความ</a>
+                <a href="#">ติดต่อเรา</a>
+            </div>
+            <div>
+                <h4>บริการ</h4>
+                <a href="https://skjjapanshipping.com">ขนส่งทางเรือ</a>
+                <a href="https://skjjapanshipping.com">รับสั่งซื้อสินค้า</a>
+                <a href="https://skjjapanshipping.com/skjtrack/tracking">Track & Trace</a>
+                <a href="https://skjjapanshipping.com">คลังสินค้าญี่ปุ่น</a>
+            </div>
+            <div>
+                <h4>ติดต่อเรา</h4>
+                <p><i class="fas fa-phone" style="color: var(--red-light); margin-right: 8px;"></i> 082-460-9940</p>
+                <p><i class="fab fa-line" style="color: var(--red-light); margin-right: 8px;"></i> @skj.japan</p>
+                <p style="margin-top: 8px;"><i class="fas fa-clock" style="color: var(--red-light); margin-right: 8px;"></i> เปิดให้บริการทุกวัน 09:00-18:00</p>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            &copy; 2026 SKJ Japan Shipping Company. All rights reserved.
+        </div>
+    </footer>
+
+    <!-- SCROLL TO TOP -->
+    <button class="scroll-top" id="scrollTop" onclick="window.scrollTo({top:0,behavior:'smooth'})">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+
+    <script>
+        window.addEventListener('scroll', function() {
+            document.getElementById('header').classList.toggle('scrolled', window.scrollY > 50);
+            document.getElementById('scrollTop').classList.toggle('show', window.scrollY > 400);
+        }, { passive: true });
+
+        const obs = new IntersectionObserver(function(entries) {
+            entries.forEach(function(e) {
+                if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); }
+            });
+        }, { threshold: 0.1 });
+        document.querySelectorAll('.animate-item').forEach(function(el, i) {
+            el.style.transitionDelay = (i % 6) * 0.08 + 's';
+            obs.observe(el);
+        });
+    </script>
+</body>
+</html>

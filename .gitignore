@@ -1,0 +1,53 @@
+# Laravel
+/node_modules
+/public/hot
+/public/storage
+/storage/*.key
+/vendor
+.env
+.env.backup
+.env.production
+.phpunit.result.cache
+Homestead.json
+Homestead.yaml
+npm-debug.log
+yarn-error.log
+
+# Uploads and temp files
+/uploads/
+/uploads_temp/
+/storage/app/uploads/
+/storage/app/public/uploads/
+
+# Large files and binaries
+*.zip
+*.tar.gz
+*.rar
+*.7z
+*.exe
+*.dmg
+*.pkg
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Cache
+/bootstrap/cache
+/storage/framework/cache/data/
+/storage/framework/sessions/
+/storage/framework/views/
+
+# Database
+*.sqlite
+*.db

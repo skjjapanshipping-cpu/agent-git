@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>บทความ - SKJ JAPAN บริการขนส่งสินค้าจากญี่ปุ่นมาไทย</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --red: #C9301D;
+            --red-dark: #A52714;
+            --red-light: #ff6b6b;
+            --dark: #1e293b;
+            --gray-50: #f8fafc;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --gray-300: #cbd5e1;
+            --gray-400: #94a3b8;
+            --gray-500: #64748b;
+            --gray-600: #475569;
+            --gray-700: #334155;
+            --gray-900: #0f172a;
+            --white: #ffffff;
+            --radius: 16px;
+            --radius-sm: 10px;
+            --radius-lg: 24px;
+            --shadow: 0 2px 12px rgba(0,0,0,0.06);
+            --shadow-md: 0 4px 24px rgba(0,0,0,0.08);
+            --shadow-lg: 0 12px 40px rgba(0,0,0,0.1);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Noto Sans Thai', sans-serif;
+            color: var(--dark);
+            background: var(--white);
+            line-height: 1.7;
+            overflow-x: hidden;
+        }
+        ::selection { background: var(--red); color: white; }
+        img { max-width: 100%; height: auto; }
+        a { text-decoration: none; transition: var(--transition); }
+
+        /* ===== TOP BAR ===== */
+        .topbar {
+            background: var(--red); color: white; font-size: 0.8rem;
+            padding: 0 24px; height: 38px;
+            display: flex; align-items: center; justify-content: space-between;
+            font-weight: 500; position: fixed;
+            top: 0; left: 0; right: 0; z-index: 9991;
+        }
+        .topbar-left { display: flex; align-items: center; gap: 6px; }
+        .topbar-right { display: flex; align-items: center; gap: 12px; }
+        .topbar-right a { color: white; font-size: 0.9rem; opacity: 0.8; transition: var(--transition); }
+        .topbar-right a:hover { opacity: 1; }
+        .topbar a { color: white; text-decoration: none; }
+        .topbar i { margin-right: 4px; }
+
+        /* ===== HEADER ===== */
+        .header {
+            position: fixed; top: 38px; left: 0; right: 0;
+            z-index: 9990; background: var(--white);
+            border-bottom: 1px solid var(--gray-200); transition: var(--transition);
+        }
+        .header.scrolled { box-shadow: 0 2px 20px rgba(0,0,0,0.08); }
+        .header-spacer { height: 110px; }
+        main { position: relative; z-index: 1; }
+        .header-inner {
+            max-width: 1200px; margin: 0 auto;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 8px 24px;
+        }
+        .logo img { height: 56px; }
+        .nav-wrap { display: flex; align-items: center; gap: 4px; }
+        .nav { display: flex; align-items: center; gap: 0; }
+        .nav a {
+            color: var(--gray-700); font-weight: 600; font-size: 0.88rem;
+            padding: 8px 14px; border-radius: 6px; line-height: 1;
+            border-bottom: 2px solid transparent;
+        }
+        .nav a:hover { color: var(--red); border-bottom-color: var(--red); }
+        .nav a.active { color: var(--red); border-bottom-color: var(--red); }
+        .nav-actions { display: flex; gap: 8px; align-items: center; margin-left: 12px; }
+        .btn {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 10px 24px; border-radius: 8px;
+            font-family: inherit; font-size: 0.9rem; font-weight: 700;
+            cursor: pointer; border: none; transition: var(--transition);
+        }
+        .btn-red { background: var(--red); color: white; }
+        .btn-red:hover { background: var(--red-dark); transform: translateY(-1px); box-shadow: 0 4px 15px rgba(201,48,29,0.3); }
+        .btn-outline { background: transparent; color: var(--red); border: 2px solid var(--red); }
+        .btn-outline:hover { background: var(--red); color: white; }
+        .btn-white { background: white; color: var(--red); }
+        .btn-white:hover { background: var(--gray-50); transform: translateY(-1px); }
+        .btn-lg { padding: 14px 36px; font-size: 1rem; border-radius: var(--radius-sm); }
+        .mobile-toggle { display: none; background: none; border: none; font-size: 1.4rem; color: var(--gray-700); cursor: pointer; }
+
+        /* ===== PAGE HERO ===== */
+        .page-hero {
+            background: linear-gradient(135deg, var(--gray-900) 0%, #1a2332 100%);
+            padding: 80px 24px 60px; text-align: center;
+            position: relative; overflow: hidden;
+        }
+        .page-hero::before {
+            content: ''; position: absolute; top: -100px; right: -100px;
+            width: 400px; height: 400px;
+            background: rgba(201,48,29,0.1); border-radius: 50%;
+        }
+        .page-hero .eyebrow {
+            display: inline-flex; align-items: center; gap: 8px;
+            color: var(--red-light); font-size: 0.85rem; font-weight: 700;
+            margin-bottom: 12px; letter-spacing: 0.05em; text-transform: uppercase;
+            position: relative;
+        }
+        .page-hero .eyebrow::before, .page-hero .eyebrow::after {
+            content: ''; width: 24px; height: 2px;
+            background: var(--red-light); border-radius: 2px;
+        }
+        .page-hero h1 {
+            font-size: clamp(1.8rem, 4vw, 2.8rem); font-weight: 900;
+            color: white; margin-bottom: 16px; position: relative;
+        }
+        .page-hero p {
+            color: rgba(255,255,255,0.7); font-size: 1.05rem;
+            max-width: 600px; margin: 0 auto; position: relative;
+        }
+        .breadcrumb {
+            display: flex; justify-content: center; gap: 8px;
+            margin-top: 20px; font-size: 0.82rem;
+            color: rgba(255,255,255,0.5); position: relative;
+        }
+        .breadcrumb a { color: rgba(255,255,255,0.5); }
+        .breadcrumb a:hover { color: var(--red-light); }
+
+        /* ===== SECTION BASE ===== */
+        .section { padding: 80px 24px; }
+        .section-inner { max-width: 1100px; margin: 0 auto; }
+
+        /* ===== BLOG GRID ===== */
+        .blog-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+        .blog-card {
+            background: var(--white);
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius);
+            overflow: hidden;
+            transition: var(--transition);
+            display: flex;
+            flex-direction: column;
+        }
+        .blog-card:hover {
+            box-shadow: var(--shadow-md);
+            transform: translateY(-4px);
+            border-color: var(--red);
+        }
+        .blog-card .thumb {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+        .blog-card .content {
+            padding: 20px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .blog-card .tag {
+            display: inline-block;
+            background: #fef2f2;
+            color: var(--red);
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            align-self: flex-start;
+        }
+        .blog-card h3 {
+            font-size: 0.95rem;
+            font-weight: 700;
+            line-height: 1.6;
+            margin-bottom: 8px;
+            color: var(--gray-900);
+        }
+        .blog-card:hover h3 { color: var(--red); }
+        .blog-card .excerpt {
+            font-size: 0.82rem;
+            color: var(--gray-500);
+            line-height: 1.7;
+            margin-bottom: 12px;
+            flex: 1;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .blog-card .meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-top: 12px;
+            border-top: 1px solid var(--gray-100);
+            font-size: 0.78rem;
+            color: var(--gray-400);
+        }
+        .blog-card .read-more {
+            color: var(--red);
+            font-weight: 700;
+            font-size: 0.8rem;
+        }
+        .blog-card:hover .read-more { text-decoration: underline; }
+
+        /* ===== FEATURED POST ===== */
+        .featured-post {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 40px;
+            align-items: center;
+            margin-bottom: 60px;
+            background: var(--white);
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            transition: var(--transition);
+        }
+        .featured-post:hover {
+            box-shadow: var(--shadow-lg);
+            border-color: var(--red);
+        }
+        .featured-post .featured-img {
+            width: 100%;
+            height: 100%;
+            min-height: 320px;
+            object-fit: cover;
+        }
+        .featured-post .featured-content {
+            padding: 32px;
+        }
+        .featured-post .tag {
+            display: inline-block;
+            background: #fef2f2;
+            color: var(--red);
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 4px 12px;
+            border-radius: 4px;
+            margin-bottom: 12px;
+        }
+        .featured-post h2 {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: var(--gray-900);
+            margin-bottom: 12px;
+            line-height: 1.5;
+        }
+        .featured-post:hover h2 { color: var(--red); }
+        .featured-post p {
+            color: var(--gray-500);
+            font-size: 0.92rem;
+            line-height: 1.8;
+            margin-bottom: 20px;
+        }
+        .featured-post .meta {
+            font-size: 0.82rem;
+            color: var(--gray-400);
+        }
+
+        /* ===== CTA ===== */
+        .cta-section {
+            background: linear-gradient(135deg, var(--red), var(--red-dark));
+            padding: 64px 24px; text-align: center;
+            position: relative; overflow: hidden;
+        }
+        .cta-section::before {
+            content: ''; position: absolute; top: -50%; left: -20%;
+            width: 400px; height: 400px;
+            background: rgba(255,255,255,0.05); border-radius: 50%;
+        }
+        .cta-section h2 { color: white; font-size: clamp(1.4rem, 3vw, 2rem); margin-bottom: 10px; position: relative; }
+        .cta-section p { color: rgba(255,255,255,0.8); margin-bottom: 28px; position: relative; }
+
+        /* ===== FOOTER ===== */
+        .footer {
+            background: var(--gray-900); color: rgba(255,255,255,0.6);
+            padding: 56px 24px 24px;
+        }
+        .footer-inner {
+            max-width: 1100px; margin: 0 auto;
+            display: grid; grid-template-columns: 2fr 1fr 1fr 1.2fr;
+            gap: 40px; padding-bottom: 40px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+        .footer h4 { color: white; font-size: 0.95rem; font-weight: 700; margin-bottom: 14px; }
+        .footer p { font-size: 0.88rem; line-height: 1.8; }
+        .footer a { color: rgba(255,255,255,0.6); display: block; padding: 4px 0; font-size: 0.88rem; }
+        .footer a:hover { color: var(--red-light); padding-left: 4px; }
+        .footer-logo img { height: 48px; margin-bottom: 12px; filter: brightness(0) invert(1); }
+        .social-links { display: flex; gap: 10px; margin-top: 14px; }
+        .social-links a {
+            width: 36px; height: 36px; background: rgba(255,255,255,0.08);
+            border-radius: 8px; display: flex; align-items: center; justify-content: center;
+            color: rgba(255,255,255,0.6); font-size: 0.9rem; padding: 0;
+        }
+        .social-links a:hover { background: var(--red); color: white; transform: translateY(-2px); padding: 0; }
+        .footer-bottom {
+            max-width: 1100px; margin: 20px auto 0;
+            text-align: center; font-size: 0.8rem; color: rgba(255,255,255,0.3);
+        }
+
+        /* ===== SCROLL TO TOP ===== */
+        .scroll-top {
+            position: fixed; bottom: 24px; right: 24px;
+            width: 44px; height: 44px; background: var(--red); color: white;
+            border: none; border-radius: 12px; font-size: 1rem;
+            cursor: pointer; box-shadow: 0 4px 15px rgba(201,48,29,0.4);
+            transition: var(--transition); opacity: 0; pointer-events: none; z-index: 50;
+        }
+        .scroll-top.show { opacity: 1; pointer-events: auto; }
+        .scroll-top:hover { transform: translateY(-3px); }
+
+        /* ===== MOBILE NAV OVERLAY ===== */
+        .mobile-nav-overlay {
+            display: none; position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5); z-index: 99999;
+            opacity: 0; transition: opacity 0.3s ease;
+        }
+        .mobile-nav-overlay.open { display: block; opacity: 1; }
+        .mobile-nav-panel {
+            position: absolute; top: 0; right: 0;
+            width: 300px; max-width: 85vw; height: 100%;
+            background: var(--white); box-shadow: -4px 0 30px rgba(0,0,0,0.15);
+            transform: translateX(100%); transition: transform 0.3s ease;
+            overflow-y: auto; display: flex; flex-direction: column;
+        }
+        .mobile-nav-overlay.open .mobile-nav-panel { transform: translateX(0); }
+        .mobile-nav-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 16px 20px; border-bottom: 1px solid var(--gray-200);
+        }
+        .mobile-nav-header img { height: 40px; }
+        .mobile-nav-close { background: none; border: none; font-size: 1.3rem; color: var(--gray-500); cursor: pointer; padding: 4px; }
+        .mobile-nav-links { padding: 12px 0; flex: 1; }
+        .mobile-nav-links a {
+            display: flex; align-items: center; gap: 10px;
+            padding: 14px 24px; color: var(--gray-700);
+            font-weight: 600; font-size: 0.95rem;
+            border-bottom: 1px solid var(--gray-100);
+        }
+        .mobile-nav-links a:hover, .mobile-nav-links a.active { color: var(--red); background: #fef2f2; }
+        .mobile-nav-links a i { width: 20px; text-align: center; color: var(--gray-400); }
+        .mobile-nav-links a.active i { color: var(--red); }
+        .mobile-nav-actions {
+            padding: 16px 20px; border-top: 1px solid var(--gray-200);
+            display: flex; flex-direction: column; gap: 10px;
+        }
+        .mobile-nav-actions .btn { justify-content: center; width: 100%; }
+        .mobile-nav-social {
+            padding: 16px 20px; display: flex; gap: 12px; justify-content: center;
+        }
+        .mobile-nav-social a {
+            width: 40px; height: 40px; background: var(--gray-100); border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            color: var(--gray-500); font-size: 1rem;
+        }
+        .mobile-nav-social a:hover { background: var(--red); color: white; }
+
+        /* ===== RESPONSIVE - iPad ===== */
+        @media (max-width: 1024px) {
+            .section { padding: 60px 20px; }
+            .blog-grid { grid-template-columns: repeat(2, 1fr); }
+            .footer-inner { grid-template-columns: 1fr 1fr; gap: 30px; }
+        }
+        /* ===== RESPONSIVE - Mobile ===== */
+        @media (max-width: 768px) {
+            .topbar { font-size: 0.72rem; padding: 0 12px; }
+            .topbar-left span { display: none; }
+            .topbar-right { gap: 8px; }
+            .header-inner { padding: 6px 16px; }
+            .logo img { height: 44px; }
+            .nav, .nav-actions { display: none; }
+            .mobile-toggle { display: block; }
+            .header-spacer { height: 100px; }
+            .section { padding: 48px 16px; }
+            .page-hero { padding: 60px 16px 48px; }
+            .blog-grid { grid-template-columns: 1fr; }
+            .featured-post { grid-template-columns: 1fr; }
+            .featured-post .featured-img { min-height: 200px; }
+            .featured-post .featured-content { padding: 20px; }
+            .featured-post h2 { font-size: 1.1rem; }
+            .footer-inner { grid-template-columns: 1fr 1fr; gap: 24px; }
+            .footer { padding: 40px 16px 20px; }
+            .cta-section { padding: 48px 16px; }
+        }
+        @media (max-width: 480px) {
+            .topbar-left { display: none; }
+            .topbar { justify-content: center; }
+            .footer-inner { grid-template-columns: 1fr; }
+        }
+
+        /* ===== ANIMATE ===== */
+        .animate-item {
+            opacity: 0; transform: translateY(20px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        .animate-item.visible { opacity: 1; transform: translateY(0); }
+    </style>
+</head>
+<body>
+    <!-- TOP BAR -->
+    <div class="topbar" id="topbar">
+        <div class="topbar-left">
+            <span>เปิดให้บริการทุกวัน ปิดตู้ทุกสัปดาห์</span>
+            <a href="https://skjjapanshipping.com/skjtrack/tracking" style="margin-left: 10px; background: white; color: var(--red); padding: 3px 14px; border-radius: 20px; font-weight: 700; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 5px;"><i class="fas fa-search"></i> Track & Trace</a>
+        </div>
+        <div class="topbar-right">
+            <a href="https://www.facebook.com/SKJ.Japan" target="_blank"><i class="fab fa-facebook-f"></i></a>
+            <a href="https://www.instagram.com/skj.japan" target="_blank"><i class="fab fa-instagram"></i></a>
+            <a href="https://lin.ee/whDh44F" target="_blank"><i class="fab fa-line"></i></a>
+            <a href="https://www.tiktok.com/@skj.japan" target="_blank"><i class="fab fa-tiktok"></i></a>
+            <a href="https://www.youtube.com/@SKJJAPANShipping" target="_blank"><i class="fab fa-youtube"></i></a>
+            <span style="opacity: 0.5;">|</span>
+            <a href="#" style="font-size: 0.78rem; font-weight: 700;">TH</a>
+        </div>
+    </div>
+
+    <!-- HEADER -->
+    <header class="header" id="header">
+        <div class="header-inner">
+            <a href="https://skjjapanshipping.com" class="logo">
+                <img src="https://skjjapanshipping.com/wp-content/uploads/2026/02/skj-logo-white.png" alt="SKJ Japan">
+            </a>
+            <div class="nav-wrap">
+                <nav class="nav">
+                    <a href="fujiking-style.html">หน้าแรก</a>
+                    <a href="about.html">เกี่ยวกับเรา</a>
+                    <a href="services.html">บริการของเรา</a>
+                    <a href="blog.html" class="active">บทความ</a>
+                    <a href="#">ติดต่อเรา</a>
+                </nav>
+                <div class="nav-actions">
+                    <a href="https://skjjapanshipping.com/skjtrack/login" class="btn btn-outline" style="padding: 8px 18px; font-size: 0.82rem;"><i class="fas fa-sign-in-alt"></i> เข้าสู่ระบบ</a>
+                    <a href="https://skjjapanshipping.com/skjtrack/register" class="btn btn-red" style="padding: 8px 18px; font-size: 0.82rem;"><i class="fas fa-user-plus"></i> สมัครสมาชิก</a>
+                </div>
+            </div>
+            <button class="mobile-toggle" onclick="document.getElementById('mobileNav').classList.add('open')"><i class="fas fa-bars"></i></button>
+        </div>
+    </header>
+
+    <!-- MOBILE NAV -->
+    <div class="mobile-nav-overlay" id="mobileNav" onclick="if(event.target===this)this.classList.remove('open')">
+        <div class="mobile-nav-panel">
+            <div class="mobile-nav-header">
+                <img src="https://skjjapanshipping.com/wp-content/uploads/2026/02/skj-logo-white.png" alt="SKJ Japan">
+                <button class="mobile-nav-close" onclick="document.getElementById('mobileNav').classList.remove('open')"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="mobile-nav-links">
+                <a href="fujiking-style.html"><i class="fas fa-home"></i> หน้าแรก</a>
+                <a href="about.html"><i class="fas fa-info-circle"></i> เกี่ยวกับเรา</a>
+                <a href="services.html"><i class="fas fa-concierge-bell"></i> บริการของเรา</a>
+                <a href="blog.html" class="active"><i class="fas fa-newspaper"></i> บทความ</a>
+                <a href="contact.html"><i class="fas fa-envelope"></i> ติดต่อเรา</a>
+                <a href="https://skjjapanshipping.com/skjtrack/tracking"><i class="fas fa-search"></i> Track & Trace</a>
+            </div>
+            <div class="mobile-nav-actions">
+                <a href="https://skjjapanshipping.com/skjtrack/login" class="btn btn-outline"><i class="fas fa-sign-in-alt"></i> เข้าสู่ระบบ</a>
+                <a href="https://skjjapanshipping.com/skjtrack/register" class="btn btn-red"><i class="fas fa-user-plus"></i> สมัครสมาชิก</a>
+            </div>
+            <div class="mobile-nav-social">
+                <a href="https://www.facebook.com/SKJ.Japan" target="_blank"><i class="fab fa-facebook-f"></i></a>
+                <a href="https://lin.ee/whDh44F" target="_blank"><i class="fab fa-line"></i></a>
+                <a href="https://www.instagram.com/skj.japan" target="_blank"><i class="fab fa-instagram"></i></a>
+                <a href="https://www.tiktok.com/@skj.japan" target="_blank"><i class="fab fa-tiktok"></i></a>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN -->
+    <main>
+    <div class="header-spacer"></div>
+
+    <!-- PAGE HERO -->
+    <section class="page-hero">
+        <div class="eyebrow">Blog</div>
+        <h1>บทความ</h1>
+        <p>เรื่องน่ารู้เกี่ยวกับการสั่งซื้อสินค้าและขนส่งจากญี่ปุ่น</p>
+        <div class="breadcrumb">
+            <a href="fujiking-style.html">หน้าแรก</a>
+            <span>/</span>
+            <span style="color: rgba(255,255,255,0.8);">บทความ</span>
+        </div>
+    </section>
+
+    <!-- BLOG CONTENT -->
+    <section class="section">
+        <div class="section-inner">
+
+            <!-- FEATURED POST -->
+            <a href="https://skjjapanshipping.com/%e0%b8%94%e0%b8%b4%e0%b8%99%e0%b9%81%e0%b8%94%e0%b8%99%e0%b9%81%e0%b8%ab%e0%b9%88%e0%b8%87%e0%b9%82%e0%b8%a1%e0%b9%80%e0%b8%94%e0%b8%a5-%e0%b8%81%e0%b8%b1%e0%b8%99%e0%b8%94%e0%b8%b1%e0%b9%89%e0%b8%a1/" class="featured-post animate-item" style="text-decoration:none; color:inherit;">
+                <img class="featured-img" src="https://skjjapanshipping.com/wp-content/uploads/2023/12/1-7.png" alt="ดินแดนแห่งโมเดล กันดั้ม และฟิกเกอร์">
+                <div class="featured-content">
+                    <span class="tag"><i class="fas fa-star" style="margin-right: 4px;"></i> บทความแนะนำ</span>
+                    <h2>ดินแดนแห่งโมเดล กันดั้ม และฟิกเกอร์ ทั้งออนไลน์ และหน้าร้าน ห้ามพลาด!!</h2>
+                    <p>ชี้เป้า! แหล่งซื้อกันดั้ม โตเกียว ที่ดีที่สุด พร้อมแนะนำร้านค้าออนไลน์และหน้าร้านที่ต้องไปเยือน</p>
+                    <div class="meta">
+                        <span><i class="far fa-calendar"></i> 20 ธ.ค. 2023</span>
+                        <span class="read-more">อ่านเพิ่มเติม <i class="fas fa-arrow-right"></i></span>
+                    </div>
+                </div>
+            </a>
+
+            <!-- BLOG GRID -->
+            <div class="blog-grid">
+                <a href="https://skjjapanshipping.com/%e0%b8%a3%e0%b9%89%e0%b8%b2%e0%b8%99%e0%b9%81%e0%b8%9a%e0%b8%a3%e0%b8%99%e0%b8%94%e0%b9%8c%e0%b9%80%e0%b8%99%e0%b8%a1%e0%b8%a1%e0%b8%b7%e0%b8%ad%e0%b8%aa%e0%b8%ad%e0%b8%87%e0%b8%97%e0%b8%b5%e0%b9%88/" class="blog-card animate-item" style="text-decoration:none; color:inherit;">
+                    <img class="thumb" src="https://skjjapanshipping.com/wp-content/uploads/2023/12/1-6.png" alt="ร้านแบรนด์เนมมือสอง">
+                    <div class="content">
+                        <span class="tag">ช้อปปิ้ง</span>
+                        <h3>ร้านแบรนด์เนมมือสองที่ใหญ่ที่สุด</h3>
+                        <p class="excerpt">แบรนด์เนมมือสองญี่ปุ่น ราคาดีการันตีคุณภาพ SKJ JAPAN การันตีของแท้ส่งถึงไทย</p>
+                        <div class="meta">
+                            <span><i class="far fa-calendar"></i> 20 ธ.ค. 2023</span>
+                            <span class="read-more">อ่านต่อ <i class="fas fa-arrow-right"></i></span>
+                        </div>
+                    </div>
+                </a>
+
+                <a href="https://skjjapanshipping.com/%e0%b9%81%e0%b8%ab%e0%b8%a5%e0%b9%88%e0%b8%87%e0%b8%8a%e0%b8%ad%e0%b8%9b%e0%b8%9b%e0%b8%b4%e0%b8%87%e0%b8%82%e0%b8%b6%e0%b9%89%e0%b8%99%e0%b8%8a%e0%b8%b7%e0%b9%88%e0%b8%ad-%e0%b8%8a%e0%b8%ad-2/" class="blog-card animate-item" style="text-decoration:none; color:inherit;">
+                    <img class="thumb" src="https://skjjapanshipping.com/wp-content/uploads/2023/12/1-5.png" alt="แหล่งชอปปิงขึ้นชื่อ Part 2">
+                    <div class="content">
+                        <span class="tag">เทรนด์</span>
+                        <h3>แหล่งชอปปิงขึ้นชื่อ ชอปชิลๆ หิ้วกลับตัวปลิว ผ่านทางเรือ (Part 2)</h3>
+                        <p class="excerpt">มาถึงภาคต่อสำหรับแหล่งชอปปิงขึ้นชื่อ ที่ตอกย้ำสโลแกน "ชอปชิลๆ หิ้วกลับ"</p>
+                        <div class="meta">
+                            <span><i class="far fa-calendar"></i> 20 ธ.ค. 2023</span>
+                            <span class="read-more">อ่านต่อ <i class="fas fa-arrow-right"></i></span>
+                        </div>
+                    </div>
+                </a>
+
+                <a href="https://skjjapanshipping.com/%e0%b9%81%e0%b8%ab%e0%b8%a5%e0%b9%88%e0%b8%87%e0%b8%8a%e0%b8%ad%e0%b8%9b%e0%b8%9b%e0%b8%b4%e0%b8%87%e0%b8%82%e0%b8%b6%e0%b9%89%e0%b8%99%e0%b8%8a%e0%b8%b7%e0%b9%88%e0%b8%ad-%e0%b8%8a%e0%b8%ad%e0%b8%9b/" class="blog-card animate-item" style="text-decoration:none; color:inherit;">
+                    <img class="thumb" src="https://skjjapanshipping.com/wp-content/uploads/2023/12/1-4.png" alt="แหล่งชอปปิงขึ้นชื่อ Part 1">
+                    <div class="content">
+                        <span class="tag">แนะนำ</span>
+                        <h3>แหล่งชอปปิงขึ้นชื่อ ชอปชิลๆ หิ้วกลับตัวปลิว ผ่านทางเรือ (Part 1)</h3>
+                        <p class="excerpt">สิ้นสุดการรอคอยกับสิ่งที่หลายๆ ท่านถามกันเข้ามา วันนี้แนะนำแหล่งช้อปปิ้งขึ้นชื่อ</p>
+                        <div class="meta">
+                            <span><i class="far fa-calendar"></i> 20 ธ.ค. 2023</span>
+                            <span class="read-more">อ่านต่อ <i class="fas fa-arrow-right"></i></span>
+                        </div>
+                    </div>
+                </a>
+
+                <a href="https://skjjapanshipping.com/%e0%b8%ad%e0%b8%b1%e0%b8%9b%e0%b9%80%e0%b8%94%e0%b8%95%e0%b9%80%e0%b8%97%e0%b8%a3%e0%b8%99%e0%b8%94%e0%b9%8c%e0%b8%82%e0%b8%ad%e0%b8%87%e0%b8%9d%e0%b8%b2%e0%b8%81%e0%b8%aa%e0%b8%b8%e0%b8%94%e0%b8%ae-2/" class="blog-card animate-item" style="text-decoration:none; color:inherit;">
+                    <img class="thumb" src="https://skjjapanshipping.com/wp-content/uploads/2023/12/1-3.png" alt="อัปเดตเทรนด์ของฝากสุดฮิต Part 2">
+                    <div class="content">
+                        <span class="tag">เทรนด์</span>
+                        <h3>อัปเดตเทรนด์ของฝากสุดฮิต Part 2</h3>
+                        <p class="excerpt">มาถึง Part 2 ของ 5 อันดับของฝากสุดฮิต คัดมาแล้วเน้นๆ ที่ต้องมี!</p>
+                        <div class="meta">
+                            <span><i class="far fa-calendar"></i> 20 ธ.ค. 2023</span>
+                            <span class="read-more">อ่านต่อ <i class="fas fa-arrow-right"></i></span>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="cta-section">
+        <h2>พร้อมเริ่มส่งสินค้าจากญี่ปุ่นกับเราแล้วหรือยัง?</h2>
+        <p>สมัครสมาชิกวันนี้ เริ่มต้นใช้บริการขนส่งสินค้าจากญี่ปุ่นที่ดีที่สุด</p>
+        <a href="https://skjjapanshipping.com/skjtrack/register" class="btn btn-white btn-lg" style="position: relative;"><i class="fas fa-user-plus"></i> สมัครสมาชิกฟรี</a>
+    </section>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="footer-inner">
+            <div>
+                <div class="footer-logo">
+                    <img src="https://skjjapanshipping.com/wp-content/uploads/2026/02/skj-logo-white.png" alt="SKJ Japan">
+                </div>
+                <p>SKJ JAPAN SHIPPING<br>"รวดเร็ว ปลอดภัย ใส่ใจคุณ"<br>บริการขนส่งสินค้าจากญี่ปุ่นมาไทย</p>
+                <div class="social-links">
+                    <a href="https://www.facebook.com/SKJ.Japan" target="_blank"><i class="fab fa-facebook-f"></i></a>
+                    <a href="https://lin.ee/whDh44F" target="_blank"><i class="fab fa-line"></i></a>
+                    <a href="https://www.instagram.com/skj.japan" target="_blank"><i class="fab fa-instagram"></i></a>
+                    <a href="https://www.tiktok.com/@skj.japan" target="_blank"><i class="fab fa-tiktok"></i></a>
+                </div>
+            </div>
+            <div>
+                <h4>เมนู</h4>
+                <a href="fujiking-style.html">หน้าแรก</a>
+                <a href="about.html">เกี่ยวกับเรา</a>
+                <a href="services.html">บริการของเรา</a>
+                <a href="blog.html">บทความ</a>
+                <a href="#">ติดต่อเรา</a>
+            </div>
+            <div>
+                <h4>บริการ</h4>
+                <a href="https://skjjapanshipping.com">ขนส่งทางเรือ</a>
+                <a href="https://skjjapanshipping.com">รับสั่งซื้อสินค้า</a>
+                <a href="https://skjjapanshipping.com/skjtrack/tracking">Track & Trace</a>
+                <a href="https://skjjapanshipping.com">คลังสินค้าญี่ปุ่น</a>
+            </div>
+            <div>
+                <h4>ติดต่อเรา</h4>
+                <p><i class="fas fa-phone" style="color: var(--red-light); margin-right: 8px;"></i> 082-460-9940</p>
+                <p><i class="fab fa-line" style="color: var(--red-light); margin-right: 8px;"></i> @skj.japan</p>
+                <p style="margin-top: 8px;"><i class="fas fa-clock" style="color: var(--red-light); margin-right: 8px;"></i> เปิดให้บริการทุกวัน 09:00-18:00</p>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            &copy; 2026 SKJ Japan Shipping Company. All rights reserved.
+        </div>
+    </footer>
+
+    <!-- SCROLL TO TOP -->
+    <button class="scroll-top" id="scrollTop" onclick="window.scrollTo({top:0,behavior:'smooth'})">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+
+    <script>
+        window.addEventListener('scroll', function() {
+            document.getElementById('header').classList.toggle('scrolled', window.scrollY > 50);
+            document.getElementById('scrollTop').classList.toggle('show', window.scrollY > 400);
+        }, { passive: true });
+
+        const obs = new IntersectionObserver(function(entries) {
+            entries.forEach(function(e) {
+                if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); }
+            });
+        }, { threshold: 0.1 });
+        document.querySelectorAll('.animate-item').forEach(function(el, i) {
+            el.style.transitionDelay = (i % 6) * 0.08 + 's';
+            obs.observe(el);
+        });
+    </script>
+</body>
+</html>
