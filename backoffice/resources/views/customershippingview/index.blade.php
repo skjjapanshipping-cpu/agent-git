@@ -5,6 +5,7 @@
 @endsection
 
 @section('extra-css')
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         /* ========================================
            COMPLETE LAYOUT OVERRIDE - Fix Paper Dashboard
@@ -154,14 +155,40 @@
             color: #475569 !important;
             width: 100% !important; /* Expand to container */
             box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-            transition: all 0.2s;
+            transition: none !important;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+        }
+
+        .dataTables_length select,
+        .unified-select {
+            font-size: 14px !important;
+            height: 42px !important;
+            border-radius: 10px !important;
+            border: 1px solid #e2e8f0 !important;
+            padding: 0 15px !important;
+            padding-right: 36px !important;
+            background-color: white !important;
+            color: #475569 !important;
+            width: 100% !important;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            transition: none !important;
+            -webkit-appearance: none !important;
+            -moz-appearance: none !important;
+            appearance: none !important;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+            background-repeat: no-repeat !important;
+            background-position: right 12px center !important;
+            background-size: 12px !important;
+            cursor: pointer;
         }
         
         .dataTables_filter input:focus,
         .dataTables_length select:focus,
         #start_date:focus {
             border-color: #1D8AC9 !important;
-            box-shadow: 0 0 0 3px rgba(29, 138, 201, 0.1) !important;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
             outline: none !important;
         }
 
@@ -185,7 +212,7 @@
         /* Container for controls */
         .controls-container {
             display: grid;
-            grid-template-columns: 2fr 1fr 2fr; /* Date(2) Show(1) Search(2) */
+            grid-template-columns: 2fr 2fr 1fr 2fr; /* Date(2) Recipient(2) Show(1) Search(2) */
             gap: 10px;
             align-items: center;
             width: 100%;
@@ -197,6 +224,7 @@
         .control-group {
             display: flex;
             flex-direction: column;
+            min-height: 68px;
             gap: 5px;
         }
         
@@ -883,8 +911,15 @@
             .control-group { width: auto; }
             
             #date-filter-group { flex: 4; }
+            #recipient-filter-group { flex: 3; }
             #length-container { flex: 2; min-width: 50px; }
             #filter-container { flex: 4; }
+
+            #recipient_filter {
+                padding: 0 5px !important;
+                font-size: 13px !important;
+                height: 40px !important;
+            }
             
             /* Smaller inputs on mobile to fit */
             .dataTables_length select,
@@ -1259,6 +1294,9 @@
                         <button type="button" id="updateSelected" class="btn btn-modern btn-modern-primary" onclick="checkAndUpdateSelection()">
                             <i class="fa fa-check-circle"></i> เลือกจัดส่งที่อยู่ปัจจุบัน
                         </button>
+                        <button type="button" class="btn btn-modern btn-modern-accent" onclick="openBatchRecipientModal()">
+                            <i class="fa fa-users"></i> กำหนดผู้รับ
+                        </button>
                     </div>
                 </div>
 
@@ -1328,12 +1366,25 @@
                                 <input type="date" id="end_date" class="form-control d-none">
                             </div>
                             
-                            <!-- Show Entries Container (Filled by JS) -->
+                            <!-- Show Entries -->
                             <div class="control-group" id="length-container">
                                 <label class="control-label d-md-block d-none">SHOW:</label>
-                                <!-- JS puts Length here -->
+                                <select id="custom_page_length" class="unified-select">
+                                    <option value="100" selected>100</option>
+                                    <option value="150">150</option>
+                                    <option value="200">200</option>
+                                    <option value="300">300</option>
+                                </select>
                             </div>
                             
+                            <!-- Recipient Filter -->
+                            <div class="control-group" id="recipient-filter-group">
+                                <label class="control-label d-md-block d-none">RECIPIENT:</label>
+                                <select id="recipient_filter" class="unified-select">
+                                    <option value="">ผู้รับทั้งหมด</option>
+                                </select>
+                            </div>
+
                             <!-- Search Container (Filled by JS) -->
                             <div class="control-group" id="filter-container">
                                 <label class="control-label d-md-block d-none">SEARCH:</label>
@@ -1760,6 +1811,7 @@
 @endsection
 
 @section('extra-script')
+    <script src="{{ asset('js/thai-address-search.js') }}"></script>
     <script>
         // Update Select Global Function (Same as previous)
         window.checkAndUpdateSelection = function() {
@@ -1787,8 +1839,8 @@
             }
 
             var dataTable = $('#dt-mant-table-1').DataTable({
-                "pageLength": 50,
-                "lengthMenu": [[10, 25, 50, 100, 150, 200], [10, 25, 50, 100, 150, 200]],
+                "pageLength": 100,
+                "lengthMenu": [[100, 150, 200, 300], [100, 150, 200, 300]],
                 "processing": true,
                 "serverSide": true,
                 "paging": true,
@@ -1808,6 +1860,7 @@
                         d.status = $("select.status-select-header").val();
                         d.start_date = $('#start_date').val();
                         d.end_date = $('#end_date').val();
+                        d.recipient_filter = $('#recipient_filter').val();
                         d._token = "{{ csrf_token() }}";
                         d.customerno = '{{\App\User::find(auth()->id())->customerno}}';
                     }
@@ -1820,9 +1873,12 @@
                     // Add Placeholders Manually
                     filter.find('input').attr('placeholder', 'Search...');
                     
-                    // Move to specific containers
-                    length.detach().appendTo('#length-container');
+                    // Hide original DataTables length (we use custom select)
+                    length.hide();
                     filter.detach().appendTo('#filter-container');
+
+                    // Load recipients for current ETD
+                    loadRecipients();
                 },
                 "columns": [
                     { "data": "id", "orderable": false }, // 0
@@ -1918,7 +1974,7 @@
                 "order": []
             });
 
-            $('#start_date').on('change', function () { dataTable.ajax.reload(); });
+            $('#start_date').on('change', function () { $('#recipient_filter').val(''); loadRecipients(); dataTable.ajax.reload(); });
             $('#checkAll').on('change', function () { $(':checkbox', dataTable.rows().nodes()).prop('checked', $(this).prop('checked')); });
             
             dataTable.on('xhr.dt', function (e, settings, json, xhr) {
@@ -1929,4 +1985,442 @@
 
         });
     </script>
+<script>
+    // === Recipient Filter Logic ===
+    function loadRecipients() {
+        var etd = $('#start_date').val();
+        $.ajax({
+            url: "{{ route('fetch.recipients') }}",
+            type: "POST",
+            data: { etd: etd, _token: "{{ csrf_token() }}" },
+            success: function(res) {
+                var sel = $('#recipient_filter');
+                var currentVal = sel.val();
+                sel.find('option:not(:first)').remove();
+                if (res.recipients && res.recipients.length > 0) {
+                    res.recipients.forEach(function(r) {
+                        sel.append('<option value="' + r.value + '">' + r.label + ' (' + r.count + ')</option>');
+                    });
+                }
+                // Restore selection if still exists
+                if (currentVal && sel.find('option[value="' + currentVal + '"]').length > 0) {
+                    sel.val(currentVal);
+                } else {
+                    sel.val('');
+                }
+            }
+        });
+    }
+
+    // When recipient filter changes, reload DataTable
+    // Custom page length handler (static select - no bounce)
+    $('#custom_page_length').on('change', function() {
+        var newLen = parseInt($(this).val());
+        $('#dt-mant-table-1').DataTable().page.len(newLen).draw();
+    });
+
+    $(document).on('change', '#recipient_filter', function() {
+        $('#dt-mant-table-1').DataTable().ajax.reload();
+    });
+</script>
+
+<!-- Batch Recipient Modal -->
+<div id="batchRecipientModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; z-index:9999; background:rgba(0,0,0,0.5); backdrop-filter:blur(2px);">
+    <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:white; border-radius:20px; width:95%; max-width:520px; max-height:90vh; overflow-y:auto; box-shadow:0 25px 60px rgba(0,0,0,0.3);">
+        <!-- Header -->
+        <div style="padding:24px 28px 16px; border-bottom:1px solid #f1f5f9;">
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <div style="width:42px; height:42px; background:linear-gradient(135deg,#1D8AC9,#0ea5e9); border-radius:12px; display:flex; align-items:center; justify-content:center; color:white; font-size:1.1rem;">
+                        <i class="fa fa-users"></i>
+                    </div>
+                    <div>
+                        <h3 style="margin:0; font-size:1.1rem; font-weight:700; color:#1e293b;">กำหนดผู้รับ</h3>
+                        <p id="batchRecipientCount" style="margin:0; font-size:0.82rem; color:#64748b;">0 รายการ</p>
+                    </div>
+                </div>
+                <button onclick="closeBatchRecipientModal()" style="background:none; border:none; cursor:pointer; padding:8px;">
+                    <i class="fa fa-times" style="font-size:1.2rem; color:#94a3b8;"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Body -->
+        <div style="padding:20px 28px;">
+            <!-- Delivery Type -->
+            <div style="margin-bottom:16px;">
+                <label style="display:block; font-size:0.82rem; font-weight:600; color:#374151; margin-bottom:6px;">วิธีจัดส่ง</label>
+                <select id="batch_delivery_type" style="width:100%; padding:10px 14px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:0.9rem; color:#1e293b;">
+                    <option value="3" selected>เพิ่มที่อยู่เอง</option>
+                    <option value="2">ที่อยู่ปัจจุบัน</option>
+                    <option value="1">รับเอง</option>
+                </select>
+            </div>
+
+            <!-- Pickup name (shown for type 1 - รับเอง) -->
+            <div id="batchPickupNameFields" style="display:none;">
+                <div style="margin-bottom:10px;">
+                    <label style="display:block; font-size:0.82rem; font-weight:600; color:#374151; margin-bottom:6px;">ชื่อผู้รับ</label>
+                    <input type="text" id="batch_pickup_name" placeholder="ชื่อผู้มารับ" style="width:100%; padding:10px 14px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:0.9rem;">
+                </div>
+            </div>
+
+            <!-- Current address preview (shown for type 2) -->
+            <div id="batchCurrentAddressPreview" style="display:none; background:#f0f9ff; border:1.5px solid #bae6fd; border-radius:12px; padding:16px; margin-bottom:16px;">
+                <div style="font-size:0.82rem; font-weight:600; color:#0369a1; margin-bottom:8px;"><i class="fa fa-map-marker"></i> ที่อยู่ปัจจุบัน</div>
+                <div style="font-size:0.88rem; color:#1e293b; line-height:1.6;">
+                    <div><b>{{ \App\User::find(auth()->id())->name ?? '' }}</b></div>
+                    <div>{{ \App\User::find(auth()->id())->mobile ?? '' }}</div>
+                    <div>{{ \App\User::find(auth()->id())->addr ?? '' }}</div>
+                    <div>{{ \App\User::find(auth()->id())->subdistrinct ?? '' }} {{ \App\User::find(auth()->id())->distrinct ?? '' }}</div>
+                    <div>{{ \App\User::find(auth()->id())->province ?? '' }} {{ \App\User::find(auth()->id())->postcode ?? '' }}</div>
+                </div>
+            </div>
+
+            <!-- Recipient Fields (shown for type 3) -->
+            <div id="batchRecipientFields">
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
+                    <div class="position-relative">
+                        <label style="display:block; font-size:0.82rem; font-weight:600; color:#374151; margin-bottom:6px;">ชื่อ-นามสกุล</label>
+                        <input type="text" id="batch_fullname" placeholder="ชื่อ-นามสกุล" style="width:100%; padding:10px 14px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:0.9rem;">
+                        <small style="color:#ef4444; font-size:0.72rem;">*ค้นหาด้วยชื่อ (ประวัติการส่งที่ผ่านมา)*</small>
+                        <div id="batch_fullname-results" class="search-results"></div>
+                    </div>
+                    <div class="position-relative">
+                        <label style="display:block; font-size:0.82rem; font-weight:600; color:#374151; margin-bottom:6px;">เบอร์โทร</label>
+                        <input type="text" id="batch_mobile" placeholder="เบอร์โทร" style="width:100%; padding:10px 14px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:0.9rem;">
+                        <small style="color:#ef4444; font-size:0.72rem;">*ค้นหาด้วยเบอร์โทร (ประวัติการส่งที่ผ่านมา)*</small>
+                        <div id="batch_mobile-results" class="search-results"></div>
+                    </div>
+                </div>
+                <div style="margin-bottom:10px;">
+                    <label style="display:block; font-size:0.82rem; font-weight:600; color:#374151; margin-bottom:6px;">ที่อยู่</label>
+                    <input type="text" id="batch_address" placeholder="บ้านเลขที่ ซอย ถนน" style="width:100%; padding:10px 14px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:0.9rem;">
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
+                    <div class="position-relative">
+                        <label style="display:block; font-size:0.82rem; font-weight:600; color:#374151; margin-bottom:6px;">แขวง/ตำบล</label>
+                        <input type="text" id="batch_subdistrict" placeholder="พิมพ์เพื่อค้นหาตำบล" style="width:100%; padding:10px 14px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:0.9rem;">
+                        <div id="batch_subdistrict-results" class="search-results"></div>
+                    </div>
+                    <div class="position-relative">
+                        <label style="display:block; font-size:0.82rem; font-weight:600; color:#374151; margin-bottom:6px;">เขต/อำเภอ</label>
+                        <input type="text" id="batch_district" placeholder="พิมพ์เพื่อค้นหาอำเภอ" style="width:100%; padding:10px 14px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:0.9rem;">
+                        <div id="batch_district-results" class="search-results"></div>
+                    </div>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
+                    <div class="position-relative">
+                        <label style="display:block; font-size:0.82rem; font-weight:600; color:#374151; margin-bottom:6px;">จังหวัด</label>
+                        <input type="text" id="batch_province" placeholder="พิมพ์เพื่อค้นหาจังหวัด" style="width:100%; padding:10px 14px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:0.9rem;">
+                        <div id="batch_province-results" class="search-results"></div>
+                    </div>
+                    <div class="position-relative">
+                        <label style="display:block; font-size:0.82rem; font-weight:600; color:#374151; margin-bottom:6px;">รหัสไปรษณีย์</label>
+                        <input type="text" id="batch_postcode" placeholder="รหัสไปรษณีย์" style="width:100%; padding:10px 14px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:0.9rem;">
+                        <div id="batch_postcode-results" class="search-results"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Note field (always visible) -->
+            <div style="margin-bottom:10px; margin-top:16px;">
+                <label style="display:block; font-size:0.82rem; font-weight:600; color:#374151; margin-bottom:6px;">หมายเหตุ <span style="font-weight:400; color:#94a3b8;">(ไม่บังคับ)</span></label>
+                <input type="text" id="batch_note" placeholder="หมายเหตุเพิ่มเติม (ถ้ามี)" style="width:100%; padding:10px 14px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:0.9rem;">
+                <small style="color:#ef4444; font-size:0.72rem;">*ระบบ Note ทุกรายการที่เลือก*</small>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div style="padding:16px 28px 24px; border-top:1px solid #f1f5f9; display:flex; gap:10px; justify-content:flex-end;">
+            <button onclick="closeBatchRecipientModal()" style="padding:12px 24px; background:#f1f5f9; color:#64748b; border:1.5px solid #e2e8f0; border-radius:12px; font-size:0.9rem; font-weight:600; cursor:pointer;">
+                ยกเลิก
+            </button>
+            <button onclick="submitBatchRecipient()" id="batchSubmitBtn" style="padding:12px 28px; background:linear-gradient(135deg,#1D8AC9,#0ea5e9); color:white; border:none; border-radius:12px; font-size:0.9rem; font-weight:600; cursor:pointer; box-shadow:0 4px 15px rgba(29,138,201,0.3);">
+                <i class="fa fa-check"></i> บันทึก
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .btn-modern-accent {
+        background: linear-gradient(135deg, #8b5cf6, #6d28d9) !important;
+        color: white !important;
+        border: none !important;
+    }
+    .btn-modern-accent:hover {
+        background: linear-gradient(135deg, #7c3aed, #5b21b6) !important;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+    }
+    #batchRecipientModal .search-results {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        max-height: 200px;
+        overflow-y: auto;
+        z-index: 10000;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        display: none;
+    }
+    #batchRecipientModal .search-results .search-result-item {
+        padding: 10px 14px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        border-bottom: 1px solid #f8fafc;
+    }
+    #batchRecipientModal .search-results .search-result-item:hover {
+        background: #f0f9ff;
+    }
+    .swal2-container {
+        z-index: 99999 !important;
+    }
+    @media (max-width: 768px) {
+        #batchRecipientModal > div > div:nth-child(2) {
+            padding: 16px 20px !important;
+        }
+        #batchRecipientFields [style*="grid-template-columns"] {
+            grid-template-columns: 1fr !important;
+        }
+    }
+</style>
+
+<script>
+    // === Batch Recipient Modal Logic ===
+    var batchSelectedIds = [];
+
+    function openBatchRecipientModal() {
+        var selectedCheckboxes = $('#dt-mant-table-1 tbody input[type="checkbox"]:checked');
+        if (selectedCheckboxes.length === 0) {
+            Swal.fire({ icon: 'warning', title: 'แจ้งเตือน', text: 'กรุณาเลือกรายการที่ต้องการกำหนดผู้รับ', confirmButtonColor: '#1D8AC9' });
+            return;
+        }
+        batchSelectedIds = [];
+        selectedCheckboxes.each(function() { batchSelectedIds.push(parseInt($(this).val())); });
+        $('#batchRecipientCount').text(batchSelectedIds.length + ' รายการ');
+
+        // Reset form
+        $('#batch_delivery_type').val('3');
+        $('#batch_fullname, #batch_mobile, #batch_address, #batch_subdistrict, #batch_district, #batch_province, #batch_postcode, #batch_note, #batch_pickup_name').val('');
+        $('#batchRecipientFields').show();
+        $('#batchPickupNameFields').hide();
+        $('#batchCurrentAddressPreview').hide();
+
+        $('#batchRecipientModal').fadeIn(200);
+
+        // Initialize customer search for batch modal
+        initBatchCustomerSearch();
+        initBatchThaiAddressSearch();
+    }
+
+    function closeBatchRecipientModal() {
+        $('#batchRecipientModal').fadeOut(200);
+        // Clean up search results
+        $('#batchRecipientModal .search-results').hide().empty();
+    }
+
+    // Toggle fields based on delivery type
+    $('#batch_delivery_type').on('change', function() {
+        var val = $(this).val();
+        if (val === '3') {
+            $('#batchRecipientFields').slideDown(200);
+            $('#batchCurrentAddressPreview').slideUp(200);
+            $('#batchPickupNameFields').slideUp(200);
+        } else if (val === '2') {
+            $('#batchRecipientFields').slideUp(200);
+            $('#batchCurrentAddressPreview').slideDown(200);
+            $('#batchPickupNameFields').slideUp(200);
+        } else {
+            $('#batchRecipientFields').slideUp(200);
+            $('#batchCurrentAddressPreview').slideUp(200);
+            $('#batchPickupNameFields').slideDown(200);
+        }
+    });
+
+    function submitBatchRecipient() {
+        var deliveryType = $('#batch_delivery_type').val();
+        var batchNote = $('#batch_note').val().trim();
+        var data = {
+            ids: batchSelectedIds,
+            delivery_type_id: parseInt(deliveryType),
+            _token: '{{ csrf_token() }}'
+        };
+        if (batchNote) { data.note = batchNote; }
+
+        if (deliveryType === '3') {
+            // Validate required fields
+            var fullname = $('#batch_fullname').val().trim();
+            var mobile = $('#batch_mobile').val().trim();
+            var address = $('#batch_address').val().trim();
+            var subdistrict = $('#batch_subdistrict').val().trim();
+            var district = $('#batch_district').val().trim();
+            var province = $('#batch_province').val().trim();
+            var postcode = $('#batch_postcode').val().trim();
+
+            if (!fullname || !mobile || !address || !subdistrict || !district || !province || !postcode) {
+                Swal.fire({ icon: 'warning', title: 'กรุณากรอกข้อมูลให้ครบ', text: 'กรุณากรอกชื่อ เบอร์โทร และที่อยู่ให้ครบถ้วน', confirmButtonColor: '#1D8AC9' });
+                return;
+            }
+
+            data.delivery_fullname = fullname;
+            data.delivery_mobile = mobile;
+            data.delivery_address = address;
+            data.delivery_subdistrict = subdistrict;
+            data.delivery_district = district;
+            data.delivery_province = province;
+            data.delivery_postcode = postcode;
+        }
+
+        if (deliveryType === '1') {
+            var pickupName = $('#batch_pickup_name').val().trim();
+            if (pickupName) { data.delivery_fullname = pickupName; }
+        }
+
+        var typeName = deliveryType === '1' ? ('รับเอง: ' + ($('#batch_pickup_name').val().trim() || '-')) : (deliveryType === '2' ? 'ที่อยู่ปัจจุบัน' : data.delivery_fullname);
+
+        Swal.fire({
+            title: 'ยืนยันกำหนดผู้รับ?',
+            html: 'อัพเดท <b>' + batchSelectedIds.length + '</b> รายการ<br>ผู้รับ: <b>' + typeName + '</b>',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#1D8AC9',
+            cancelButtonColor: '#94a3b8',
+            confirmButtonText: 'ยืนยัน',
+            cancelButtonText: 'ยกเลิก'
+        }).then(function(result) {
+            if (result.isConfirmed) {
+                $('#batchSubmitBtn').prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> กำลังบันทึก...');
+
+                $.ajax({
+                    url: '{{ route("batch.update.recipient") }}',
+                    type: 'POST',
+                    data: data,
+                    headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+                    success: function(res) {
+                        closeBatchRecipientModal();
+                        $('#batchSubmitBtn').prop('disabled', false).html('<i class="fa fa-check"></i> บันทึก');
+
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'สำเร็จ!',
+                            text: res.message,
+                            confirmButtonColor: '#1D8AC9',
+                            timer: 2500
+                        });
+
+                        // Reload DataTable + recipients dropdown
+                        $('#dt-mant-table-1').DataTable().ajax.reload();
+                        loadRecipients();
+                    },
+                    error: function(xhr) {
+                        $('#batchSubmitBtn').prop('disabled', false).html('<i class="fa fa-check"></i> บันทึก');
+                        var msg = xhr.responseJSON ? xhr.responseJSON.message : 'เกิดข้อผิดพลาด';
+                        Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: msg, confirmButtonColor: '#1D8AC9' });
+                    }
+                });
+            }
+        });
+    }
+
+    // Customer search for batch modal (name + phone)
+    function initBatchCustomerSearch() {
+        var debounceTimer;
+
+        $('#batch_fullname').off('input').on('input', function() {
+            var query = $(this).val().trim();
+            clearTimeout(debounceTimer);
+            if (query.length < 2) { $('#batch_fullname-results').hide().empty(); return; }
+            debounceTimer = setTimeout(function() {
+                $.get('/skjtrack/api/address/searchCustomerAddress', { term: query, field: 'delivery_fullname' }, function(data) {
+                    var $results = $('#batch_fullname-results').empty();
+                    if (data.length > 0) {
+                        data.forEach(function(c) {
+                            var $item = $('<div>').addClass('search-result-item')
+                                .text((c.fullname || c.text || '') + ' - ' + (c.mobile || ''))
+                                .data({fullname: c.fullname||'', mobile: c.mobile||'', address: c.address||'', province: c.province||'', amphoe: c.amphoe||'', tambon: c.tambon||'', zipcode: c.zipcode||''});
+                            $results.append($item);
+                        });
+                        $results.show();
+                    } else { $results.hide(); }
+                });
+            }, 300);
+        });
+
+        $('#batch_mobile').off('input').on('input', function() {
+            var query = $(this).val().trim();
+            clearTimeout(debounceTimer);
+            if (query.length < 3) { $('#batch_mobile-results').hide().empty(); return; }
+            debounceTimer = setTimeout(function() {
+                $.get('/skjtrack/api/address/searchCustomerAddress', { term: query, field: 'delivery_mobile' }, function(data) {
+                    var $results = $('#batch_mobile-results').empty();
+                    if (data.length > 0) {
+                        data.forEach(function(c) {
+                            var $item = $('<div>').addClass('search-result-item')
+                                .text((c.fullname || c.text || '') + ' - ' + (c.mobile || ''))
+                                .data({fullname: c.fullname||'', mobile: c.mobile||'', address: c.address||'', province: c.province||'', amphoe: c.amphoe||'', tambon: c.tambon||'', zipcode: c.zipcode||''});
+                            $results.append($item);
+                        });
+                        $results.show();
+                    } else { $results.hide(); }
+                });
+            }, 300);
+        });
+
+        // Handle click on search result
+        $(document).off('click', '#batch_fullname-results .search-result-item, #batch_mobile-results .search-result-item')
+            .on('click', '#batch_fullname-results .search-result-item, #batch_mobile-results .search-result-item', function() {
+            var $this = $(this);
+            $('#batch_fullname').val($this.data('fullname') || '');
+            $('#batch_mobile').val($this.data('mobile') || '');
+            $('#batch_address').val($this.data('address') || '');
+            $('#batch_subdistrict').val($this.data('tambon') || '');
+            $('#batch_district').val($this.data('amphoe') || '');
+            $('#batch_province').val($this.data('province') || '');
+            $('#batch_postcode').val($this.data('zipcode') || '');
+            $('#batch_fullname-results, #batch_mobile-results').hide().empty();
+        });
+
+        // Close results when clicking outside
+        $(document).on('click', function(e) {
+            if (!$(e.target).closest('#batch_fullname, #batch_fullname-results').length) {
+                $('#batch_fullname-results').hide();
+            }
+            if (!$(e.target).closest('#batch_mobile, #batch_mobile-results').length) {
+                $('#batch_mobile-results').hide();
+            }
+        });
+    }
+
+    // Thai address search for batch modal
+    function initBatchThaiAddressSearch() {
+        if (typeof initThaiAddressSearch === 'function') {
+            initThaiAddressSearch({
+                formId: '#batchRecipientModal',
+                provinceField: '#batch_province',
+                amphoeField: '#batch_district',
+                tambonField: '#batch_subdistrict',
+                zipcodeField: '#batch_postcode',
+                onAddressSelect: function(address) {
+                    console.log('Batch address selected:', address);
+                }
+            });
+        }
+    }
+
+    // Close modal on ESC or backdrop click
+    // ESC key disabled - must use cancel button to close
+    // $(document).on('keydown', function(e) {
+    //     if (e.key === 'Escape') closeBatchRecipientModal();
+    // });
+    // Backdrop click disabled - must use cancel button to close
+    // $('#batchRecipientModal').on('click', function(e) {
+    //     if (e.target === this) closeBatchRecipientModal();
+    // });
+</script>
+
 @endsection

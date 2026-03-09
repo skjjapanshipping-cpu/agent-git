@@ -230,6 +230,9 @@
             $('[name^="delivery"]').not('[name="delivery_type_id"]').removeAttr('required');
             $('[for^="delivery"]').not('[for="delivery_type_id"]').addClass('d-none');
             $('.search-hint').addClass('d-none');
+            // Show pickup person name
+            $('input[name="delivery_fullname"]').removeClass('d-none');
+            $('label[for="delivery_fullname"]').removeClass('d-none');
         } else if(_delivery_type_id==2) {
             // ล็อคฟิลด์ทั้งหมดเมื่อโหลดหน้าและเป็นที่อยู่ปัจจุบัน
             $('input[name="delivery_fullname"]').attr('readonly', true);
@@ -261,6 +264,16 @@
                 $('[name^="delivery"]').not('[name="delivery_type_id"]').removeAttr('required');
                 $('[for^="delivery"]').not('[for="delivery_type_id"]').addClass('d-none');
                 $('.search-hint').addClass('d-none');
+                // Show pickup person name
+                $('input[name="delivery_fullname"]').removeClass('d-none').removeAttr('readonly');
+                $('label[for="delivery_fullname"]').removeClass('d-none');
+                // Clear other fields
+                $('input[name="delivery_mobile"]').val('');
+                $('input[name="delivery_address"]').val('');
+                $('input[name="delivery_province"]').val('');
+                $('input[name="delivery_district"]').val('');
+                $('input[name="delivery_subdistrict"]').val('');
+                $('input[name="delivery_postcode"]').val('');
                 break;
             case '2':
                 $('input[name="delivery_fullname"]').val($('#cur_addr>input#fullname').val());

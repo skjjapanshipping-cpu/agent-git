@@ -104,6 +104,17 @@ class CustomerShippingViewController extends Controller
             $sqlQuery='';
             $queryAll = Customershipping::latest('ship_date')->where('excel_status','=','1')
                 ->where('customerno',$authUser->customerno);
+
+            // Filter by recipient name (ผู้รับ)
+            if (!empty($request->recipient_filter)) {
+                if ($request->recipient_filter === '__empty__') {
+                    $queryAll->where(function($q) {
+                        $q->whereNull('delivery_fullname')->orWhere('delivery_fullname', '');
+                    });
+                } else {
+                    $queryAll->where('delivery_fullname', $request->recipient_filter);
+                }
+            }
 //            dd($request->start_date);
             if(!empty($request->start_date)) {
                 session(['startdate' => $request->start_date]);
@@ -288,6 +299,122 @@ class CustomerShippingViewController extends Controller
             'totalShipments', 'statusCounts', 'monthlyData',
             'recentShipments', 'recentOrders', 'shippingStatuses', 'payStatuses', 'etdTimeline'
         ));
+    }
+
+    /**
+     * Batch update recipient/delivery info for multiple items at once
+     */
+    public function batchUpdateRecipient(Request $request)
+    {
+        $authUser = Auth::user();
+
+        $request->validate([
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'integer',
+            'delivery_type_id' => 'required|integer|in:1,2,3',
+        ]);
+
+        $ids = $request->input('ids');
+        $deliveryTypeId = $request->input('delivery_type_id');
+
+        // Security: only update items belonging to this customer
+        $validIds = Customershipping::whereIn('id', $ids)
+            ->where('customerno', $authUser->customerno)
+            ->where('excel_status', 1)
+            ->pluck('id')
+            ->toArray();
+
+        if (empty($validIds)) {
+            return response()->json(['success' => false, 'message' => 'ไม่พบรายการที่เลือก'], 404);
+        }
+
+        try {
+            $updateData = ['delivery_type_id' => $deliveryTypeId];
+
+            if ($deliveryTypeId == 1) {
+                // รับเอง - set pickup person name if provided, clear address info
+                $updateData['delivery_fullname'] = $request->input('delivery_fullname', null);
+                $updateData['delivery_mobile'] = null;
+                $updateData['delivery_address'] = null;
+                $updateData['delivery_subdistrict'] = null;
+                $updateData['delivery_district'] = null;
+                $updateData['delivery_province'] = null;
+                $updateData['delivery_postcode'] = null;
+            } elseif ($deliveryTypeId == 2) {
+                // ที่อยู่ปัจจุบัน - use auth user's address
+                $updateData['delivery_fullname'] = $authUser->name;
+                $updateData['delivery_mobile'] = $authUser->mobile;
+                $updateData['delivery_address'] = $authUser->addr;
+                $updateData['delivery_subdistrict'] = $authUser->subdistrinct;
+                $updateData['delivery_district'] = $authUser->distrinct;
+                $updateData['delivery_province'] = $authUser->province;
+                $updateData['delivery_postcode'] = $authUser->postcode;
+            } else {
+                // เพิ่มที่อยู่เอง - use provided data
+                $request->validate([
+                    'delivery_fullname' => 'required|string|max:255',
+                    'delivery_mobile' => 'required|string|max:50',
+                    'delivery_address' => 'required|string|max:255',
+                    'delivery_subdistrict' => 'required|string|max:255',
+                    'delivery_district' => 'required|string|max:255',
+                    'delivery_province' => 'required|string|max:255',
+                    'delivery_postcode' => 'required|string|max:10',
+                ]);
+
+                $updateData['delivery_fullname'] = $request->input('delivery_fullname');
+                $updateData['delivery_mobile'] = str_replace([' ', '-'], '', $request->input('delivery_mobile'));
+                $updateData['delivery_address'] = $request->input('delivery_address');
+                $updateData['delivery_subdistrict'] = $request->input('delivery_subdistrict');
+                $updateData['delivery_district'] = $request->input('delivery_district');
+                $updateData['delivery_province'] = $request->input('delivery_province');
+                $updateData['delivery_postcode'] = $request->input('delivery_postcode');
+            }
+
+            // Add note if provided
+            if (!empty($request->input('note'))) {
+                $updateData['note'] = $request->input('note');
+            }
+
+            Customershipping::whereIn('id', $validIds)->update($updateData);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'อัพเดทผู้รับสำเร็จ ' . count($validIds) . ' รายการ',
+                'updated_count' => count($validIds),
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'เกิดข้อผิดพลาด: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Get distinct recipient names for a customer + ETD (for filter dropdown)
+     */
+    public function getRecipients(Request $request)
+    {
+        $authUser = Auth::user();
+        $query = Customershipping::where('excel_status', 1)
+            ->where('customerno', $authUser->customerno);
+
+        if (!empty($request->etd)) {
+            $query->whereRaw('DATE(etd) = ?', [$request->etd]);
+        }
+
+        $recipients = $query->selectRaw("COALESCE(NULLIF(TRIM(delivery_fullname), ''), '__empty__') as recipient_name")
+            ->selectRaw('COUNT(id) as cnt')
+            ->groupBy('recipient_name')
+            ->orderByRaw('cnt DESC')
+            ->get()
+            ->map(function($item) {
+                $name = $item->recipient_name;
+                if ($name === '__empty__') {
+                    return ['name' => '', 'label' => 'ยังไม่ระบุผู้รับ', 'count' => $item->cnt, 'value' => '__empty__'];
+                }
+                return ['name' => $name, 'label' => $name, 'count' => $item->cnt, 'value' => $name];
+            });
+
+        return response()->json(['recipients' => $recipients]);
     }
 
     public static function getEtd3Month($customerno)

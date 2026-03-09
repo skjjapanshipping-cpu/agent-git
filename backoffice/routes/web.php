@@ -115,6 +115,7 @@ Route::group(['middleware' => ['auth']], function () {
     Route::post('callcustomershippingsimport', 'CustomershippingController@import')->name('callcustomershippingsimport');
     Route::get('customershippingsexport/{start_date?}', 'CustomershippingController@export')->name('customershippingsexport');
     Route::get('customershippingsexport2/{start_date?}', 'CustomershippingController@export2')->name('customershippingsexport2');
+    Route::get('customershippings-labels/{etd_date}', 'CustomershippingController@exportLabels')->name('customershippings.labels');
 
     //frontend export
     Route::get('customershippingsviewexport2/{customerno?}/{start_date?}', 'CustomerShippingViewController@export2')->name('customershippingsviewexport2');
@@ -125,6 +126,8 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get('shippingview', 'CustomerShippingViewController@index')->name('shippingview.index');
     Route::post('fetchcustomershippings', 'CustomershippingController@fetchCustomershippings')->name('fetch.customershippings');
     Route::post('fetchcustomershippingsview', 'CustomerShippingViewController@fetchCustomershippingsview')->name('fetch.customershippingsview');
+    Route::post('fetch-recipients', 'CustomerShippingViewController@getRecipients')->name('fetch.recipients');
+    Route::post('batch-update-recipient', 'CustomerShippingViewController@batchUpdateRecipient')->name('batch.update.recipient');
     Route::post('fetchcustomerorder', 'CustomerorderController@fetchCustomerorder')->name('fetch.customerorder');
     Route::get('customerorderexport2', 'CustomerorderController@export2')->name('customerorderexport2');
 
@@ -169,6 +172,11 @@ Route::middleware('auth')->get('/api/address/searchCustomerShippingAddress', 'AP
     ->name('search.customer.shipping.address');
 
 Route::middleware('auth')->get('/get-customer-delivery-type', 'CustomershippingController@getCustomerDeliveryType');
+
+// Shippop — ส่งบิลค่าส่งไทยผ่าน LINE
+Route::middleware('auth')->post('/shippop/notify-shipping', 'ShippopController@notifyThaiShipping')->name('shippop.notify.shipping');
+Route::middleware('auth')->get('/shippop/unpaid-customers', 'ShippopController@getUnpaidCustomers')->name('shippop.unpaid.customers');
+Route::middleware('auth')->post('/shippop/send-reminder', 'ShippopController@sendReminder')->name('shippop.send.reminder');
 
 // Price Calculator (public)
 Route::get('/calc', 'PriceCalculatorController@index')->name('price.calculator');
