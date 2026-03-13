@@ -1244,6 +1244,330 @@
                 padding-top: 70px !important;
             }
         }
+
+        /* ========================================
+           SUMMARY CARDS
+           ======================================== */
+        .summary-cards-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 14px;
+            margin-bottom: 18px;
+        }
+        .summary-card {
+            background: #fff;
+            border-radius: 14px;
+            padding: 18px 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+            border: 1px solid #e8ecf1;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .summary-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+        }
+        .summary-card-icon {
+            width: 48px; height: 48px;
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.2rem; flex-shrink: 0;
+        }
+        .summary-card-icon.blue { background: #eff6ff; color: #3b82f6; }
+        .summary-card-icon.green { background: #f0fdf4; color: #22c55e; }
+        .summary-card-icon.orange { background: #fff7ed; color: #f97316; }
+        .summary-card-icon.purple { background: #faf5ff; color: #a855f7; }
+        .summary-card-info .sc-label {
+            font-size: 0.75rem; color: #94a3b8; font-weight: 600; margin-bottom: 2px;
+        }
+        .summary-card-info .sc-value {
+            font-size: 1.4rem; font-weight: 800; color: #1e293b; line-height: 1.2;
+        }
+        .summary-card-info .sc-value small {
+            font-size: 0.7rem; font-weight: 600; color: #94a3b8;
+        }
+
+        /* ========================================
+           ACTION REQUIRED BANNER
+           ======================================== */
+        .action-banner {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border: 1.5px solid #f59e0b;
+            border-radius: 12px;
+            padding: 14px 20px;
+            margin-bottom: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+            box-shadow: 0 2px 10px rgba(245, 158, 11, 0.15);
+        }
+        .action-banner-content {
+            display: flex; align-items: center; gap: 12px;
+        }
+        .action-banner-icon {
+            width: 42px; height: 42px;
+            background: #f59e0b; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 1.1rem; flex-shrink: 0;
+        }
+        .action-banner-text h4 { margin: 0; font-size: 0.92rem; font-weight: 700; color: #92400e; }
+        .action-banner-text p { margin: 0; font-size: 0.8rem; color: #a16207; }
+        .action-banner-btn {
+            background: #f59e0b; color: white; border: none; padding: 8px 20px;
+            border-radius: 8px; font-weight: 700; font-size: 0.85rem; cursor: pointer;
+            text-decoration: none; white-space: nowrap; transition: background 0.2s;
+        }
+        .action-banner-btn:hover { background: #d97706; color: white; text-decoration: none; }
+
+        /* ========================================
+           QUICK VIEW MODAL
+           ======================================== */
+        .qv-overlay {
+            display: none; position: fixed; inset: 0; z-index: 9998;
+            background: rgba(0,0,0,0.5); backdrop-filter: blur(3px);
+        }
+        .qv-overlay.active { display: flex; align-items: center; justify-content: center; }
+        .qv-modal {
+            background: white; border-radius: 20px; width: 95%; max-width: 600px;
+            max-height: 90vh; overflow-y: auto;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.3);
+            animation: qvSlideUp 0.25s ease-out;
+        }
+        @keyframes qvSlideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .qv-header {
+            padding: 20px 24px 14px;
+            border-bottom: 1px solid #f1f5f9;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .qv-header h3 { margin: 0; font-size: 1.1rem; font-weight: 700; color: #1e293b; }
+        .qv-close {
+            background: none; border: none; cursor: pointer; padding: 8px;
+            color: #94a3b8; font-size: 1.2rem;
+        }
+        .qv-close:hover { color: #64748b; }
+        .qv-body { padding: 20px 24px; }
+        .qv-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px 0; border-bottom: 1px solid #f8fafc;
+        }
+        .qv-row:last-child { border-bottom: none; }
+        .qv-label { font-size: 0.82rem; color: #94a3b8; font-weight: 600; }
+        .qv-value { font-size: 0.9rem; color: #1e293b; font-weight: 600; text-align: right; max-width: 60%; }
+        .qv-images {
+            display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px;
+        }
+        .qv-images img {
+            width: 80px; height: 80px; object-fit: cover; border-radius: 10px;
+            border: 1px solid #e2e8f0; cursor: pointer;
+        }
+        .qv-address-block {
+            background: #f8fafc; border-radius: 10px; padding: 14px;
+            margin-top: 8px; font-size: 0.85rem; color: #334155; line-height: 1.6;
+        }
+        .qv-status-badge {
+            display: inline-block; padding: 4px 12px; border-radius: 20px;
+            font-size: 0.78rem; font-weight: 700;
+        }
+        .qv-status-badge.shipping { background: #eff6ff; color: #2563eb; }
+        .qv-status-badge.arrived { background: #ecfdf5; color: #059669; }
+        .qv-status-badge.received { background: #fdf2f8; color: #db2777; }
+        .qv-footer {
+            padding: 14px 24px 20px;
+            border-top: 1px solid #f1f5f9;
+            display: flex; gap: 10px; justify-content: flex-end;
+        }
+        .qv-footer .btn-qv {
+            padding: 10px 22px; border-radius: 10px; font-size: 0.88rem;
+            font-weight: 600; cursor: pointer; border: none; transition: all 0.2s;
+        }
+        .qv-footer .btn-qv-close { background: #f1f5f9; color: #64748b; }
+        .qv-footer .btn-qv-edit {
+            background: linear-gradient(135deg, #1D8AC9, #0ea5e9); color: white;
+            box-shadow: 0 4px 12px rgba(29,138,201,0.3);
+        }
+
+        /* ========================================
+           INVOICE MODAL
+           ======================================== */
+        .inv-overlay {
+            display: none; position: fixed; inset: 0; z-index: 9999;
+            background: rgba(0,0,0,0.55); backdrop-filter: blur(4px);
+        }
+        .inv-overlay.active { display: flex; align-items: center; justify-content: center; }
+        .inv-modal {
+            background: white; border-radius: 20px; width: 95%; max-width: 480px;
+            max-height: 92vh; overflow-y: auto;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.3);
+            animation: qvSlideUp 0.25s ease-out;
+        }
+        .inv-header {
+            padding: 22px 24px 14px;
+            border-bottom: 1px solid #f1f5f9;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .inv-header h3 { margin: 0; font-size: 1.1rem; font-weight: 700; color: #1e293b; }
+        .inv-body { padding: 20px 24px; }
+        .inv-summary-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px 0; border-bottom: 1px solid #f1f5f9;
+        }
+        .inv-summary-row:last-child { border-bottom: none; }
+        .inv-summary-row .inv-label { font-size: 0.88rem; color: #64748b; font-weight: 500; }
+        .inv-summary-row .inv-value { font-size: 0.95rem; color: #1e293b; font-weight: 700; }
+        .inv-total-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 14px 16px; margin-top: 10px;
+            background: linear-gradient(135deg, #eff6ff, #dbeafe);
+            border-radius: 12px;
+        }
+        .inv-total-row .inv-label { font-size: 1rem; color: #1e40af; font-weight: 700; }
+        .inv-total-row .inv-value { font-size: 1.3rem; color: #1e40af; font-weight: 800; }
+        .inv-qr-section {
+            text-align: center; margin-top: 20px; padding: 20px;
+            background: #f8fafc; border-radius: 14px; border: 1px solid #e2e8f0;
+        }
+        .inv-qr-section img {
+            width: 200px; height: 200px; border-radius: 12px;
+            border: 2px solid #e2e8f0; background: white; padding: 8px;
+        }
+        .inv-qr-label {
+            margin-top: 12px; font-size: 0.82rem; color: #64748b; font-weight: 600;
+        }
+        .inv-qr-amount {
+            font-size: 1.4rem; font-weight: 800; color: #059669; margin-top: 4px;
+        }
+        .inv-bank-info {
+            margin-top: 16px; padding: 14px; background: #fffbeb;
+            border-radius: 10px; border: 1px solid #fde68a;
+            font-size: 0.82rem; color: #92400e; line-height: 1.7;
+        }
+        .inv-footer {
+            padding: 14px 24px 20px; border-top: 1px solid #f1f5f9;
+            display: flex; gap: 10px; justify-content: center;
+        }
+        .inv-footer .btn-inv {
+            padding: 10px 28px; border-radius: 10px; font-size: 0.88rem;
+            font-weight: 600; cursor: pointer; border: none;
+        }
+        .inv-footer .btn-inv-close { background: #f1f5f9; color: #64748b; }
+        .inv-qr-loading {
+            display: flex; align-items: center; justify-content: center;
+            height: 200px; color: #94a3b8; font-size: 0.9rem;
+        }
+        .btn-invoice-trigger {
+            background: linear-gradient(135deg, #059669, #10b981);
+            color: white; border: none; padding: 8px 18px; border-radius: 8px;
+            font-weight: 700; font-size: 0.85rem; cursor: pointer;
+            box-shadow: 0 3px 10px rgba(5, 150, 105, 0.3);
+            transition: all 0.2s; white-space: nowrap;
+        }
+        .btn-invoice-trigger:hover { background: linear-gradient(135deg, #047857, #059669); transform: translateY(-1px); }
+
+        /* ========================================
+           ADDRESS BOOK MODAL
+           ======================================== */
+        .ab-overlay {
+            display: none; position: fixed; inset: 0; z-index: 9999;
+            background: rgba(0,0,0,0.55); backdrop-filter: blur(4px);
+        }
+        .ab-overlay.active { display: flex; align-items: center; justify-content: center; }
+        .ab-modal {
+            background: white; border-radius: 20px; width: 95%; max-width: 560px;
+            max-height: 92vh; overflow-y: auto;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.3);
+            animation: qvSlideUp 0.25s ease-out;
+        }
+        .ab-header {
+            padding: 22px 24px 14px; border-bottom: 1px solid #f1f5f9;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .ab-header h3 { margin: 0; font-size: 1.1rem; font-weight: 700; color: #1e293b; }
+        .ab-body { padding: 16px 24px; }
+        .ab-list { list-style: none; padding: 0; margin: 0; }
+        .ab-item {
+            display: flex; align-items: flex-start; justify-content: space-between;
+            padding: 14px 16px; margin-bottom: 10px;
+            background: #f8fafc; border-radius: 12px; border: 1.5px solid #e2e8f0;
+            transition: all 0.2s; cursor: pointer; position: relative;
+        }
+        .ab-item:hover { border-color: #1D8AC9; background: #f0f9ff; }
+        .ab-item.ab-default { border-color: #10b981; background: #f0fdf4; }
+        .ab-item-info { flex: 1; min-width: 0; }
+        .ab-item-label {
+            font-size: 0.82rem; font-weight: 700; color: #1D8AC9; margin-bottom: 2px;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .ab-item-label .ab-badge-default {
+            background: #10b981; color: white; font-size: 0.68rem; padding: 1px 6px;
+            border-radius: 4px; font-weight: 600;
+        }
+        .ab-item-name { font-size: 0.92rem; font-weight: 600; color: #1e293b; }
+        .ab-item-addr { font-size: 0.82rem; color: #64748b; margin-top: 2px; line-height: 1.5; }
+        .ab-item-actions {
+            display: flex; gap: 4px; flex-shrink: 0; margin-left: 10px;
+        }
+        .ab-item-actions button {
+            width: 30px; height: 30px; border-radius: 8px; border: none;
+            cursor: pointer; font-size: 0.78rem; display: flex; align-items: center; justify-content: center;
+        }
+        .ab-btn-edit { background: #eff6ff; color: #1D8AC9; }
+        .ab-btn-del { background: #fef2f2; color: #ef4444; }
+        .ab-btn-star { background: #f0fdf4; color: #10b981; }
+        .ab-empty {
+            text-align: center; padding: 30px 16px; color: #94a3b8; font-size: 0.9rem;
+        }
+        .ab-empty i { font-size: 2rem; display: block; margin-bottom: 10px; opacity: 0.5; }
+        .ab-footer {
+            padding: 14px 24px 20px; border-top: 1px solid #f1f5f9;
+            display: flex; gap: 10px; justify-content: space-between;
+        }
+        .btn-ab { padding: 10px 20px; border-radius: 10px; font-size: 0.85rem; font-weight: 600; cursor: pointer; border: none; }
+        .btn-ab-add { background: linear-gradient(135deg, #1D8AC9, #0ea5e9); color: white; }
+        .btn-ab-close { background: #f1f5f9; color: #64748b; }
+        .btn-ab-trigger {
+            background: linear-gradient(135deg, #8b5cf6, #a78bfa);
+            color: white; border: none; padding: 8px 18px; border-radius: 8px;
+            font-weight: 700; font-size: 0.85rem; cursor: pointer;
+            box-shadow: 0 3px 10px rgba(139, 92, 246, 0.3);
+            transition: all 0.2s; white-space: nowrap;
+        }
+        .btn-ab-trigger:hover { background: linear-gradient(135deg, #7c3aed, #8b5cf6); transform: translateY(-1px); }
+        /* AB Form (inline in modal) */
+        .ab-form { display: none; padding: 16px; background: #f8fafc; border-radius: 12px; margin-bottom: 12px; border: 1.5px solid #e2e8f0; }
+        .ab-form.active { display: block; }
+        .ab-form-title { font-size: 0.88rem; font-weight: 700; color: #1e293b; margin-bottom: 12px; }
+        .ab-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .ab-form-grid .ab-fg { }
+        .ab-form-grid .ab-fg.full { grid-column: 1 / -1; }
+        .ab-form-grid .ab-fg label { display: block; font-size: 0.78rem; font-weight: 600; color: #64748b; margin-bottom: 3px; }
+        .ab-form-grid .ab-fg input {
+            width: 100%; padding: 8px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px;
+            font-size: 0.85rem; outline: none; transition: border-color 0.2s;
+        }
+        .ab-form-grid .ab-fg input:focus { border-color: #1D8AC9; }
+        .ab-form-actions { display: flex; gap: 8px; margin-top: 12px; justify-content: flex-end; }
+        .ab-form-actions button { padding: 8px 16px; border-radius: 8px; font-size: 0.82rem; font-weight: 600; cursor: pointer; border: none; }
+        .ab-form-save { background: #1D8AC9; color: white; }
+        .ab-form-cancel { background: #f1f5f9; color: #64748b; }
+
+        @media (max-width: 768px) {
+            .summary-cards-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+            .summary-card { padding: 14px 16px; }
+            .summary-card-icon { width: 40px; height: 40px; font-size: 1rem; }
+            .summary-card-info .sc-value { font-size: 1.1rem; }
+            .action-banner { flex-direction: column; align-items: flex-start; }
+            .qv-modal { width: 98%; max-width: none; border-radius: 16px; }
+            .inv-modal { width: 98%; max-width: none; border-radius: 16px; }
+            .ab-modal { width: 98%; max-width: none; border-radius: 16px; }
+            .ab-form-grid { grid-template-columns: 1fr; }
+        }
     </style>
 @endsection
 
@@ -1297,6 +1621,12 @@
                         <button type="button" class="btn btn-modern btn-modern-accent" onclick="openBatchRecipientModal()">
                             <i class="fa fa-users"></i> กำหนดผู้รับ
                         </button>
+                        <button type="button" class="btn-invoice-trigger" onclick="openInvoiceModal()">
+                            <i class="fa fa-qrcode"></i> ชำระเงิน
+                        </button>
+                        <button type="button" class="btn-ab-trigger" onclick="openAddressBook()">
+                            <i class="fa fa-address-book"></i> สมุดที่อยู่
+                        </button>
                     </div>
                 </div>
 
@@ -1331,6 +1661,166 @@
                     </a>
                 </div>
                 @endif
+
+                <!-- Summary Cards (dynamic - updated on each DataTable load) -->
+                <div class="summary-cards-grid">
+                    <div class="summary-card">
+                        <div class="summary-card-icon blue"><i class="fa fa-cube"></i></div>
+                        <div class="summary-card-info">
+                            <div class="sc-label" id="sc-round-label">รอบปิดตู้</div>
+                            <div class="sc-value"><span id="sc-total">-</span> <small>รายการ</small></div>
+                        </div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-card-icon green"><i class="fa fa-money"></i></div>
+                        <div class="summary-card-info">
+                            <div class="sc-label">ค่านำเข้ารวม</div>
+                            <div class="sc-value"><span id="sc-import-cost">-</span> <small>฿</small></div>
+                        </div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-card-icon purple"><i class="fa fa-balance-scale"></i></div>
+                        <div class="summary-card-info">
+                            <div class="sc-label">น้ำหนักรวม</div>
+                            <div class="sc-value"><span id="sc-weight">-</span> <small>kg</small></div>
+                        </div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-card-icon orange"><i class="fa fa-calculator"></i></div>
+                        <div class="summary-card-info">
+                            <div class="sc-label">ค่า COD + ค่านำเข้า</div>
+                            <div class="sc-value"><span id="sc-price-total">-</span> <small>฿</small></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick View Modal -->
+                <div class="qv-overlay" id="qvOverlay">
+                    <div class="qv-modal">
+                        <div class="qv-header">
+                            <h3><i class="fa fa-cube" style="color:#1D8AC9;margin-right:8px;"></i>รายละเอียดพัสดุ</h3>
+                            <button class="qv-close" onclick="closeQuickView()"><i class="fa fa-times"></i></button>
+                        </div>
+                        <div class="qv-body" id="qvBody">
+                            <!-- Filled by JS -->
+                        </div>
+                        <div class="qv-footer">
+                            <button class="btn-qv btn-qv-close" onclick="closeQuickView()">ปิด</button>
+                            <a href="#" class="btn-qv btn-qv-edit" id="qvEditLink"><i class="fa fa-pencil"></i> แก้ไขที่อยู่</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Invoice Summary + QR PromptPay Modal -->
+                <div class="inv-overlay" id="invOverlay">
+                    <div class="inv-modal">
+                        <div class="inv-header">
+                            <h3><i class="fa fa-file-text-o" style="color:#059669;margin-right:8px;"></i>สรุปยอดชำระ</h3>
+                            <button class="qv-close" onclick="closeInvoiceModal()"><i class="fa fa-times"></i></button>
+                        </div>
+                        <div class="inv-body">
+                            <div style="font-size:0.82rem;color:#94a3b8;margin-bottom:12px;font-weight:600;" id="inv-round-label">รอบปิดตู้</div>
+                            <div class="inv-summary-row">
+                                <span class="inv-label">จำนวนรายการ</span>
+                                <span class="inv-value" id="inv-total-items">-</span>
+                            </div>
+                            <div class="inv-summary-row">
+                                <span class="inv-label">ค่านำเข้า</span>
+                                <span class="inv-value" id="inv-import-cost">-</span>
+                            </div>
+                            <div class="inv-summary-row">
+                                <span class="inv-label">ค่า COD</span>
+                                <span class="inv-value" id="inv-cod-cost">-</span>
+                            </div>
+                            <div class="inv-total-row">
+                                <span class="inv-label">ยอดรวมทั้งหมด</span>
+                                <span class="inv-value" id="inv-price-total">-</span>
+                            </div>
+
+                            <div class="inv-qr-section" id="inv-qr-section">
+                                <div class="inv-qr-loading" id="inv-qr-loading">
+                                    <i class="fa fa-spinner fa-spin" style="margin-right:8px;"></i> กำลังสร้าง QR Code...
+                                </div>
+                                <img src="" id="inv-qr-img" style="display:none;" alt="PromptPay QR">
+                                <div class="inv-qr-label">สแกนเพื่อชำระผ่าน PromptPay</div>
+                                <div class="inv-qr-amount" id="inv-qr-amount">฿ -</div>
+                            </div>
+
+                            <div class="inv-bank-info">
+                                <strong><i class="fa fa-university"></i> ข้อมูลการโอนเงิน</strong><br>
+                                PromptPay: <strong>1-1020-01570-11-0</strong><br>
+                                ชื่อบัญชี: <strong>อนุวัตร สักกระจ่าง</strong><br>
+                                <span style="font-size:0.78rem;color:#b45309;">* กรุณาส่งสลิปหลังโอนเงินผ่าน LINE</span>
+                            </div>
+                        </div>
+                        <div class="inv-footer">
+                            <button class="btn-inv btn-inv-close" onclick="closeInvoiceModal()">ปิด</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Address Book Modal -->
+                <div class="ab-overlay" id="abOverlay">
+                    <div class="ab-modal">
+                        <div class="ab-header">
+                            <h3><i class="fa fa-address-book" style="color:#8b5cf6;margin-right:8px;"></i>สมุดที่อยู่</h3>
+                            <button class="qv-close" onclick="closeAddressBook()"><i class="fa fa-times"></i></button>
+                        </div>
+                        <div class="ab-body">
+                            <!-- Add/Edit Form (hidden by default) -->
+                            <div class="ab-form" id="abForm">
+                                <div class="ab-form-title" id="abFormTitle">เพิ่มที่อยู่ใหม่</div>
+                                <input type="hidden" id="ab-edit-id" value="">
+                                <div class="ab-form-grid">
+                                    <div class="ab-fg">
+                                        <label>ชื่อที่อยู่</label>
+                                        <input type="text" id="ab-label" placeholder="เช่น บ้าน, ออฟฟิศ">
+                                    </div>
+                                    <div class="ab-fg">
+                                        <label>ชื่อ-นามสกุล *</label>
+                                        <input type="text" id="ab-fullname" placeholder="ชื่อผู้รับ" required>
+                                    </div>
+                                    <div class="ab-fg">
+                                        <label>เบอร์โทร</label>
+                                        <input type="text" id="ab-mobile" placeholder="0xx-xxx-xxxx">
+                                    </div>
+                                    <div class="ab-fg full">
+                                        <label>ที่อยู่</label>
+                                        <input type="text" id="ab-address" placeholder="บ้านเลขที่ ซอย ถนน">
+                                    </div>
+                                    <div class="ab-fg">
+                                        <label>แขวง/ตำบล</label>
+                                        <input type="text" id="ab-subdistrict" placeholder="ตำบล">
+                                    </div>
+                                    <div class="ab-fg">
+                                        <label>เขต/อำเภอ</label>
+                                        <input type="text" id="ab-district" placeholder="อำเภอ">
+                                    </div>
+                                    <div class="ab-fg">
+                                        <label>จังหวัด</label>
+                                        <input type="text" id="ab-province" placeholder="จังหวัด">
+                                    </div>
+                                    <div class="ab-fg">
+                                        <label>รหัสไปรษณีย์</label>
+                                        <input type="text" id="ab-postcode" placeholder="xxxxx">
+                                    </div>
+                                </div>
+                                <div class="ab-form-actions">
+                                    <button class="ab-form-cancel" onclick="abCancelForm()">ยกเลิก</button>
+                                    <button class="ab-form-save" onclick="abSaveForm()"><i class="fa fa-check"></i> บันทึก</button>
+                                </div>
+                            </div>
+                            <!-- Address List -->
+                            <div id="abList">
+                                <div class="ab-empty"><i class="fa fa-spinner fa-spin"></i>กำลังโหลด...</div>
+                            </div>
+                        </div>
+                        <div class="ab-footer">
+                            <button class="btn-ab btn-ab-close" onclick="closeAddressBook()">ปิด</button>
+                            <button class="btn-ab btn-ab-add" onclick="abShowAddForm()"><i class="fa fa-plus"></i> เพิ่มที่อยู่</button>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- Main Card -->
                 <div class="card-modern">
@@ -1924,7 +2414,11 @@
                                 else if (data.indexOf('รับเอง') !== -1) { badgeClass = 'self'; icon = 'fa-user'; }
                                 else { badgeClass = 'ems'; icon = 'fa-truck'; }
                             }
-                            return `<span class="delivery-badge ${badgeClass}"><i class="fa ${icon}"></i> ${text}</span>`;
+                            var html = `<span class="delivery-badge ${badgeClass}"><i class="fa ${icon}"></i> ${text}</span>`;
+                            if (full.delivery_fullname && full.delivery_fullname.trim()) {
+                                html += '<br><span style="color:#dc2626;font-size:10px;font-weight:600;"><i class="fa fa-user"></i> ' + full.delivery_fullname + '</span>';
+                            }
+                            return html;
                         }
                     },
                     {
@@ -1974,21 +2468,324 @@
                 "order": []
             });
 
-            $('#start_date').on('change', function () { $('#recipient_filter').val(''); loadRecipients(); dataTable.ajax.reload(); });
+            $('#start_date').on('change', function () { $('#recipient_filter').val(''); loadRecipients(true); dataTable.ajax.reload(); });
             $('#checkAll').on('change', function () { $(':checkbox', dataTable.rows().nodes()).prop('checked', $(this).prop('checked')); });
             
             dataTable.on('xhr.dt', function (e, settings, json, xhr) {
                 if (json.data_export_link) $('#data-export').attr('href', json.data_export_link);
+                // Update Summary Cards
+                var etdLabel = json.start_date ? ('รอบปิดตู้ (' + json.start_date + ')') : 'รอบปิดตู้ (ทั้งหมด)';
+                $('#sc-round-label').text(etdLabel);
+                $('#sc-total').text(json.total_records || 0);
+                $('#sc-import-cost').text(json.import_cost_total || '0');
+                $('#sc-weight').text(json.weight_total || '0');
+                $('#sc-price-total').text(json.price_total || '0');
+                // Update invoice data
+                if (typeof updateInvoiceData === 'function') updateInvoiceData(json);
+            });
+
+            // === Quick View: click on row (not checkbox, image, or action) ===
+            $('#dt-mant-table-1 tbody').on('click', 'td', function(e) {
+                // Skip if clicked on checkbox, image, link, or button
+                if ($(e.target).closest('input, a, button, img, .btn-table-action, .custom-checkbox').length) return;
+                var colIdx = dataTable.cell(this).index();
+                if (!colIdx) return;
+                // Skip columns: 0 (checkbox), 4 (box_image), 10 (product_image), 15 (action)
+                if ([0, 4, 10, 15].indexOf(colIdx.column) !== -1) return;
+                var rowData = dataTable.row($(this).closest('tr')).data();
+                if (rowData) openQuickView(rowData);
             });
 
             // Gallery: openColumnGallery อยู่ใน standalone script (content section)
 
         });
+
+        // === Quick View Modal Functions ===
+        function openQuickView(d) {
+            var boxImgs = parseImages(d.box_image || '');
+            var prodImgs = parseImages(d.product_image || '');
+            var statusText = d.status || 'อยู่ระหว่างขนส่ง';
+            var statusClass = 'shipping';
+            if (statusText.includes('ถึง') || statusText.includes('arrived')) statusClass = 'arrived';
+            else if (statusText.includes('สำเร็จ') || statusText.includes('รับ')) statusClass = 'received';
+
+            var method = (d.shipping_method || 1) == 2 ? '✈️ เครื่องบิน' : '🚢 เรือ';
+
+            var html = '';
+            // Status + Track No header
+            html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">';
+            html += '<span style="font-size:1.1rem;font-weight:700;color:#1D8AC9;">' + (d.track_no || 'ไม่มีเลขพัสดุ') + '</span>';
+            html += '<span class="qv-status-badge ' + statusClass + '">' + statusText + '</span>';
+            html += '</div>';
+
+            // Info rows
+            html += '<div class="qv-row"><span class="qv-label">วันที่</span><span class="qv-value">' + (d.ship_date || '-') + '</span></div>';
+            html += '<div class="qv-row"><span class="qv-label">เลขกล่อง</span><span class="qv-value">' + (d.box_no || '-') + '</span></div>';
+            html += '<div class="qv-row"><span class="qv-label">ประเภท</span><span class="qv-value">' + method + '</span></div>';
+            html += '<div class="qv-row"><span class="qv-label">วันที่ใส่ตู้ (ETD)</span><span class="qv-value">' + (d.etd || '-') + '</span></div>';
+            html += '<div class="qv-row"><span class="qv-label">น้ำหนัก</span><span class="qv-value">' + (d.weight || '0') + ' kg</span></div>';
+            html += '<div class="qv-row"><span class="qv-label">COD</span><span class="qv-value">' + (d.cod || '0') + '</span></div>';
+            html += '<div class="qv-row"><span class="qv-label">ค่านำเข้า</span><span class="qv-value" style="color:#059669;font-weight:800;">' + (d.import_cost || '0') + ' ฿</span></div>';
+
+            // Delivery info
+            var deliveryName = d.delivery_type_name || '';
+            html += '<div class="qv-row"><span class="qv-label">การจัดส่ง</span><span class="qv-value">' + (deliveryName || '<span style="color:#f59e0b;">ยังไม่กำหนด</span>') + '</span></div>';
+
+            if (d.delivery_fullname || d.delivery_address) {
+                html += '<div style="margin-top:10px;"><span class="qv-label">ที่อยู่จัดส่ง</span>';
+                html += '<div class="qv-address-block">';
+                if (d.delivery_fullname) html += '<strong>' + d.delivery_fullname + '</strong><br>';
+                if (d.delivery_mobile) html += '<i class="fa fa-phone" style="color:#94a3b8;"></i> ' + d.delivery_mobile + '<br>';
+                if (d.delivery_address) html += d.delivery_address + '<br>';
+                var addr2 = '';
+                if (d.delivery_subdistrict) addr2 += (d.delivery_province === 'กรุงเทพมหานคร' ? 'แขวง' : 'ต.') + d.delivery_subdistrict + ' ';
+                if (d.delivery_district) addr2 += (d.delivery_province === 'กรุงเทพมหานคร' ? 'เขต' : 'อ.') + d.delivery_district + ' ';
+                if (addr2) html += addr2 + '<br>';
+                if (d.delivery_province) html += d.delivery_province + ' ';
+                if (d.delivery_postcode) html += d.delivery_postcode;
+                html += '</div></div>';
+            }
+
+            // Note
+            if (d.note) {
+                html += '<div style="margin-top:12px;"><span class="qv-label">หมายเหตุ</span>';
+                html += '<div style="margin-top:4px;padding:10px 14px;background:#fffbeb;border-radius:8px;font-size:0.85rem;color:#92400e;">' + d.note + '</div></div>';
+            }
+
+            // Images
+            if (boxImgs.length > 0 || prodImgs.length > 0) {
+                html += '<div style="margin-top:14px;"><span class="qv-label">รูปภาพ</span><div class="qv-images">';
+                boxImgs.forEach(function(src) { html += '<img src="' + src + '" onclick="openGallery(parseImages(\'' + (d.box_image||'').replace(/'/g,"\\'") + '\'), 0)" title="รูปกล่อง">'; });
+                prodImgs.forEach(function(src) { html += '<img src="' + src + '" onclick="openGallery(parseImages(\'' + (d.product_image||'').replace(/'/g,"\\'") + '\'), 0)" title="รูปสินค้า">'; });
+                html += '</div></div>';
+            }
+
+            $('#qvBody').html(html);
+            $('#qvEditLink').attr('href', d.edit_url || '#');
+            $('#qvOverlay').addClass('active');
+            $('body').css('overflow', 'hidden');
+        }
+
+        function closeQuickView() {
+            $('#qvOverlay').removeClass('active');
+            $('body').css('overflow', '');
+        }
+
+        // Close on backdrop click
+        $('#qvOverlay').on('click', function(e) {
+            if (e.target === this) closeQuickView();
+        });
+
+        // === Invoice Summary + QR PromptPay ===
+        var _invData = { total: 0, importCost: '0', codCost: '0', priceTotal: '0', roundLabel: '', priceTotalRaw: 0 };
+
+        function updateInvoiceData(json) {
+            _invData.total = json.total_records || 0;
+            _invData.importCost = json.import_cost_total || '0';
+            _invData.codCost = json.cod_total || '0';
+            _invData.priceTotal = json.price_total || '0';
+            _invData.roundLabel = json.start_date ? ('รอบปิดตู้ (' + json.start_date + ')') : 'รอบปิดตู้ (ทั้งหมด)';
+            _invData.priceTotalRaw = parseFloat(String(json.price_total || '0').replace(/,/g, ''));
+        }
+
+        function openInvoiceModal() {
+            $('#inv-round-label').text(_invData.roundLabel);
+            $('#inv-total-items').text(_invData.total + ' รายการ');
+            $('#inv-import-cost').text(_invData.importCost + ' ฿');
+            $('#inv-cod-cost').text(_invData.codCost + ' ฿');
+            $('#inv-price-total').text(_invData.priceTotal + ' ฿');
+            $('#inv-qr-amount').text('฿ ' + _invData.priceTotal);
+
+            // Show loading, hide image
+            $('#inv-qr-loading').show();
+            $('#inv-qr-img').hide();
+
+            $('#invOverlay').addClass('active');
+            $('body').css('overflow', 'hidden');
+
+            // Generate QR
+            if (_invData.priceTotalRaw > 0) {
+                $.ajax({
+                    url: "{{ route('generate.invoice.qr') }}",
+                    type: "POST",
+                    data: { amount: _invData.priceTotalRaw, _token: "{{ csrf_token() }}" },
+                    success: function(res) {
+                        if (res.success && res.qr_url) {
+                            $('#inv-qr-img').attr('src', res.qr_url).show();
+                            $('#inv-qr-loading').hide();
+                        }
+                    },
+                    error: function() {
+                        $('#inv-qr-loading').html('<span style="color:#ef4444;">ไม่สามารถสร้าง QR ได้</span>');
+                    }
+                });
+            } else {
+                $('#inv-qr-loading').html('<span style="color:#94a3b8;">ยอดชำระ 0 ฿ - ไม่ต้องชำระ</span>');
+            }
+        }
+
+        function closeInvoiceModal() {
+            $('#invOverlay').removeClass('active');
+            $('body').css('overflow', '');
+        }
+
+        $('#invOverlay').on('click', function(e) {
+            if (e.target === this) closeInvoiceModal();
+        });
+
+        // === Address Book ===
+        function openAddressBook() {
+            $('#abOverlay').addClass('active');
+            $('body').css('overflow', 'hidden');
+            abCancelForm();
+            abLoadList();
+        }
+        function closeAddressBook() {
+            $('#abOverlay').removeClass('active');
+            $('body').css('overflow', '');
+        }
+        $('#abOverlay').on('click', function(e) {
+            if (e.target === this) closeAddressBook();
+        });
+
+        function abLoadList() {
+            $('#abList').html('<div class="ab-empty"><i class="fa fa-spinner fa-spin"></i> กำลังโหลด...</div>');
+            $.ajax({
+                url: "{{ route('address-book.index') }}",
+                type: "GET",
+                success: function(res) {
+                    if (!res.addresses || res.addresses.length === 0) {
+                        $('#abList').html('<div class="ab-empty"><i class="fa fa-map-marker"></i>ยังไม่มีที่อยู่ในสมุด<br><small>กดปุ่ม "เพิ่มที่อยู่" เพื่อเริ่มต้น</small></div>');
+                        return;
+                    }
+                    var html = '<ul class="ab-list">';
+                    res.addresses.forEach(function(a) {
+                        var addrParts = [a.address, a.subdistrict, a.district, a.province, a.postcode].filter(Boolean);
+                        html += '<li class="ab-item' + (a.is_default ? ' ab-default' : '') + '" data-id="' + a.id + '">';
+                        html += '<div class="ab-item-info">';
+                        html += '<div class="ab-item-label">' + (a.label || 'ที่อยู่') + (a.is_default ? ' <span class="ab-badge-default">ค่าเริ่มต้น</span>' : '') + '</div>';
+                        html += '<div class="ab-item-name">' + a.fullname + (a.mobile ? ' <span style="color:#94a3b8;font-weight:400;font-size:0.82rem;">(' + a.mobile + ')</span>' : '') + '</div>';
+                        html += '<div class="ab-item-addr">' + addrParts.join(' ') + '</div>';
+                        html += '</div>';
+                        html += '<div class="ab-item-actions">';
+                        if (!a.is_default) html += '<button class="ab-btn-star" title="ตั้งเป็นค่าเริ่มต้น" onclick="event.stopPropagation();abSetDefault(' + a.id + ')"><i class="fa fa-star-o"></i></button>';
+                        html += '<button class="ab-btn-edit" title="แก้ไข" onclick="event.stopPropagation();abEditAddr(' + a.id + ')"><i class="fa fa-pencil"></i></button>';
+                        html += '<button class="ab-btn-del" title="ลบ" onclick="event.stopPropagation();abDeleteAddr(' + a.id + ')"><i class="fa fa-trash"></i></button>';
+                        html += '</div></li>';
+                    });
+                    html += '</ul>';
+                    $('#abList').html(html);
+                },
+                error: function() {
+                    $('#abList').html('<div class="ab-empty" style="color:#ef4444;"><i class="fa fa-exclamation-circle"></i>โหลดข้อมูลไม่สำเร็จ</div>');
+                }
+            });
+        }
+
+        function abShowAddForm() {
+            $('#abFormTitle').text('เพิ่มที่อยู่ใหม่');
+            $('#ab-edit-id').val('');
+            $('#ab-label, #ab-fullname, #ab-mobile, #ab-address, #ab-subdistrict, #ab-district, #ab-province, #ab-postcode').val('');
+            $('#abForm').addClass('active');
+        }
+        function abCancelForm() {
+            $('#abForm').removeClass('active');
+            $('#ab-edit-id').val('');
+        }
+
+        function abSaveForm() {
+            var fullname = $('#ab-fullname').val().trim();
+            if (!fullname) { Swal.fire('กรุณากรอกชื่อ-นามสกุล', '', 'warning'); return; }
+            var editId = $('#ab-edit-id').val();
+            var data = {
+                label: $('#ab-label').val().trim(),
+                fullname: fullname,
+                mobile: $('#ab-mobile').val().trim(),
+                address: $('#ab-address').val().trim(),
+                subdistrict: $('#ab-subdistrict').val().trim(),
+                district: $('#ab-district').val().trim(),
+                province: $('#ab-province').val().trim(),
+                postcode: $('#ab-postcode').val().trim(),
+                _token: "{{ csrf_token() }}"
+            };
+            var url, method;
+            if (editId) {
+                url = "{{ url('address-book') }}/" + editId;
+                method = "PUT";
+                data._method = 'PUT';
+            } else {
+                url = "{{ route('address-book.store') }}";
+                method = "POST";
+            }
+            $.ajax({
+                url: url, type: "POST", data: data,
+                success: function() { abCancelForm(); abLoadList(); },
+                error: function(xhr) {
+                    var msg = 'บันทึกไม่สำเร็จ';
+                    if (xhr.responseJSON && xhr.responseJSON.errors) {
+                        msg = Object.values(xhr.responseJSON.errors).flat().join('\n');
+                    }
+                    Swal.fire('เกิดข้อผิดพลาด', msg, 'error');
+                }
+            });
+        }
+
+        function abEditAddr(id) {
+            $.get("{{ route('address-book.index') }}", function(res) {
+                var a = res.addresses.find(function(x) { return x.id == id; });
+                if (!a) return;
+                $('#abFormTitle').text('แก้ไขที่อยู่');
+                $('#ab-edit-id').val(a.id);
+                $('#ab-label').val(a.label || '');
+                $('#ab-fullname').val(a.fullname || '');
+                $('#ab-mobile').val(a.mobile || '');
+                $('#ab-address').val(a.address || '');
+                $('#ab-subdistrict').val(a.subdistrict || '');
+                $('#ab-district').val(a.district || '');
+                $('#ab-province').val(a.province || '');
+                $('#ab-postcode').val(a.postcode || '');
+                $('#abForm').addClass('active');
+            });
+        }
+
+        function abDeleteAddr(id) {
+            Swal.fire({
+                title: 'ลบที่อยู่นี้?',
+                text: 'ที่อยู่จะถูกลบออกจากสมุดถาวร',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                confirmButtonText: 'ลบเลย',
+                cancelButtonText: 'ยกเลิก'
+            }).then(function(result) {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: "{{ url('address-book') }}/" + id,
+                        type: "POST",
+                        data: { _method: 'DELETE', _token: "{{ csrf_token() }}" },
+                        success: function() { abLoadList(); },
+                        error: function() { Swal.fire('ลบไม่สำเร็จ', '', 'error'); }
+                    });
+                }
+            });
+        }
+
+        function abSetDefault(id) {
+            $.ajax({
+                url: "{{ url('address-book') }}/" + id + "/default",
+                type: "POST",
+                data: { _token: "{{ csrf_token() }}" },
+                success: function() { abLoadList(); }
+            });
+        }
     </script>
 <script>
     // === Recipient Filter Logic ===
-    function loadRecipients() {
+    var _lastRecipientEtd = null;
+    function loadRecipients(force) {
         var etd = $('#start_date').val();
+        if (!force && etd === _lastRecipientEtd) return;
+        _lastRecipientEtd = etd;
         $.ajax({
             url: "{{ route('fetch.recipients') }}",
             type: "POST",
@@ -2002,12 +2799,7 @@
                         sel.append('<option value="' + r.value + '">' + r.label + ' (' + r.count + ')</option>');
                     });
                 }
-                // Restore selection if still exists
-                if (currentVal && sel.find('option[value="' + currentVal + '"]').length > 0) {
-                    sel.val(currentVal);
-                } else {
-                    sel.val('');
-                }
+                if (currentVal) sel.val(currentVal);
             }
         });
     }
@@ -2022,6 +2814,9 @@
     $(document).on('change', '#recipient_filter', function() {
         $('#dt-mant-table-1').DataTable().ajax.reload();
     });
+
+    // ป้องกันเลื่อนเม้าส์เปลี่ยนค่า dropdown
+    $(document).on('wheel', '#recipient_filter', function(e) { e.preventDefault(); });
 </script>
 
 <!-- Batch Recipient Modal -->
@@ -2079,6 +2874,14 @@
 
             <!-- Recipient Fields (shown for type 3) -->
             <div id="batchRecipientFields">
+                <!-- Address Book Quick Pick -->
+                <div id="batchAbPick" style="margin-bottom:14px;">
+                    <label style="display:block; font-size:0.82rem; font-weight:600; color:#8b5cf6; margin-bottom:8px;"><i class="fa fa-address-book"></i> เลือกจากสมุดที่อยู่</label>
+                    <div id="batchAbPickList" style="display:flex; flex-wrap:wrap; gap:6px;">
+                        <span style="font-size:0.82rem; color:#94a3b8;">กำลังโหลด...</span>
+                    </div>
+                    <div style="border-bottom:1px solid #f1f5f9; margin-top:14px; margin-bottom:14px;"></div>
+                </div>
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
                     <div class="position-relative">
                         <label style="display:block; font-size:0.82rem; font-weight:600; color:#374151; margin-bottom:6px;">ชื่อ-นามสกุล</label>
@@ -2213,6 +3016,9 @@
 
         $('#batchRecipientModal').fadeIn(200);
 
+        // Load Address Book into batch modal
+        loadBatchAddressBook();
+
         // Initialize customer search for batch modal
         initBatchCustomerSearch();
         initBatchThaiAddressSearch();
@@ -2222,6 +3028,50 @@
         $('#batchRecipientModal').fadeOut(200);
         // Clean up search results
         $('#batchRecipientModal .search-results').hide().empty();
+    }
+
+    function loadBatchAddressBook() {
+        var container = $('#batchAbPickList');
+        container.html('<span style="font-size:0.82rem; color:#94a3b8;"><i class="fa fa-spinner fa-spin"></i> กำลังโหลด...</span>');
+        $.ajax({
+            url: "{{ route('address-book.index') }}",
+            type: "GET",
+            success: function(res) {
+                container.empty();
+                if (!res.addresses || res.addresses.length === 0) {
+                    container.html('<span style="font-size:0.82rem; color:#94a3b8;">ยังไม่มีที่อยู่ — เพิ่มได้ที่ปุ่ม "สมุดที่อยู่"</span>');
+                    return;
+                }
+                res.addresses.forEach(function(a) {
+                    var btn = $('<button type="button"></button>');
+                    btn.css({
+                        padding: '8px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px',
+                        background: a.is_default ? '#f0fdf4' : 'white', color: '#1e293b',
+                        fontSize: '0.82rem', fontWeight: '600', cursor: 'pointer',
+                        display: 'inline-flex', alignItems: 'center', gap: '6px',
+                        transition: 'all 0.2s'
+                    });
+                    if (a.is_default) btn.css('borderColor', '#10b981');
+                    btn.html('<i class="fa fa-map-marker" style="color:#8b5cf6;"></i> ' + (a.label || a.fullname));
+                    btn.on('click', function() {
+                        $('#batch_fullname').val(a.fullname || '');
+                        $('#batch_mobile').val(a.mobile || '');
+                        $('#batch_address').val(a.address || '');
+                        $('#batch_subdistrict').val(a.subdistrict || '');
+                        $('#batch_district').val(a.district || '');
+                        $('#batch_province').val(a.province || '');
+                        $('#batch_postcode').val(a.postcode || '');
+                        // Visual feedback
+                        container.find('button').css('borderColor', '#e2e8f0');
+                        $(this).css('borderColor', '#8b5cf6');
+                    });
+                    container.append(btn);
+                });
+            },
+            error: function() {
+                container.html('<span style="font-size:0.82rem; color:#ef4444;">โหลดไม่สำเร็จ</span>');
+            }
+        });
     }
 
     // Toggle fields based on delivery type
@@ -2315,7 +3165,7 @@
 
                         // Reload DataTable + recipients dropdown
                         $('#dt-mant-table-1').DataTable().ajax.reload();
-                        loadRecipients();
+                        loadRecipients(true);
                     },
                     error: function(xhr) {
                         $('#batchSubmitBtn').prop('disabled', false).html('<i class="fa fa-check"></i> บันทึก');

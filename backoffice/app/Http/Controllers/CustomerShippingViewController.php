@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 use Yajra\DataTables\DataTables;
+use App\Services\PromptPayQrService;
 
 
 class CustomerShippingViewController extends Controller
@@ -28,6 +29,7 @@ class CustomerShippingViewController extends Controller
         if ($user->hasRole('admin') && empty($user->customerno)) {
             return redirect('/home');
         }
+
         return view('customershippingview.index');
     }
 
@@ -194,7 +196,7 @@ class CustomerShippingViewController extends Controller
                     ,'price_total'=>number_format($priceTotal, 2, '.', ',')
                     ,'total_records'=>$totalRecords
                     ,'start_date'=>$startDate
-                    ,'data_export_link'=>url('customershippingsviewexport2',['customerno'=>!empty($request->customerno)?$request->customerno:'','start_date'=>$startDateRaw])
+                    ,'data_export_link'=>url('customershippingsviewexport2',['customerno'=>!empty($request->customerno)?$request->customerno:'','start_date'=>$startDateRaw]) . (!empty($request->recipient_filter) ? '?recipient_filter=' . urlencode($request->recipient_filter) : '')
 
                     ,'query'=>$sqlQuery
                 ])// แสดงผลรวมของค่า COD])
@@ -209,7 +211,7 @@ class CustomerShippingViewController extends Controller
 //        return view('customershipping.export',[
 //            'customershippings'=>Customershipping::all()
 //        ]);
-        return Excel::download(new CustomershippigviewHtmlExport($request->start_date,$request->customerno), 'shipping_data_' . time() . '.xlsx');
+        return Excel::download(new CustomershippigviewHtmlExport($request->start_date,$request->customerno,$request->recipient_filter), 'shipping_data_' . time() . '.xlsx');
     }
 
     public function analytics()
@@ -401,20 +403,55 @@ class CustomerShippingViewController extends Controller
             $query->whereRaw('DATE(etd) = ?', [$request->etd]);
         }
 
-        $recipients = $query->selectRaw("COALESCE(NULLIF(TRIM(delivery_fullname), ''), '__empty__') as recipient_name")
+        $rows = $query->selectRaw("COALESCE(NULLIF(TRIM(delivery_fullname), ''), '__empty__') as recipient_name")
+            ->selectRaw('MAX(delivery_type_id) as dtype')
             ->selectRaw('COUNT(id) as cnt')
             ->groupBy('recipient_name')
             ->orderByRaw('cnt DESC')
-            ->get()
-            ->map(function($item) {
-                $name = $item->recipient_name;
-                if ($name === '__empty__') {
-                    return ['name' => '', 'label' => 'ยังไม่ระบุผู้รับ', 'count' => $item->cnt, 'value' => '__empty__'];
-                }
-                return ['name' => $name, 'label' => $name, 'count' => $item->cnt, 'value' => $name];
-            });
+            ->get();
 
-        return response()->json(['recipients' => $recipients]);
+        $normal = [];
+        $pickup = [];
+        foreach ($rows as $item) {
+            $name = $item->recipient_name;
+            $isPickup = ($item->dtype == 1);
+            if ($name === '__empty__') {
+                $entry = ['name' => '', 'label' => 'ยังไม่ระบุผู้รับ', 'count' => $item->cnt, 'value' => '__empty__'];
+            } else {
+                $label = $isPickup ? '(รับเอง) ' . $name : $name;
+                $entry = ['name' => $name, 'label' => $label, 'count' => $item->cnt, 'value' => $name];
+            }
+            if ($isPickup) {
+                $pickup[] = $entry;
+            } else {
+                $normal[] = $entry;
+            }
+        }
+
+        usort($normal, function($a, $b) { return strcmp($a['name'], $b['name']); });
+        usort($pickup, function($a, $b) { return strcmp($a['name'], $b['name']); });
+
+        return response()->json(['recipients' => array_merge($normal, $pickup)]);
+    }
+
+    /**
+     * Generate PromptPay QR code for invoice payment
+     */
+    public function generateInvoiceQr(Request $request)
+    {
+        $amount = floatval($request->amount);
+        if ($amount <= 0) {
+            return response()->json(['success' => false, 'message' => 'ยอดเงินไม่ถูกต้อง'], 400);
+        }
+
+        $qrUrl = PromptPayQrService::generateQrUrl($amount, 'invoice');
+
+        return response()->json([
+            'success' => true,
+            'qr_url' => $qrUrl,
+            'amount' => $amount,
+            'formatted_amount' => number_format($amount, 2, '.', ','),
+        ]);
     }
 
     public static function getEtd3Month($customerno)

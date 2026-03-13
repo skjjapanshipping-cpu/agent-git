@@ -24,6 +24,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Services\LineMessagingService;
 use App\MyAuthProvider;
+use Mpdf\Mpdf;
+use Mpdf\Config\ConfigVariables;
+use Mpdf\Config\FontVariables;
 
 
 /**
@@ -120,6 +123,16 @@ class CustomershippingController extends Controller
                         if (!empty($request->shipping_method))
                             $query->where('shipping_method', $request->shipping_method);
 
+                        if (!empty($request->recipient_filter)) {
+                            if ($request->recipient_filter === '__empty__') {
+                                $query->where(function($q) {
+                                    $q->whereNull('delivery_fullname')->orWhere('delivery_fullname', '')->orWhereRaw("TRIM(delivery_fullname) = ''");
+                                });
+                            } else {
+                                $query->where('delivery_fullname', $request->recipient_filter);
+                            }
+                        }
+
                         if (!empty($request->start_date) && !empty($request->end_date))
                             $query->whereBetween('etd', [$request->start_date, $request->end_date]);
                         else if (!empty($request->start_date))
@@ -172,6 +185,11 @@ class CustomershippingController extends Controller
                     return Customershipping::getShippingMethodLabel($row->shipping_method ?? 1);
                 })->addColumn('pay_status', function ($row) {
                     return PayStatus::getNameById($row->pay_status);
+                })->addColumn('thai_bill_status', function ($row) {
+                    $labels = [0 => '-', 1 => 'รอโอน', 2 => 'โอนแล้ว'];
+                    return $labels[$row->thai_bill_status ?? 0] ?? '-';
+                })->addColumn('thai_bill_amount_display', function ($row) {
+                    return $row->thai_bill_amount ? number_format($row->thai_bill_amount, 0) : '-';
                 })
                 ->with([
                     'cod_total' => number_format($codTotal, 2, '.', ','),
@@ -234,10 +252,37 @@ class CustomershippingController extends Controller
         $Ids = explode(',', $request->input('track_ids2'));
 
         try {
+            // ดึง customerno + etd ก่อนอัพเดท เพื่อ sync ไป SKJ Chat
+            $items = Customershipping::whereIn('id', $Ids)->select('customerno', 'etd')->get();
 
             Customershipping::whereIn('id', $Ids)->update([
                 'pay_status' => 2
-            ]); //shipping_status
+            ]);
+
+            // Sync สถานะชำระเงินไป SKJ Chat (invoiceSent → paid)
+            $synced = [];
+            foreach ($items->groupBy('customerno') as $cn => $group) {
+                foreach ($group->pluck('etd')->unique() as $etd) {
+                    if (!$etd) continue;
+                    $etdFormatted = \Carbon\Carbon::parse($etd)->format('d/m/Y');
+                    $key = $cn . '|' . $etdFormatted;
+                    if (in_array($key, $synced)) continue;
+                    $synced[] = $key;
+                    try {
+                        \Illuminate\Support\Facades\Http::withHeaders([
+                            'X-API-Key' => 'skjchat-invoice-2026',
+                            'Content-Type' => 'application/json',
+                        ])->timeout(10)->post('https://chat.skjjapanshipping.com/api/invoice-update-status', [
+                            'customerno' => $cn,
+                            'etd' => $etdFormatted,
+                            'status' => 'paid',
+                        ]);
+                    } catch (\Exception $e) {
+                        \Illuminate\Support\Facades\Log::warning('[PAY-SYNC] Failed to sync to SKJ Chat', ['customerno' => $cn, 'error' => $e->getMessage()]);
+                    }
+                }
+            }
+
             return redirect()->route('customershippings.index')
                 ->with('success', 'อัปเดตสินค้าชำระเงินแล้ว');
         } catch (\Exception $e) {
@@ -810,6 +855,152 @@ class CustomershippingController extends Controller
     }
 
 
+    public function exportLabels($etd_date)
+    {
+        $shippings = Customershipping::where('excel_status', 1)
+            ->whereRaw('DATE(etd) = ?', [$etd_date])
+            ->get();
+
+        if ($shippings->isEmpty()) {
+            return redirect()->back()->with('error', 'ไม่พบข้อมูลในรอบปิดตู้นี้');
+        }
+
+        $etdFormatted = Carbon::parse($etd_date)->format('d/m/Y');
+
+        // Group by customerno
+        $grouped = $shippings->groupBy('customerno');
+        $labels = [];
+        foreach ($grouped as $customerno => $items) {
+            $deliveryType = 'รับเอง';
+            $first = $items->first();
+            if ($first && $first->delivery_type_id == 2) {
+                $deliveryType = 'จัดส่ง';
+            }
+            $labels[] = [
+                'qty' => $items->count(),
+                'customerno' => $customerno,
+                'etd' => $etdFormatted,
+                'delivery_type' => $deliveryType,
+            ];
+        }
+
+        // Sort by customerno
+        usort($labels, function($a, $b) {
+            return strcmp($a['customerno'], $b['customerno']);
+        });
+
+        // --- PhpWord: Generate .docx matching A15 template ---
+        $phpWord = new \PhpOffice\PhpWord\PhpWord();
+        $phpWord->setDefaultFontName('TH SarabunPSK');
+        $phpWord->setDefaultFontSize(14);
+
+        // A15 page: 175mm x 212mm, margins: top=2mm, bottom=0, left=6mm, right=6mm
+        // 1mm = 56.6929 twips
+        $twip = function($mm) { return (int) round($mm * 56.6929); };
+
+        $sectionStyle = [
+            'pageSizeW' => $twip(175),
+            'pageSizeH' => $twip(212),
+            'marginTop' => $twip(2),
+            'marginBottom' => $twip(0),
+            'marginLeft' => $twip(6),
+            'marginRight' => $twip(6),
+        ];
+
+        // Table dimensions from template: 7 rows x 3 cols
+        // Label cells: 80mm wide x 50mm tall | Gap: 3mm
+        $labelW = $twip(80);
+        $labelH = $twip(50);
+        $gapW = $twip(3);
+        $gapH = $twip(3);
+
+        $tableStyle = [
+            'borderSize' => 0,
+            'borderColor' => 'FFFFFF',
+            'cellMargin' => 0,
+            'layout' => \PhpOffice\PhpWord\Style\Table::LAYOUT_FIXED,
+        ];
+
+        $labelCellStyle = [
+            'width' => $labelW,
+            'valign' => 'center',
+        ];
+        $gapColStyle = [
+            'width' => $gapW,
+            'valign' => 'center',
+        ];
+
+        $chunks = array_chunk($labels, 8);
+        foreach ($chunks as $pageIndex => $page) {
+            $section = $phpWord->addSection($sectionStyle);
+            $table = $section->addTable($tableStyle);
+
+            for ($row = 0; $row < 4; $row++) {
+                // Label row
+                $tableRow = $table->addRow($labelH, ['exactHeight' => true]);
+
+                // Col 1 - label
+                $idx = $row * 2;
+                $cell = $tableRow->addCell($labelW, $labelCellStyle);
+                if (isset($page[$idx])) {
+                    $this->writeLabelContent($cell, $page[$idx]);
+                }
+
+                // Col 2 - gap
+                $tableRow->addCell($gapW, $gapColStyle);
+
+                // Col 3 - label
+                $idx = $row * 2 + 1;
+                $cell = $tableRow->addCell($labelW, $labelCellStyle);
+                if (isset($page[$idx])) {
+                    $this->writeLabelContent($cell, $page[$idx]);
+                }
+
+                // Gap row (except after last label row)
+                if ($row < 3) {
+                    $gapRow = $table->addRow($gapH, ['exactHeight' => true]);
+                    $gapRow->addCell($labelW);
+                    $gapRow->addCell($gapW);
+                    $gapRow->addCell($labelW);
+                }
+            }
+        }
+
+        $filename = 'labels-etd-' . Carbon::parse($etd_date)->format('d-m-Y') . '.docx';
+        $tempFile = storage_path('app/' . $filename);
+        $phpWord->save($tempFile, 'Word2007');
+
+        return response()->download($tempFile, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        ])->deleteFileAfterSend(true);
+    }
+
+    private function writeLabelContent($cell, $label)
+    {
+        $center = ['alignment' => \PhpOffice\PhpWord\SimpleType\Jc::CENTER, 'spaceAfter' => 0, 'spaceBefore' => 0];
+
+        $cell->addText(
+            'จำนวน ' . $label['qty'] . ' ชิ้น',
+            ['size' => 14, 'color' => '0099CC', 'name' => 'TH SarabunPSK'],
+            $center
+        );
+        $cell->addText(
+            $label['customerno'],
+            ['size' => 36, 'bold' => true, 'color' => 'FF0000', 'name' => 'Arial Black'],
+            $center
+        );
+        $cell->addText(
+            'รอบปิดตู้: ' . $label['etd'],
+            ['size' => 11, 'color' => '555555', 'name' => 'TH SarabunPSK'],
+            $center
+        );
+        $cell->addText(
+            'สถานะ: ' . $label['delivery_type'],
+            ['size' => 11, 'color' => '555555', 'italic' => true, 'name' => 'TH SarabunPSK'],
+            $center
+        );
+    }
+
     protected function isImage($value)
     {
         // ตรวจสอบค่าว่าเป็น URL ของรูปภาพหรือไม่
@@ -1007,6 +1198,135 @@ class CustomershippingController extends Controller
             'success' => true,
             'message' => "แจ้งเตือนรอบปิดตู้ {$etdFormatted} เสร็จสิ้น: สำเร็จ {$results['success']} ราย, ไม่สำเร็จ {$results['failed']} ราย, ไม่มี LINE {$results['no_line']} ราย" . ($results['already_sent'] > 0 ? ", เคยแจ้งแล้ว {$results['already_sent']} ราย" : ''),
             'results' => $results,
+        ]);
+    }
+
+    /**
+     * Get distinct recipient names for admin filter dropdown
+     */
+    public function getAdminRecipients(Request $request)
+    {
+        $query = Customershipping::where('excel_status', 1);
+
+        if (!empty($request->etd)) {
+            $query->whereRaw('DATE(etd) = ?', [$request->etd]);
+        }
+
+        if (!empty($request->search)) {
+            $searchTerm = '%'.$request->search.'%';
+            $query->whereRaw("customerno like ?", [$searchTerm]);
+        }
+
+        $rows = (clone $query)->selectRaw("COALESCE(NULLIF(TRIM(delivery_fullname), ''), '__empty__') as recipient_name")
+            ->selectRaw('MAX(delivery_type_id) as dtype')
+            ->selectRaw('COUNT(id) as cnt')
+            ->groupBy('recipient_name')
+            ->orderByRaw('cnt DESC')
+            ->get();
+
+        $normal = [];
+        $pickup = [];
+        foreach ($rows as $item) {
+            $name = $item->recipient_name;
+            $isPickup = ($item->dtype == 1);
+            if ($name === '__empty__') {
+                $entry = ['name' => '', 'label' => 'ยังไม่ระบุผู้รับ', 'count' => $item->cnt, 'value' => '__empty__'];
+            } else {
+                $label = $isPickup ? '(รับเอง) ' . $name : $name;
+                $entry = ['name' => $name, 'label' => $label, 'count' => $item->cnt, 'value' => $name];
+            }
+            if ($isPickup) {
+                $pickup[] = $entry;
+            } else {
+                $normal[] = $entry;
+            }
+        }
+
+        usort($normal, function($a, $b) { return strcmp($a['name'], $b['name']); });
+        usort($pickup, function($a, $b) { return strcmp($a['name'], $b['name']); });
+
+        return response()->json(['recipients' => array_merge($normal, $pickup)]);
+    }
+
+    /**
+     * สรุปสถานะส่งในไทย ต่อรอบปิดตู้ — แยกตามรหัสลูกค้า
+     */
+    public function fetchThaiShippingSummary(Request $request)
+    {
+        $etd = $request->input('etd');
+        if (!$etd) {
+            return response()->json(['success' => false, 'message' => 'กรุณาเลือกรอบปิดตู้']);
+        }
+
+        $items = Customershipping::where('excel_status', '1')
+            ->whereDate('etd', $etd)
+            ->select('customerno', 'delivery_type_id', 'thai_bill_status', 'status')
+            ->get();
+
+        $grouped = $items->groupBy('customerno');
+        $customers = [];
+
+        foreach ($grouped as $customerno => $rows) {
+            $total = $rows->count();
+
+            // delivery_type_id=1 → รับเอง
+            $pickupAll = $rows->where('delivery_type_id', 1);
+            $pickupDone = $pickupAll->where('status', 4)->count();   // สำเร็จ = รับแล้ว
+            $pickupWait = $pickupAll->count() - $pickupDone;          // ถึงไทย ยังไม่มารับ
+
+            // delivery_type_id!=1 → ต้องส่งในไทย
+            $needShip = $rows->where('delivery_type_id', '!=', 1)->count();
+            $billed = $rows->filter(function ($r) {
+                return $r->delivery_type_id != 1 && $r->thai_bill_status >= 1;
+            })->count();
+
+            // สรุปจำนวนที่เสร็จแล้ว = รับเองสำเร็จ + ส่งแล้วมีบิล
+            $doneItems = $pickupDone + $billed;
+            // จำนวนที่ยังค้าง = รอรับเอง + รอทำส่ง
+            $pendingItems = $pickupWait + ($needShip - $billed);
+
+            if ($pendingItems == 0) {
+                $status = 'done';       // เสร็จหมด (รับ+ส่งครบ)
+            } elseif ($doneItems > 0) {
+                $status = 'partial';    // ทำไปบางส่วน
+            } else {
+                $status = 'pending';    // ยังไม่ดำเนินการเลย
+            }
+
+            $customers[] = [
+                'customerno' => $customerno,
+                'total' => $total,
+                'pickup' => $pickupAll->count(),
+                'pickup_done' => $pickupDone,
+                'pickup_wait' => $pickupWait,
+                'need_ship' => $needShip,
+                'billed' => $billed,
+                'status' => $status,
+            ];
+        }
+
+        // Sort: pending → partial → done — ภายในกลุ่มเรียงตาม customerno
+        usort($customers, function ($a, $b) {
+            $order = ['pending' => 0, 'partial' => 1, 'done' => 2];
+            $statusCmp = ($order[$a['status']] ?? 3) - ($order[$b['status']] ?? 3);
+            if ($statusCmp !== 0) return $statusCmp;
+            return strnatcasecmp($a['customerno'], $b['customerno']);
+        });
+
+        $totalCustomers = count($customers);
+        $doneCount = count(array_filter($customers, fn($c) => $c['status'] === 'done'));
+        $partialCount = count(array_filter($customers, fn($c) => $c['status'] === 'partial'));
+        $pendingCount = count(array_filter($customers, fn($c) => $c['status'] === 'pending'));
+
+        return response()->json([
+            'success' => true,
+            'summary' => [
+                'total_customers' => $totalCustomers,
+                'done' => $doneCount,
+                'partial' => $partialCount,
+                'pending' => $pendingCount,
+            ],
+            'customers' => $customers,
         ]);
     }
 }
