@@ -2500,6 +2500,9 @@
 
         });
 
+        // Move modal to body so position:fixed works correctly
+        $(function() { $('#qvOverlay').appendTo('body'); });
+
         // === Quick View Modal Functions ===
         function openQuickView(d) {
             var boxImgs = parseImages(d.box_image || '');

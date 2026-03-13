@@ -167,7 +167,7 @@
         .stat-card.stat-highlight { border-left:4px solid #dc3545; }
 
         /* Better table header */
-        .table thead th { background:#f8fafc !important; color:#475569 !important; font-size:11px !important; font-weight:700 !important; text-transform:uppercase !important; letter-spacing:0.3px !important; border-bottom:2px solid #e2e8f0 !important; padding:10px 8px !important; }
+        .table thead th { background:#f8fafc !important; color:#475569 !important; font-size:11px !important; font-weight:700 !important; text-transform:uppercase !important; letter-spacing:0.3px !important; border-bottom:2px solid #e2e8f0 !important; padding:10px 18px 10px 8px !important; }
         .table tbody td { font-size:12px; padding:8px !important; vertical-align:middle !important; }
         .table-striped tbody tr:nth-of-type(odd) { background-color:rgba(248,250,252,0.7) !important; }
         .table-hover tbody tr:hover { background-color:rgba(220,53,69,0.04) !important; }
