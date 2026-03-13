@@ -114,8 +114,13 @@ class CustomershippingController extends Controller
                         //                        }
                         if (!empty($request->status))
                             $query->where('status', $request->status);
-                        if (!empty($request->delivery_type_id))
-                            $query->where('delivery_type_id', $request->delivery_type_id);
+                        if (!empty($request->delivery_type_id)) {
+                            if (strpos($request->delivery_type_id, ',') !== false) {
+                                $query->whereIn('delivery_type_id', explode(',', $request->delivery_type_id));
+                            } else {
+                                $query->where('delivery_type_id', $request->delivery_type_id);
+                            }
+                        }
 
                         if (!empty($request->pay_status))
                             $query->where('pay_status', $request->pay_status);

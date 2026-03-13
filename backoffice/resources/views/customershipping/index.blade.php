@@ -634,8 +634,9 @@
                             });
 
                         select.append('<option value="1">รับเอง</option>')
-                        select.append('<option value="2">ที่อยู่ปัจจุบัน	</option>')
+                        select.append('<option value="2">ที่อยู่ปัจจุบัน</option>')
                         select.append('<option value="3">เพิ่มที่อยู่เอง</option>')
+                        select.append('<option value="2,3">ที่อยู่ปัจจุบัน + เพิ่มที่อยู่เอง</option>')
                         // });
                     });
 
