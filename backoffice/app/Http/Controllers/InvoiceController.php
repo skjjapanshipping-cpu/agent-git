@@ -347,6 +347,7 @@ class InvoiceController extends Controller
             'customer_nos' => 'required|array|min:1',
             'message_template' => 'nullable|string',
             'qr_image_url' => 'nullable|string',
+            'messenger_fee' => 'nullable|numeric|min:0',
         ]);
 
         $etdDate = $request->input('etd');
@@ -354,6 +355,7 @@ class InvoiceController extends Controller
         $shippingIdsMap = $request->input('shipping_ids_map', []);
         $messageTemplate = $request->input('message_template', '');
         $qrImageUrl = $request->input('qr_image_url', '');
+        $messengerFee = (float) $request->input('messenger_fee', 0);
 
         $chatApiUrl = 'https://chat.skjjapanshipping.com/api/invoice-send';
         $chatApiKey = 'skjchat-invoice-2026';
@@ -408,6 +410,18 @@ class InvoiceController extends Controller
 
             $etdFormatted = Carbon::parse($etdDate)->format('d/m/Y');
 
+            // คำนวณยอดรวมทั้งหมด (ค่านำเข้า + ค่าแมสเซ็นเจอร์)
+            $grandTotal = round($totalAmount + $messengerFee, 2);
+
+            // สร้าง PromptPay QR แบบ dynamic (ฝังยอดเงินรวมค่าแมส)
+            $dynamicQrUrl = \App\Services\PromptPayQrService::generateQrUrl($grandTotal, 'inv');
+
+            // สร้าง Flex Message card สำหรับ LINE
+            $flexMessages = $this->buildInvoiceFlexMessages(
+                $customerno, $etdFormatted, $itemCount, round($totalAmount, 2),
+                $pdfUrl, null, $messageTemplate ?: null, $messengerFee
+            );
+
             // Call SKJ Chat API
             try {
                 $response = \Illuminate\Support\Facades\Http::withHeaders([
@@ -417,11 +431,13 @@ class InvoiceController extends Controller
                     'customerno' => $customerno,
                     'etd' => $etdFormatted,
                     'itemCount' => $itemCount,
-                    'totalAmount' => round($totalAmount, 2),
+                    'totalAmount' => $grandTotal,
+                    'messengerFee' => $messengerFee,
                     'messageTemplate' => $messageTemplate ?: null,
                     'pdfUrl' => $pdfUrl,
-                    'qrImageUrl' => $qrImageUrl ?: null,
+                    'qrImageUrl' => $dynamicQrUrl,
                     'shippingIds' => $shippings->pluck('id')->values()->toArray(),
+                    'flexMessages' => $flexMessages,
                 ]);
 
                 $data = $response->json();
@@ -435,18 +451,52 @@ class InvoiceController extends Controller
                         }
                     }
 
-                    $results['success']++;
-                    $results['details'][] = [
-                        'customerno' => $customerno,
-                        'status' => 'success',
-                        'message' => 'ส่งบิลสำเร็จ → ' . ($data['contactName'] ?? '') . ' (' . ($data['platform'] ?? '') . ')',
-                    ];
+                    // เช็คว่ามี step ที่ fail ไหม (partial success)
+                    $warning = $data['warning'] ?? null;
+                    $failedSteps = $data['failedSteps'] ?? [];
+                    if ($warning || !empty($failedSteps)) {
+                        $failDetail = '';
+                        foreach ($failedSteps as $fs) {
+                            $stepName = $fs['step'] ?? '';
+                            $stepErr = $fs['error'] ?? '';
+                            if (str_contains($stepErr, '24') || str_contains($stepErr, 'window')) {
+                                $failDetail .= ' [' . $stepName . ': FB เกิน 24 ชม.]';
+                            } else {
+                                $failDetail .= ' [' . $stepName . ': ' . mb_substr($stepErr, 0, 60) . ']';
+                            }
+                        }
+                        $results['success']++;
+                        $results['details'][] = [
+                            'customerno' => $customerno,
+                            'status' => 'partial',
+                            'message' => '⚠️ ส่งได้บางส่วน → ' . ($data['contactName'] ?? '') . ' (' . ($data['platform'] ?? '') . ')' . $failDetail,
+                        ];
+                    } else {
+                        $results['success']++;
+                        $results['details'][] = [
+                            'customerno' => $customerno,
+                            'status' => 'success',
+                            'message' => 'ส่งบิลสำเร็จ → ' . ($data['contactName'] ?? '') . ' (' . ($data['platform'] ?? '') . ')',
+                        ];
+                    }
                 } elseif ($response->status() === 404) {
                     $results['not_found']++;
                     $results['details'][] = [
                         'customerno' => $customerno,
                         'status' => 'not_found',
                         'message' => $data['message'] ?? 'ไม่พบในระบบแชท',
+                    ];
+                } elseif ($response->successful() && !($data['success'] ?? true)) {
+                    // Chat API returned 200 but success=false (all steps failed)
+                    $errorMsg = $data['error'] ?? 'ส่งไม่สำเร็จ';
+                    if (str_contains($errorMsg, '24') || str_contains($errorMsg, 'window')) {
+                        $errorMsg = 'FB เกิน 24 ชม. ส่งข้อความไม่ได้';
+                    }
+                    $results['failed']++;
+                    $results['details'][] = [
+                        'customerno' => $customerno,
+                        'status' => 'failed',
+                        'message' => $errorMsg . ' → ' . ($data['contactName'] ?? '') . ' (' . ($data['platform'] ?? '') . ')',
                     ];
                 } else {
                     $results['failed']++;
@@ -610,5 +660,182 @@ class InvoiceController extends Controller
             'message' => "ส่งเตือนสำเร็จ {$successCount}/" . count($customerNos) . " ราย",
             'results' => $results,
         ]);
+    }
+
+    /**
+     * สร้าง Flex Message card สำหรับค่านำเข้า (LINE)
+     */
+    protected function buildInvoiceFlexMessages(
+        string $customerno, string $etdFormatted, int $itemCount, float $totalAmount,
+        ?string $pdfUrl, ?string $qrImageUrl, ?string $messageTemplate, float $messengerFee = 0
+    ): array {
+        // คำนวณยอดรวมทั้งหมด (ค่านำเข้า + ค่าแมสเซ็นเจอร์)
+        $grandTotal = round($totalAmount + $messengerFee, 2);
+
+        // สร้าง PromptPay QR แบบ dynamic (ฝังยอดเงินรวมค่าแมส) — ไม่ใช้ qrImageUrl จาก frontend เพราะต้องการฝังยอดเงินทุกครั้ง
+        $qrPaymentUrl = \App\Services\PromptPayQrService::generateQrUrl($grandTotal, 'inv');
+
+        $bodyContents = [
+            ['type' => 'text', 'text' => 'รหัสลูกค้า', 'size' => 'xs', 'color' => '#AAAAAA'],
+            ['type' => 'text', 'text' => strtoupper($customerno), 'size' => 'lg', 'color' => '#333333', 'weight' => 'bold'],
+            ['type' => 'separator', 'margin' => 'lg'],
+            [
+                'type' => 'box', 'layout' => 'vertical', 'margin' => 'lg', 'spacing' => 'sm',
+                'contents' => [
+                    [
+                        'type' => 'box', 'layout' => 'horizontal',
+                        'contents' => [
+                            ['type' => 'text', 'text' => 'รอบปิดตู้', 'size' => 'sm', 'color' => '#AAAAAA', 'flex' => 0],
+                            ['type' => 'text', 'text' => $etdFormatted, 'size' => 'sm', 'color' => '#333333', 'weight' => 'bold', 'align' => 'end'],
+                        ],
+                    ],
+                    [
+                        'type' => 'box', 'layout' => 'horizontal',
+                        'contents' => [
+                            ['type' => 'text', 'text' => 'จำนวน', 'size' => 'sm', 'color' => '#AAAAAA', 'flex' => 0],
+                            ['type' => 'text', 'text' => $itemCount . ' ชิ้น', 'size' => 'sm', 'color' => '#333333', 'weight' => 'bold', 'align' => 'end'],
+                        ],
+                    ],
+                ],
+            ],
+            ['type' => 'separator', 'margin' => 'lg'],
+            [
+                'type' => 'box', 'layout' => 'vertical', 'margin' => 'lg', 'spacing' => 'sm',
+                'contents' => [
+                    ['type' => 'text', 'text' => 'ค่านำเข้า', 'size' => 'sm', 'color' => '#555555'],
+                    [
+                        'type' => 'box', 'layout' => 'horizontal',
+                        'contents' => [
+                            ['type' => 'text', 'text' => '฿' . number_format($totalAmount, 2), 'size' => $messengerFee > 0 ? 'lg' : 'xxl', 'color' => '#E53935', 'weight' => 'bold', 'align' => 'center', 'margin' => 'md'],
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        // ถ้ามีค่าแมสเซ็นเจอร์ แสดงแยกบรรทัดและสรุปยอดรวมทั้งหมด
+        if ($messengerFee > 0) {
+            $bodyContents[] = [
+                'type' => 'box', 'layout' => 'vertical', 'margin' => 'sm', 'spacing' => 'sm',
+                'contents' => [
+                    ['type' => 'text', 'text' => 'ค่าแมสเซ็นเจอร์', 'size' => 'sm', 'color' => '#555555'],
+                    [
+                        'type' => 'box', 'layout' => 'horizontal',
+                        'contents' => [
+                            ['type' => 'text', 'text' => '฿' . number_format($messengerFee, 2), 'size' => 'lg', 'color' => '#E53935', 'weight' => 'bold', 'align' => 'center', 'margin' => 'md'],
+                        ],
+                    ],
+                ],
+            ];
+            $bodyContents[] = ['type' => 'separator', 'margin' => 'md'];
+            $bodyContents[] = [
+                'type' => 'box', 'layout' => 'vertical', 'margin' => 'md', 'spacing' => 'sm',
+                'contents' => [
+                    ['type' => 'text', 'text' => 'ยอดรวมทั้งหมด', 'size' => 'sm', 'color' => '#555555', 'weight' => 'bold'],
+                    ['type' => 'text', 'text' => '฿' . number_format($grandTotal, 2), 'size' => 'xxl', 'color' => '#E53935', 'weight' => 'bold', 'align' => 'center', 'margin' => 'md'],
+                ],
+            ];
+        }
+
+        $bodyContents[] = ['type' => 'separator', 'margin' => 'lg'];
+
+        // QR Code + ปุ่มกดชำระเงิน (ใช้ยอดรวมทั้งหมดรวมค่าแมส)
+        $paymentPageUrl = 'https://skjjapanshipping.com/skjtrack/pay.php?amount=' . number_format($grandTotal, 2, '.', '');
+        $bodyContents[] = [
+            'type' => 'box', 'layout' => 'vertical', 'margin' => 'lg', 'spacing' => 'sm',
+            'alignItems' => 'center',
+            'contents' => [
+                ['type' => 'text', 'text' => 'สแกน QR Code เพื่อชำระเงิน', 'size' => 'sm', 'color' => '#555555', 'align' => 'center', 'weight' => 'bold'],
+                [
+                    'type' => 'image',
+                    'url' => $qrPaymentUrl,
+                    'size' => 'lg',
+                    'aspectMode' => 'fit',
+                    'margin' => 'md',
+                    'action' => ['type' => 'uri', 'label' => 'ชำระเงิน', 'uri' => $paymentPageUrl],
+                ],
+                [
+                    'type' => 'button',
+                    'action' => ['type' => 'uri', 'label' => 'กดเพื่อชำระเงิน', 'uri' => $paymentPageUrl],
+                    'style' => 'primary', 'color' => '#4CAF50', 'height' => 'sm', 'margin' => 'md',
+                ],
+            ],
+        ];
+
+        $bodyContents[] = ['type' => 'separator', 'margin' => 'lg'];
+        $bodyContents[] = [
+            'type' => 'box', 'layout' => 'vertical', 'margin' => 'md',
+            'contents' => [
+                ['type' => 'text', 'text' => 'กดปุ่มด้านล่างเพื่อดูรายละเอียดบิล', 'size' => 'xs', 'color' => '#AAAAAA', 'wrap' => true, 'align' => 'center'],
+            ],
+        ];
+
+        $bubble = [
+            'type' => 'bubble',
+            'size' => 'mega',
+            'header' => [
+                'type' => 'box', 'layout' => 'horizontal', 'paddingAll' => '16px',
+                'backgroundColor' => '#E53935',
+                'spacing' => 'md',
+                'contents' => [
+                    [
+                        'type' => 'image',
+                        'url' => 'https://skjjapanshipping.com/skjtrack/img/skj-logo-icon.png',
+                        'size' => 'xxs',
+                        'aspectMode' => 'fit',
+                        'flex' => 0,
+                    ],
+                    [
+                        'type' => 'box', 'layout' => 'vertical', 'flex' => 1,
+                        'contents' => [
+                            ['type' => 'text', 'text' => 'ใบแจ้งค่านำเข้า', 'weight' => 'bold', 'size' => 'md', 'color' => '#FFFFFF'],
+                            ['type' => 'text', 'text' => 'SKJ JAPAN SHIPPING', 'size' => 'xs', 'color' => '#FFE0E0'],
+                        ],
+                    ],
+                ],
+            ],
+            'body' => [
+                'type' => 'box', 'layout' => 'vertical', 'paddingAll' => '20px', 'spacing' => 'sm',
+                'contents' => $bodyContents,
+            ],
+        ];
+
+        // Footer with PDF button
+        if ($pdfUrl) {
+            $bubble['footer'] = [
+                'type' => 'box', 'layout' => 'vertical', 'paddingAll' => '12px',
+                'contents' => [
+                    [
+                        'type' => 'button',
+                        'action' => ['type' => 'uri', 'label' => 'เปิดดูใบแจ้งหนี้', 'uri' => $pdfUrl],
+                        'style' => 'primary', 'color' => '#E53935', 'height' => 'md',
+                    ],
+                ],
+            ];
+        }
+
+        $messages = [];
+
+        // ถ้ามี messageTemplate ส่ง text ก่อน
+        if ($messageTemplate) {
+            $formattedTotal = number_format($totalAmount, 2);
+            $formattedMessengerFee = number_format($messengerFee, 2);
+            $formattedGrandTotal = number_format($grandTotal, 2);
+            $text = str_replace(
+                ['{{จำนวน}}', '{{รวม}}', '{{ค่าแมส}}', '{{ยอดรวมทั้งหมด}}'],
+                [$itemCount, $formattedTotal, $formattedMessengerFee, $formattedGrandTotal],
+                $messageTemplate
+            );
+            $messages[] = ['type' => 'text', 'text' => $text];
+        }
+
+        $altText = 'ใบแจ้งค่านำเข้า - ' . strtoupper($customerno) . ' รอบปิดตู้ ' . $etdFormatted . ' ยอดรวม ฿' . number_format($grandTotal, 2);
+        $messages[] = [
+            'type' => 'flex',
+            'altText' => $altText,
+            'contents' => $bubble,
+        ];
+
+        return $messages;
     }
 } 

@@ -46,6 +46,18 @@
         </div>
     </div>
 
+    <!-- Address Book Quick Pick -->
+    <div class="form-section" id="addressBookSection">
+        <div class="form-section-title">
+            <i class="fa fa-address-book"></i> เลือกจากสมุดที่อยู่
+        </div>
+        <div id="abPickList" style="display:flex;flex-wrap:wrap;gap:8px;">
+            <button type="button" class="btn-ab-pick-loading" disabled style="padding:8px 16px;border:1.5px dashed #d1d9e6;border-radius:10px;background:#f8fafc;color:#94a3b8;font-size:0.82rem;cursor:default;">
+                <i class="fa fa-spinner fa-spin"></i> กำลังโหลด...
+            </button>
+        </div>
+    </div>
+
     <!-- Section: ข้อมูลผู้รับ -->
     <div class="form-section">
         <div class="form-section-title">
@@ -328,6 +340,45 @@
             }
         });
       
+
+        // === Address Book Quick Pick ===
+        $.ajax({
+            url: '/skjtrack/address-book',
+            type: 'GET',
+            success: function(res) {
+                var container = $('#abPickList');
+                container.empty();
+                if (!res.addresses || res.addresses.length === 0) {
+                    container.html('<span style="font-size:0.82rem;color:#94a3b8;">ยังไม่มีที่อยู่ในสมุด — เพิ่มได้ที่หน้า My Shipping</span>');
+                    return;
+                }
+                res.addresses.forEach(function(a) {
+                    var btn = $('<button type="button" class="btn-ab-pick-item"></button>');
+                    btn.html('<i class="fa fa-map-marker"></i> ' + (a.label || a.fullname));
+                    if (a.is_default) btn.addClass('ab-pick-default');
+                    btn.on('click', function() {
+                        // Set delivery type to 3 (อื่นๆ) and fill address
+                        $('select[name="delivery_type_id"]').val('3').trigger('change');
+                        setTimeout(function() {
+                            $('input[name="delivery_fullname"]').val(a.fullname || '');
+                            $('input[name="delivery_mobile"]').val(a.mobile || '');
+                            $('input[name="delivery_address"]').val(a.address || '');
+                            $('input[name="delivery_subdistrict"]').val(a.subdistrict || '');
+                            $('input[name="delivery_district"]').val(a.district || '');
+                            $('input[name="delivery_province"]').val(a.province || '');
+                            $('input[name="delivery_postcode"]').val(a.postcode || '');
+                            // Visual feedback
+                            $('.btn-ab-pick-item').css('border-color', '#e2e8f0');
+                            btn.css('border-color', '#8b5cf6');
+                        }, 100);
+                    });
+                    container.append(btn);
+                });
+            },
+            error: function() {
+                $('#abPickList').html('<span style="font-size:0.82rem;color:#ef4444;">โหลดสมุดที่อยู่ไม่สำเร็จ</span>');
+            }
+        });
 
          // ระบบค้นหาลูกค้า
     initCustomerSearch({
@@ -636,5 +687,16 @@
         font-size: 0.78rem;
         margin-top: 4px;
     }
+
+    /* Address Book Pick Buttons */
+    .btn-ab-pick-item {
+        padding: 10px 16px; border: 1.5px solid #e2e8f0; border-radius: 10px;
+        background: white; color: #1e293b; font-size: 0.85rem; font-weight: 600;
+        cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px;
+    }
+    .btn-ab-pick-item:hover { border-color: #8b5cf6; background: #faf5ff; color: #7c3aed; }
+    .btn-ab-pick-item i { color: #8b5cf6; }
+    .btn-ab-pick-item.ab-pick-default { border-color: #10b981; background: #f0fdf4; }
+    .btn-ab-pick-item.ab-pick-default:hover { border-color: #059669; }
 </style>
 @endsection

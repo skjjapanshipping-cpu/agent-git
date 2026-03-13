@@ -13,7 +13,7 @@ return [
     |
     */
 
-    'failed' => 'These credentials do not match our records.',
-    'throttle' => 'Too many login attempts. Please try again in :seconds seconds.',
+    'failed' => 'อีเมลหรือรหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง',
+    'throttle' => 'เข้าสู่ระบบผิดหลายครั้งเกินไป กรุณาลองใหม่ใน :seconds วินาที',
 
 ];

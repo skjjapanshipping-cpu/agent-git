@@ -127,7 +127,16 @@ Route::group(['middleware' => ['auth']], function () {
     Route::post('fetchcustomershippings', 'CustomershippingController@fetchCustomershippings')->name('fetch.customershippings');
     Route::post('fetchcustomershippingsview', 'CustomerShippingViewController@fetchCustomershippingsview')->name('fetch.customershippingsview');
     Route::post('fetch-recipients', 'CustomerShippingViewController@getRecipients')->name('fetch.recipients');
+    Route::post('generate-invoice-qr', 'CustomerShippingViewController@generateInvoiceQr')->name('generate.invoice.qr');
+    Route::post('update-thai-bill-paid', 'CustomershippingController@updateThaiBillPaid')->name('update-thai-bill-paid');
+    Route::post('fetch-admin-recipients', 'CustomershippingController@getAdminRecipients')->name('fetch.admin.recipients');
+    Route::get('fetch-thai-shipping-summary', 'CustomershippingController@fetchThaiShippingSummary')->name('fetch.thai.shipping.summary');
     Route::post('batch-update-recipient', 'CustomerShippingViewController@batchUpdateRecipient')->name('batch.update.recipient');
+    Route::get('address-book', 'AddressBookController@index')->name('address-book.index');
+    Route::post('address-book', 'AddressBookController@store')->name('address-book.store');
+    Route::put('address-book/{id}', 'AddressBookController@update')->name('address-book.update');
+    Route::delete('address-book/{id}', 'AddressBookController@destroy')->name('address-book.destroy');
+    Route::post('address-book/{id}/default', 'AddressBookController@setDefault')->name('address-book.default');
     Route::post('fetchcustomerorder', 'CustomerorderController@fetchCustomerorder')->name('fetch.customerorder');
     Route::get('customerorderexport2', 'CustomerorderController@export2')->name('customerorderexport2');
 

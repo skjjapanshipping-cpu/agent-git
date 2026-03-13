@@ -225,7 +225,7 @@
         <tfoot>
             <tr >
                 @php
-                    function convertNumberToThaiBaht($number){
+                    if (!function_exists('convertNumberToThaiBaht')) { function convertNumberToThaiBaht($number){
                         $number = number_format($number, 2, '.', '');
                         $numberStr = (string)$number;
                         list($baht, $satang) = explode('.', $numberStr);
@@ -301,7 +301,7 @@
                         }
                         
                         return $result;
-                    }
+                    }}
                 @endphp
                 <td colspan="4" style="font-size: 16pt;" class="text-center border-top border-bottom bg-black text-white">{{ convertNumberToThaiBaht($total) }}</td>
                 <td  class="text-right border-top border-bottom">รวมเป็นเงินทั้งสิ้น</td>

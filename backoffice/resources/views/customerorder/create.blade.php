@@ -4,6 +4,10 @@
     {{ __('Create') }} Customerorder
 @endsection
 
+@section('extra-css')
+    @include('partials.form-modern-css')
+@endsection
+
 @section('content')
     <section class="content container-fluid">
         <div class="row">
@@ -11,9 +15,10 @@
 
                 @includeif('partials.errors')
 
-                <div class="card card-default">
-                    <div class="card-header">
-                        <span class="card-title">{{ __('Create') }} Customerorder</span>
+                <div class="card modern-form-card">
+                    <div class="card-header modern-form-header">
+                        <span class="modern-form-title"><i class="fa fa-plus-circle"></i> สร้างรายการสั่งซื้อใหม่</span>
+                        <a href="{{ route('customerorders.index') }}" class="btn-back"><i class="fa fa-arrow-left"></i> กลับ</a>
                     </div>
                     <div class="card-body">
                         <form method="POST" action="{{ route('customerorders.store') }}"  role="form" enctype="multipart/form-data">

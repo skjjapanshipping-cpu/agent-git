@@ -52,7 +52,9 @@ class Customershipping extends Model
     protected $fillable = ['ship_date','customerno','track_no','cod','cod_rate','weight','unit_price','import_cost','box_image','product_image','box_no','warehouse','status','shipping_method', 'delivery_mobile',
         'delivery_address', 'delivery_subdistrict', 'delivery_district', 'delivery_province',
         'delivery_postcode','delivery_type_id','delivery_fullname','note', 'width', 'length', 'height','etd','note_admin','excel_status','iswholeprice','pay_status',
-        'itemno'];
+        'itemno',
+        'shippop_purchase_id','thai_tracking_no','thai_courier','thai_shipping_price','thai_delivery_status','shippop_booked_at',
+        'thai_bill_status','thai_bill_amount','thai_bill_pdf','thai_billed_at'];
 
     protected $casts = [
         'ship_date' => 'datetime:d/m/Y',
@@ -60,6 +62,7 @@ class Customershipping extends Model
         'scanned_at' => 'datetime',
         'picked_up_at' => 'datetime',
         'chat_notified_at' => 'datetime',
+        'shippop_booked_at' => 'datetime',
     ];
 
     protected static $statusCache = null;

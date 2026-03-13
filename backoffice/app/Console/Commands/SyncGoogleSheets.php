@@ -199,11 +199,15 @@ class SyncGoogleSheets extends Command
         $skipped = 0;
         $errors = 0;
 
-        // Build lookup of existing track_no (normalized without hyphens)
-        $existingTrackNos = Track::pluck('track_no')
-            ->map(fn($t) => str_replace('-', '', (string)$t))
-            ->flip()
-            ->toArray();
+        // Count existing records per normalized track_no
+        $existingCounts = [];
+        Track::pluck('track_no')->each(function($t) use (&$existingCounts) {
+            $n = str_replace('-', '', (string)$t);
+            $existingCounts[$n] = ($existingCounts[$n] ?? 0) + 1;
+        });
+
+        // Track how many of each track_no we've encountered in this import batch
+        $seenCounts = [];
 
         // Excluded track_no keywords
         $excluded = ['ไม่มีเลขพัสดุ', 'เลขพัสดุไม่ชัด', 'เลขพัสดุขาดครึ่ง', 'รับตามบ้าน'];
@@ -222,9 +226,10 @@ class SyncGoogleSheets extends Command
             }
             if ($skip) continue;
 
-            // Check duplicate by normalized track_no
+            // Check duplicate: allow multiple rows with same track_no (different boxes)
             $normalized = str_replace('-', '', $trackNo);
-            if (isset($existingTrackNos[$normalized])) {
+            $seenCounts[$normalized] = ($seenCounts[$normalized] ?? 0) + 1;
+            if ($seenCounts[$normalized] <= ($existingCounts[$normalized] ?? 0)) {
                 $skipped++;
                 continue;
             }
@@ -250,7 +255,7 @@ class SyncGoogleSheets extends Command
             if ($this->option('dry-run')) {
                 $this->line("     [DRY] {$customerName} | {$trackNo} | {$weight}kg | {$sourceDate}");
                 $new++;
-                $existingTrackNos[$normalized] = true;
+                $existingCounts[$normalized] = ($existingCounts[$normalized] ?? 0) + 1;
                 continue;
             }
 
@@ -266,7 +271,7 @@ class SyncGoogleSheets extends Command
                     'status' => 1, // auto-confirmed
                 ]);
 
-                $existingTrackNos[$normalized] = true;
+                $existingCounts[$normalized] = ($existingCounts[$normalized] ?? 0) + 1;
                 $new++;
             } catch (\Exception $e) {
                 $errors++;

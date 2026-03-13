@@ -35,4 +35,5 @@ return [
         'redirect' => env('LINE_REDIRECT_URI'),
         'channel_token' => env('LINE_CHANNEL_ACCESS_TOKEN'),
     ],
+    // Shippop API Key ไม่จำเป็นแล้ว — จองขนส่งเองใน Shippop แล้วอัพโหลดบิล
 ];

@@ -14,13 +14,18 @@ use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Worksheet\Column;
+use Illuminate\Support\Facades\Auth;
 class CustomershippigviewHtmlExport implements FromView,WithColumnFormatting,WithColumnWidths,WithEvents
 {
     protected $etd;
-    public function __construct($etd,$customerno)
+    protected $customerno;
+    protected $recipient_filter;
+    public function __construct($etd,$customerno,$recipient_filter=null)
     {
         $this->etd=$etd;
-        $this->customerno=$customerno;
+        // Always use authenticated user's customerno for security
+        $this->customerno = Auth::check() ? Auth::user()->customerno : $customerno;
+        $this->recipient_filter=$recipient_filter;
     }
 
     /**
@@ -28,19 +33,27 @@ class CustomershippigviewHtmlExport implements FromView,WithColumnFormatting,Wit
     */
     public function view(): View
     {
-        $params = ['etd'=>$this->etd,'customerno'=>$this->customerno];
-        $queryAll = Customershipping::latest('ship_date')->where('excel_status','=','1');
-//            ->selectRaw("*,CONCAT(delivery_fullname,' ',delivery_address,' ต.',delivery_subdistrict,' อ.',delivery_district,' จ.',delivery_province,' ',delivery_postcode) as delivery_address");;
-        $customershippings = $queryAll->where(function ($query) use ($params) {
-            if (!empty($params['etd']))
-                $customershippings = $query->whereRaw("DATE(etd)=?",[$params['etd']]);
-            if (!empty($params['customerno']))
-                $customershippings = $query->whereRaw("lower(customerno)=?",[strtolower($params['customerno'])]);
-         })->orderByRaw('customerno asc')->take(1000);
+        $queryAll = Customershipping::where('excel_status','=','1')
+            ->where('customerno', $this->customerno);
 
-//        dd($queryAll->toSql(),$customershippings->get()->toArray());
+        if (!empty($this->etd)) {
+            $queryAll->whereRaw("DATE(etd)=?", [$this->etd]);
+        }
+
+        if (!empty($this->recipient_filter)) {
+            if ($this->recipient_filter === '__empty__') {
+                $queryAll->where(function($q) {
+                    $q->whereNull('delivery_fullname')->orWhere('delivery_fullname', '');
+                });
+            } else {
+                $queryAll->where('delivery_fullname', $this->recipient_filter);
+            }
+        }
+
+        $customershippings = $queryAll->orderBy('ship_date', 'desc')->take(1000)->get();
+
         return view('customershippingview.export',[
-            'customershippings'=>$customershippings->get()
+            'customershippings'=>$customershippings
         ]);
     }
 
@@ -59,21 +72,21 @@ class CustomershippigviewHtmlExport implements FromView,WithColumnFormatting,Wit
     public function columnWidths(): array
     {
         return [
-            'A' => 11,
-            'B' => 16,
-            'C' => 10,
-            'D' => 15,
-            'E' => 8,
-            'F' => 8,
-            'G' => 8,
-            'H' => 8,
-            'I' => 16,
-            'J' => 8,
-            'K' => 8,
-            'L' => 11,
-            'M' => 15,
-            'N' => 27,
-            'O' => 27
+            'A' => 6,   // NO
+            'B' => 13,  // การจัดส่ง
+            'C' => 12,  // วันที่
+            'D' => 16,  // รูปหน้ากล่อง
+            'E' => 18,  // เลขพัสดุ
+            'F' => 8,   // COD
+            'G' => 8,   // น้ำหนัก
+            'H' => 10,  // ค่านำเข้า
+            'I' => 10,  // รูปสินค้า
+            'J' => 10,  // เลขกล่อง
+            'K' => 12,  // วันที่ใส่ตู้
+            'L' => 10,  // ประเภท
+            'M' => 16,  // สถานะ
+            'N' => 30,  // ที่อยู่จัดส่ง
+            'O' => 20,  // หมายเหตุ
         ];
     }
     public function registerEvents(): array
@@ -87,8 +100,8 @@ class CustomershippigviewHtmlExport implements FromView,WithColumnFormatting,Wit
                         'vertical' => Alignment::VERTICAL_CENTER,
                     ],
                 ]);
-                $event->sheet->getColumnDimension('K')->setVisible(false);
                 $event->sheet->getStyle('N')->getAlignment()->setWrapText(true);
+                $event->sheet->getStyle('N')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
 
                 $event->sheet->getStyle('A1:O' . $event->sheet->getHighestRow())
                     ->applyFromArray([

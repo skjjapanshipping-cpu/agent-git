@@ -204,7 +204,7 @@
 
         .lbl-barcode {
             width: 85%;
-            margin-top: 1mm;
+            margin-top: 2mm;
         }
 
         .lbl-number {
@@ -463,7 +463,7 @@
                         JsBarcode('#bc-' + j, barcodeVal, {
                             format: 'CODE128',
                             width: 1.6,
-                            height: 28,
+                            height: 24,
                             displayValue: false,
                             margin: 0,
                             background: 'transparent'

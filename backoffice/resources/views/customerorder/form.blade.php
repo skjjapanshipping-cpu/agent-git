@@ -1,14 +1,28 @@
 <div class="box box-info padding-1">
     <div class="box-body">
 
+        <!-- Section: ข้อมูลพื้นฐาน -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <i class="fa fa-info-circle icon-blue"></i>
+                <h6>ข้อมูลพื้นฐาน</h6>
+            </div>
         <div class="form-group">
             {{ Form::label('วันที่') }}
             @php
-                $orderDateValue = isset($customerorder) && $customerorder->order_date 
-                    ? \Carbon\Carbon::parse($customerorder->order_date)->format('Y-m-d\TH:i')
-                    : now()->format('Y-m-d\TH:i');
+                $orderDateOnly = isset($customerorder) && $customerorder->order_date 
+                    ? \Carbon\Carbon::parse($customerorder->order_date)->format('Y-m-d')
+                    : now()->format('Y-m-d');
+                $orderTimeOnly = isset($customerorder) && $customerorder->order_date 
+                    ? \Carbon\Carbon::parse($customerorder->order_date)->format('H:i')
+                    : now()->format('H:i');
             @endphp
-            <input type="datetime-local" name="order_date" value="{{ $orderDateValue }}" class="form-control {{ $errors->has('order_date') ? ' is-invalid' : '' }}" placeholder="">
+            <div style="display:flex;gap:10px;align-items:center;">
+                <input type="date" id="order_date_date" value="{{ $orderDateOnly }}" class="form-control {{ $errors->has('order_date') ? ' is-invalid' : '' }}" style="flex:1;">
+                <input type="time" id="order_date_time" value="{{ $orderTimeOnly }}" class="form-control" style="max-width:130px;">
+                <span id="order_time_thai" style="font-size:14px;font-weight:700;color:#dc3545;white-space:nowrap;"></span>
+            </div>
+            <input type="hidden" name="order_date" id="order_date_combined" value="{{ $orderDateOnly }}T{{ $orderTimeOnly }}">
             {!! $errors->first('order_date', '<div class="invalid-feedback">กรุณากรอกข้อมูล</div>') !!}
         </div>
         <div class="form-group">
@@ -38,7 +52,7 @@
         </div>
         <div class="form-group">
             {{ Form::label('Item2') }}
-            {{ Form::text('itemno2', $customerorder->itemno2 ?? '', ['id' => 'itemno2','class' => 'form-control' . ($errors->has('itemno2') ? ' is-invalid' : ''), 'placeholder' => 'กรอกรหัสสินค้าเพิ่มเติม', 'maxlength' => '255']) }}
+            {{ Form::text('itemno2', $customerorder->itemno2 ?? '', ['id' => 'itemno2','class' => 'form-control' . ($errors->has('itemno2') ? ' is-invalid' : ''), 'placeholder' => 'กรณีรหัส ITEM ผู้ซื้อไม่ตรงกับระบบ ให้ระบุ (หน้ากล่องระบุผิด ANW-xxx-xxxx)', 'maxlength' => '255']) }}
             {!! $errors->first('itemno2', '<div class="invalid-feedback">กรุณากรอกข้อมูล</div>') !!}
         </div>
         <div class="form-group">
@@ -46,6 +60,14 @@
             {{ Form::textarea('note_admin', $customerorder->note_admin ?? '', ['class' => 'form-control' . ($errors->has('note_admin') ? ' is-invalid' : ''), 'placeholder' => 'Note Admin']) }}
             {!! $errors->first('note_admin', '<div class="invalid-feedback">กรุณากรอกข้อมูล</div>') !!}
         </div>
+        </div><!-- /form-section basic -->
+
+        <!-- Section: สินค้า -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <i class="fa fa-shopping-bag icon-purple"></i>
+                <h6>สินค้า</h6>
+            </div>
         <div class="form-group d-none">
             {{ Form::label('ประเภท') }}
             {{ Form::select('category', \App\Models\Category::pluck('name','id'), $customerorder->category??18, ['class' => 'form-control' . ($errors->has('category') ? ' is-invalid' : ''), 'placeholder' => 'กรุณาเลือกประเภท']) }}
@@ -90,6 +112,14 @@
             {{ Form::number('quantity', $customerorder->quantity??1, ['class' => 'form-control' . ($errors->has('quantity') ? ' is-invalid' : ''), 'placeholder' => '' ,'id' => 'quantity', 'step' => '1']) }}
             {!! $errors->first('quantity', '<div class="invalid-feedback">กรุณากรอกข้อมูล</div>') !!}
         </div>
+        </div><!-- /form-section product -->
+
+        <!-- Section: ราคา -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <i class="fa fa-money icon-green"></i>
+                <h6>ราคา</h6>
+            </div>
         <div class="form-group">
             {{ Form::label('ค่าสินค้า (เยน)') }}
             {{ Form::number('product_price_yen', old('product_price_yen', $customerorder->product_price_yen ?? ''), ['class' => 'form-control', 'step' => '0.01', 'placeholder' => 'ราคาสินค้า (เยน)', 'id' => 'product_price_yen']) }}
@@ -113,7 +143,14 @@
             {{ Form::number('product_cost_baht', $customerorder->product_cost_baht??$customerorder->product_cost_yen*\App\Models\Dailyrate::curRatePerBath()*$customerorder->quantity, ['class' => 'form-control' . ($errors->has('product_cost_baht') ? ' is-invalid' : ''), 'step' => '0.01', 'placeholder' => '' ,'id' => 'product_cost_baht']) }}
             {!! $errors->first('product_cost_baht', '<div class="invalid-feedback">กรุณากรอกข้อมูล</div>') !!}
         </div>
+        </div><!-- /form-section pricing -->
 
+        <!-- Section: สถานะและการขนส่ง -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <i class="fa fa-truck icon-red"></i>
+                <h6>สถานะและการขนส่ง</h6>
+            </div>
         <div class="form-group">
             {{ Form::label('C.Status', null, ['style' => 'color: #22c7dd;']) }}
             {{ Form::select('status', \App\Models\PayStatus::pluck('name','id'), $customerorder->status??1, ['class' => 'form-control' . ($errors->has('status') ? ' is-invalid' : ''), 'placeholder' => 'เลือกสถานะชำระเงิน']) }}
@@ -152,7 +189,7 @@
             {{ Form::textarea('note', $customerorder->note, ['class' => 'form-control' . ($errors->has('note') ? ' is-invalid' : ''), 'placeholder' => 'Note']) }}
             {!! $errors->first('note', '<div class="invalid-feedback">กรุณากรอกข้อมูล</div>') !!}
         </div>
-
+        </div><!-- /form-section status -->
 
     </div>
     <div class="box-footer mt20">
@@ -166,6 +203,21 @@
 <script>
 
     $(document).ready(function() {
+        // === Thai time display + sync date/time ===
+        function updateThaiTime() {
+            var t = $('#order_date_time').val();
+            if (t) {
+                var parts = t.split(':');
+                $('#order_time_thai').text(parts[0] + '.' + parts[1] + 'น.');
+            }
+            var d = $('#order_date_date').val();
+            if (d && t) {
+                $('#order_date_combined').val(d + 'T' + t);
+            }
+        }
+        $('#order_date_date, #order_date_time').on('change input', updateThaiTime);
+        updateThaiTime();
+
         // ดึง item number ใหม่เฉพาะหน้าสร้าง (ไม่ใช่หน้า Edit)
         var isEditPage = window.location.pathname.includes('/edit');
         var itemnoTimer = null;

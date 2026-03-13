@@ -1,6 +1,13 @@
 <div class="box box-info padding-1">
     <div class="box-body">
 
+        <!-- Section: ข้อมูลพื้นฐาน -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <i class="fa fa-info-circle icon-blue"></i>
+                <h6>ข้อมูลพื้นฐาน</h6>
+            </div>
+
         <div id="cur_addr">
             @php
                 $customer = null;
@@ -39,6 +46,14 @@
             {{ Form::textarea('note_admin', $customershipping->note_admin, ['class' => 'form-control' . ($errors->has('note_admin') ? ' is-invalid' : ''), 'placeholder' => '']) }}
             {!! $errors->first('note_admin', '<div class="invalid-feedback">:message</div>') !!}
         </div>
+        </div><!-- /form-section basic -->
+
+        <!-- Section: ข้อมูลพัสดุ -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <i class="fa fa-cube icon-orange"></i>
+                <h6>ข้อมูลพัสดุ</h6>
+            </div>
         <div class="form-group">
             {{ Form::label('track_no','เลขพัสดุ') }}
             {{ Form::text('track_no', $customershipping->track_no, ['class' => 'form-control' . ($errors->has('track_no') ? ' is-invalid' : ''), 'placeholder' => '']) }}
@@ -76,6 +91,14 @@
             {{ Form::number('height', $customershipping->height, ['class' => 'form-control' . ($errors->has('height') ? ' is-invalid' : ''), 'step' => '0.01', 'placeholder' => '']) }}
             {!! $errors->first('height', '<div class="invalid-feedback">:message</div>') !!}
         </div>
+        </div><!-- /form-section package -->
+
+        <!-- Section: ราคา -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <i class="fa fa-money icon-green"></i>
+                <h6>ราคา</h6>
+            </div>
         <div class="form-group">
             @php
                $list_unit_price=['180','170','160','150','140','130','120','115','110','100','90','0']
@@ -118,6 +141,14 @@
             {{ Form::number('import_cost', $customershipping->import_cost, ['class' => 'form-control' . ($errors->has('import_cost') ? ' is-invalid' : ''), 'step' => '0.01', 'placeholder' => '', 'id' => 'import_cost']) }}
             {!! $errors->first('import_cost', '<div class="invalid-feedback">:message</div>') !!}
         </div>
+        </div><!-- /form-section pricing -->
+
+        <!-- Section: รูปภาพ -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <i class="fa fa-image icon-purple"></i>
+                <h6>รูปภาพ</h6>
+            </div>
         <div class="form-group">
             {{ Form::label('box_image','รูปหน้ากล่อง') }}
 {{--            {{ Form::text('box_image', $customershipping->box_image, ['class' => 'form-control' . ($errors->has('box_image') ? ' is-invalid' : ''), 'placeholder' => '']) }}--}}
@@ -150,6 +181,14 @@
             </div>
             {!! $errors->first('product_image', '<div class="invalid-feedback">:message</div>') !!}
         </div>
+        </div><!-- /form-section images -->
+
+        <!-- Section: การขนส่งและสถานะ -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <i class="fa fa-truck icon-red"></i>
+                <h6>การขนส่งและสถานะ</h6>
+            </div>
         <div class="form-group">
             {{ Form::label('box_no','เลขหน้ากล่อง') }}
             {{ Form::text('box_no', $customershipping->box_no, ['class' => 'form-control' . ($errors->has('box_no') ? ' is-invalid' : ''), 'placeholder' => '']) }}
@@ -185,6 +224,19 @@
 {{--            {{ Form::select('pay_status', \App\Models\PayStatus::where('id','<',3)->pluck('name','id'),$customershipping->pay_status??1, ['class' => 'form-control' . ($errors->has('pay_status') ? ' is-invalid' : ''), 'placeholder' => 'เลือกสถานะชำระเงิน' ,'required'=>true]) }}--}}
             {!! $errors->first('pay_status', '<div class="invalid-feedback">กรุณากรอกข้อมูล</div>') !!}
         </div>
+        <div class="form-group">
+            {{ Form::label('สถานะบิลค่าส่งไทย') }}
+            {{ Form::select('thai_bill_status', [0 => '-', 1 => 'รอโอน', 2 => 'โอนแล้ว'], $customershipping->thai_bill_status ?? 0, ['class' => 'form-control' . ($errors->has('thai_bill_status') ? ' is-invalid' : '')]) }}
+            {!! $errors->first('thai_bill_status', '<div class="invalid-feedback">กรุณากรอกข้อมูล</div>') !!}
+        </div>
+        </div><!-- /form-section shipping -->
+
+        <!-- Section: การจัดส่ง -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <i class="fa fa-map-marker icon-teal"></i>
+                <h6>การจัดส่ง</h6>
+            </div>
         <div class="form-group">
             {{ Form::label('delivery_type_id','การจัดส่ง') }}
             {{ Form::select('delivery_type_id', \App\Models\DeliveryType::orderBy('sortno')->pluck('name','id'), $customershipping->delivery_type_id??1, ['id'=>'delivery_type_id','class' => 'form-control' . ($errors->has('delivery_type_id') ? ' is-invalid' : ''), 'placeholder' => 'เลือกวิธีจัดสง','required'=>true]) }}
@@ -273,6 +325,7 @@
             {{ Form::textarea('note', $customershipping->note, ['class' => 'form-control' . ($errors->has('note') ? ' is-invalid' : ''), 'placeholder' => '']) }}
             {!! $errors->first('note', '<div class="invalid-feedback">:message</div>') !!}
         </div>
+        </div><!-- /form-section delivery -->
 
     </div>
     <div class="box-footer mt20">
@@ -739,5 +792,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+
 </script>
 @endsection

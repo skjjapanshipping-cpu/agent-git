@@ -5,6 +5,7 @@
 @endsection
 
 @section('extra-css')
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         /* ========================================
            COMPLETE LAYOUT OVERRIDE - Fix Paper Dashboard (From My Shipping)
@@ -185,6 +186,85 @@
         select.boss_id option.boss-pink {
             color: #e91e63 !important;
             font-weight: bold;
+        }
+
+        /* === Modern Admin UI (matching My Shipping) === */
+        .card { border:none; border-radius:12px; box-shadow:0 2px 12px rgba(0,0,0,0.08); overflow:visible; }
+        .card-header { background:#fff !important; border-bottom:1px solid #f0f0f0; padding:12px 20px !important; border-radius:12px 12px 0 0 !important; }
+        .card-body { padding:16px 20px !important; }
+        .toolbar-row { display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:4px 0; }
+        .toolbar-row + .toolbar-row { border-top:1px solid #f0f0f0; margin-top:6px; padding-top:10px; }
+        .toolbar-group { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+        .toolbar-group-label { font-size:11px; color:#94a3b8; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; margin-right:2px; white-space:nowrap; }
+        .toolbar-spacer { flex:1; }
+        .btn-modern { border-radius:8px !important; font-size:12px !important; font-weight:600 !important; padding:6px 14px !important; border:none !important; transition:all 0.2s !important; display:inline-flex !important; align-items:center !important; gap:5px !important; white-space:nowrap !important; }
+        .btn-modern:hover { transform:translateY(-1px); box-shadow:0 4px 12px rgba(0,0,0,0.15) !important; }
+        .btn-modern i { font-size:13px; }
+        .btn-modern.btn-red { background:linear-gradient(135deg,#dc3545,#c82333) !important; color:#fff !important; }
+        .btn-modern.btn-blue { background:linear-gradient(135deg,#0084FF,#0066cc) !important; color:#fff !important; }
+        .btn-modern.btn-green { background:linear-gradient(135deg,#28a745,#1e7e34) !important; color:#fff !important; }
+        .btn-modern.btn-orange { background:linear-gradient(135deg,#fd7e14,#e8690a) !important; color:#fff !important; }
+        .btn-modern.btn-dark { background:linear-gradient(135deg,#343a40,#23272b) !important; color:#fff !important; }
+        .btn-modern.btn-outline { background:#fff !important; border:2px solid #dee2e6 !important; color:#495057 !important; }
+        .btn-modern.btn-outline:hover { border-color:#dc3545 !important; color:#dc3545 !important; background:#fff8f8 !important; }
+        .btn-modern.disabled, .btn-modern[disabled] { opacity:0.45 !important; pointer-events:none !important; transform:none !important; box-shadow:none !important; }
+        .date-filter-bar { display:flex; flex-wrap:wrap; gap:12px; align-items:center; padding:12px 16px; background:#f8fafc; border-radius:10px; margin-bottom:16px; border:1px solid #e2e8f0; }
+        .date-filter-bar label { font-size:12px; font-weight:700; color:#475569; margin:0; white-space:nowrap; }
+        .date-filter-bar input { border-radius:8px; border:2px solid #e2e8f0; padding:6px 12px; font-size:13px; max-width:180px; transition:border-color 0.2s; }
+        .date-filter-bar input:focus { border-color:#dc3545; outline:none; box-shadow:0 0 0 3px rgba(220,53,69,0.1); }
+        .stats-row { display:flex; flex-wrap:wrap; gap:12px; justify-content:center; margin:16px 0; }
+        .stat-card { background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:12px 20px; text-align:center; min-width:130px; flex:1; max-width:200px; transition:all 0.2s; }
+        .stat-card:hover { border-color:#dc3545; box-shadow:0 4px 12px rgba(220,53,69,0.1); }
+        .stat-card .stat-label { font-size:11px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; }
+        .stat-card .stat-value { font-size:20px; font-weight:800; color:#1e293b; margin-top:2px; }
+        .stat-card .stat-unit { font-size:12px; color:#64748b; font-weight:500; }
+        .stat-card.stat-highlight { border-left:4px solid #dc3545; }
+        .table thead th { background:#f8fafc !important; color:#475569 !important; font-size:11px !important; font-weight:700 !important; text-transform:uppercase !important; letter-spacing:0.3px !important; border-bottom:2px solid #e2e8f0 !important; padding:10px 8px !important; }
+        .table tbody td { font-size:12px; padding:8px !important; vertical-align:middle !important; }
+        .table-striped tbody tr:nth-of-type(odd) { background-color:rgba(248,250,252,0.7) !important; }
+        .table-hover tbody tr:hover { background-color:rgba(220,53,69,0.04) !important; }
+        .page-title { font-size:18px; font-weight:800; color:#1e293b; display:flex; align-items:center; gap:8px; }
+        .page-title i { color:#dc3545; }
+
+        /* === Modern Action Buttons === */
+        .action-btns { display:flex; gap:6px; margin-top:6px; }
+        .btn-act { display:inline-flex; align-items:center; gap:4px; padding:5px 12px; border-radius:6px; font-size:11px; font-weight:600; text-decoration:none; border:none; cursor:pointer; transition:all 0.2s; }
+        .btn-act-edit { background:#eef2ff; color:#4f46e5; border:1px solid #c7d2fe; }
+        .btn-act-edit:hover { background:#4f46e5; color:#fff; text-decoration:none; box-shadow:0 2px 6px rgba(79,70,229,0.3); }
+        .btn-act-del { background:#fef2f2; color:#dc2626; border:1px solid #fecaca; }
+        .btn-act-del:hover { background:#dc2626; color:#fff; box-shadow:0 2px 6px rgba(220,38,38,0.3); }
+
+        /* === Mobile Responsive === */
+        @media (max-width: 768px) {
+            .container-fluid { padding:8px !important; }
+            .card { border-radius:8px; }
+            .card-header { padding:10px 12px !important; }
+            .card-body { padding:10px 12px !important; }
+            .toolbar-row { flex-direction:column; align-items:stretch; gap:6px; }
+            .toolbar-row + .toolbar-row { margin-top:4px; padding-top:8px; }
+            .toolbar-spacer { display:none; }
+            .toolbar-group { flex-wrap:wrap; justify-content:flex-start; gap:4px; }
+            .toolbar-group-label { width:100%; margin-bottom:2px; font-size:10px; }
+            .page-title { font-size:15px; }
+            .btn-modern { font-size:11px !important; padding:5px 10px !important; border-radius:6px !important; }
+            .date-filter-bar { flex-direction:column; align-items:stretch; gap:6px; padding:10px 12px; }
+            .date-filter-bar input { max-width:100%; width:100%; }
+            .date-filter-bar label { font-size:11px; }
+            .stats-row { gap:8px; margin:10px 0; }
+            .stat-card { min-width:0; padding:8px 10px; flex:1 1 calc(50% - 8px); max-width:none; }
+            .stat-card .stat-label { font-size:9px; }
+            .stat-card .stat-value { font-size:16px; }
+            .stat-card .stat-unit { font-size:10px; }
+            .table thead th { font-size:9px !important; padding:6px 4px !important; }
+            .table tbody td { font-size:11px !important; padding:6px 4px !important; }
+        }
+        @media (max-width: 480px) {
+            .toolbar-group { gap:3px; }
+            .btn-modern { font-size:10px !important; padding:4px 8px !important; gap:3px !important; }
+            .btn-modern i { font-size:11px; }
+            .page-title { font-size:13px; gap:5px; }
+            .stat-card { flex:1 1 100%; }
+            .date-filter-bar { padding:8px 10px; gap:4px; }
         }
 
         /* SIDEBAR LOGOUT STYLE MATCHING MY SHIPPING */
@@ -581,12 +661,13 @@
 
                             return `
                             <div>${formattedDate}</div>
-            <form action="${full.action_del}" method="POST">
-                <a class="btn btn-sm btn-success" href="${full.edit_url}"><i class="fa fa-fw fa-edit"></i> {{ __('Edit') }}</a>
-                @csrf
-
-                            @method('DELETE')
-                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('{{ __('คุณแน่ใจว่าต้องการจะลบข้อมูลรายการนี้?') }}')" ><i class="fa fa-fw fa-trash"></i> {{ __('Delete') }}</button>
+            <form action="${full.action_del}" method="POST" style="margin:0;">
+                <div class="action-btns">
+                    <a class="btn-act btn-act-edit" href="${full.edit_url}"><i class="fa fa-pencil"></i> แก้ไข</a>
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="btn-act btn-act-del" onclick="return confirm('{{ __('คุณแน่ใจว่าต้องการจะลบข้อมูลรายการนี้?') }}')"><i class="fa fa-trash-o"></i> ลบ</button>
+                </div>
             </form>
         `;
                         }}, // คอลัมน์ที่ 1
@@ -1015,92 +1096,92 @@
 
 
                     <div class="card-header">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-
-                    
-
-        <span id="card_title">
-            {{ __(' ') }}
-        </span>
-        <div>
-                                <form method="POST" action="{{ route('update-status-pay') }}" style="display: inline-block;">
+                        <!-- Row 1: Title + Status Actions -->
+                        <div class="toolbar-row">
+                            <span class="page-title"><i class="fa fa-shopping-cart"></i> My Orders</span>
+                            <div class="toolbar-spacer"></div>
+                            <div class="toolbar-group">
+                                <span class="toolbar-group-label">อัพเดทสถานะ:</span>
+                                <form method="POST" action="{{ route('update-status-pay') }}" style="display:inline;">
                                     @csrf
                                     <input type="hidden" name="track_ids2" id="trackIdsInput2" value="">
-                                    <input type="submit" class="btn btn-sm btn-outline-primary mr-2 disabled" id="updateSelected2" value="C.ชำระเงินแล้ว">
+                                    <input type="submit" class="btn-modern btn-blue disabled" id="updateSelected2" value="💰 C.ชำระเงินแล้ว">
                                 </form>
-                                <form method="POST" action="{{ route('update-status-supplier-pay') }}" style="display: inline-block;">
+                                <form method="POST" action="{{ route('update-status-supplier-pay') }}" style="display:inline;">
                                     @csrf
                                     <input type="hidden" name="track_ids3" id="trackIdsInput3" value="">
-                                    <input type="submit" class="btn btn-sm btn-outline-danger mr-2 disabled" id="updateSelected3" value="B.ชำระเงินแล้ว">
+                                    <input type="submit" class="btn-modern btn-red disabled" id="updateSelected3" value="💳 B.ชำระเงินแล้ว">
+                                </form>
+                                <form method="POST" action="{{ route('update-status-shipping') }}" style="display:none;">
+                                    @csrf
+                                    <input type="hidden" name="track_ids" id="trackIdsInput" value="">
+                                    <input type="submit" id="updateSelected" value="">
                                 </form>
                             </div>
-
-                            <div class="col-8"> <!-- เพิ่มคลาส col-8 เพื่อกำหนดขนาดความกว้าง -->
-                                <div class="row"> <!-- เพิ่มแถวในการจัดวาง -->
-
-                                    <div class="col">
-                                        <form method="POST" action="{{ route('update-status-shipping') }}">
-                                            @csrf
-                                            <input type="hidden" name="track_ids" id="trackIdsInput" value="">
-                                            <input type="submit" class="btn btn-sm btn-outline-success mr-2 d-none" id="updateSelected" value="อัพเดทสถานะ สินค้าถึงไทยแล้ว">
-                                        </form>
-                                    </div>
-
-                                    <div class="col">
-                                        <div class="d-flex align-items-center">
-                                            <div class="mr-2">
-                                                <label class="form-check-label" style="margin-right: 5px;">
-                                                    <input type="checkbox" id="include-image" class="form-check-input" checked>
-                                                    Export รูปภาพ
-                                                </label>
-                                            </div>
-                                            <a href="{{ route('welcome') }}" class="btn btn-default btn-sm mr-2" data-placement="left">
-                                                {{ __('Dashboard') }}
-                                            </a>
-                                            <button id="invoiceBtn" class="btn btn-danger btn-sm disabled mr-2" data-placement="left">
-                                                {{ __('Invoice') }}
-                                            </button>
-                                            <button id="data-export" class="btn btn-success btn-sm mr-2 disabled" data-placement="left">
-                                                {{ __('Data Export EXCEL') }}
-                                            </button>
-                                            <a href="{{ route('customerorders.create') }}" class="btn btn-primary btn-sm" data-placement="left">
-                                                {{ __('Create New') }}
-                                            </a>
-                                            
-                                        </div>
-                                    </div>
-
-                                </div>
+                        </div>
+                        <!-- Row 2: Navigation + Export -->
+                        <div class="toolbar-row">
+                            <div class="toolbar-group">
+                                <a href="{{ route('welcome') }}" class="btn-modern btn-dark"><i class="fa fa-dashboard"></i> Dashboard</a>
+                                <a href="{{ route('customerorders.create') }}" class="btn-modern btn-blue"><i class="fa fa-plus"></i> Create New</a>
+                                <button id="invoiceBtn" class="btn-modern btn-red disabled"><i class="fa fa-file-text-o"></i> Invoice</button>
                             </div>
-
+                            <div class="toolbar-spacer"></div>
+                            <div class="toolbar-group">
+                                <span class="toolbar-group-label">ส่งออก:</span>
+                                <label class="btn-modern btn-outline" style="cursor:pointer;margin:0;">
+                                    <input type="checkbox" id="include-image" checked style="accent-color:#dc3545;"> รูปภาพ
+                                </label>
+                                <button id="data-export" class="btn-modern btn-green disabled"><i class="fa fa-file-excel-o"></i> Data Excel</button>
+                            </div>
                         </div>
                     </div>
 
+                    {{-- SweetAlert2 success popup (replaces old green bar) --}}
                     @if ($message = Session::get('success'))
-                        <div class="alert alert-success">
-                            <p>{{ $message }}</p>
-                        </div>
+                        <script>
+                        document.addEventListener('DOMContentLoaded', function() {
+                            Swal.fire({
+                                icon: 'success',
+                                title: @json($message),
+                                toast: true,
+                                position: 'top-end',
+                                timer: 3000,
+                                showConfirmButton: false,
+                                timerProgressBar: true,
+                                showClass: { popup: 'swal2-show' },
+                                hideClass: { popup: 'swal2-hide' }
+                            });
+                        });
+                        </script>
                     @endif
 
                     <div class="card-body">
                         <div class="table-responsive">
-                            <div id="dateFilters" class="mb-3 col-12 right">
-                                <label for="start_date" class="control-label"> วันที่เริ่มต้น</label>
+                            <div class="date-filter-bar" id="dateFilters">
+                                <i class="fa fa-calendar" style="color:#dc3545;font-size:16px;"></i>
+                                <label for="start_date">วันที่เริ่มต้น</label>
                                 @if ($date = Session::get('startdate'))
-                                    <input type="date" id="start_date" class="form-control col-3" placeholder="วันที่เริ่มต้น" value="{{$date}}">
+                                    <input type="date" id="start_date" value="{{$date}}" style="cursor:pointer;">
                                     @php  session()->forget('startdate'); @endphp
                                 @else
-                                    <input type="date" id="start_date" class="form-control col-3" placeholder="วันที่เริ่มต้น" value="{{ date('Y-m-d') }}">
+                                    <input type="date" id="start_date" value="{{ date('Y-m-d') }}" style="cursor:pointer;">
                                 @endif
-                                <label for="end_date" class="control-label"> วันที่สิ้นสุด</label>
-                                <input type="date" id="end_date" class="form-control col-3" placeholder="วันที่สิ้นสุด">
+                                <label for="end_date">ถึง</label>
+                                <input type="date" id="end_date" placeholder="วันที่สิ้นสุด" style="cursor:pointer;">
                             </div>
 
-                            <div class="text-center mt-3 {{Session::get('hide')?'':'d-none'}}" id="totalprice_section">
-                                <strong style="text-decoration: none; color: black; border-bottom: 3px solid red;">รวมค่าสินค้า: <span id="totalprice"></span> บาท</strong>
-                            </div>
-                            <div class="text-center mt-3 {{Session::get('hide')?'':'d-none'}}" id="payprice_section">
-                                <strong style="text-decoration: none; color: black; border-bottom: 3px solid red;">ยอดที่รอชำระ: <span id="payprice"></span> บาท</strong>
+                            <div class="stats-row {{Session::get('hide')?'':'d-none'}}">
+                                <div class="stat-card" id="totalprice_section">
+                                    <div class="stat-label">🛒 รวมค่าสินค้า</div>
+                                    <div class="stat-value"><span id="totalprice">-</span></div>
+                                    <div class="stat-unit">บาท</div>
+                                </div>
+                                <div class="stat-card stat-highlight" id="payprice_section">
+                                    <div class="stat-label">💰 ยอดรอชำระ</div>
+                                    <div class="stat-value"><span id="payprice">-</span></div>
+                                    <div class="stat-unit">บาท</div>
+                                </div>
                             </div>
 
 
