@@ -192,6 +192,24 @@
             outline: none !important;
         }
 
+        /* Custom recipient dropdown */
+        .recipient-dropdown { position:relative; display:inline-block; width:100%; }
+        .recipient-dropdown .dd-toggle { padding:0 28px 0 15px; font-size:14px; border:1px solid #e2e8f0; border-radius:10px; min-width:100%; width:100%; height:42px; background:#fff; cursor:pointer; text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; position:relative; appearance:none; color:#475569; box-shadow:0 1px 2px rgba(0,0,0,0.05); box-sizing:border-box; }
+        .recipient-dropdown .dd-toggle::after { content:'\25BC'; position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:9px; color:#94a3b8; pointer-events:none; }
+        .recipient-dropdown .dd-toggle:hover { border-color:#1D8AC9; }
+        .recipient-dropdown .dd-menu { display:none; position:absolute; top:100%; left:0; z-index:9999; background:#fff; border:1.5px solid #e2e8f0; border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,0.15); min-width:280px; width:100%; margin-top:4px; overflow:hidden; }
+        .recipient-dropdown .dd-menu.open { display:block; }
+        .recipient-dropdown .dd-search { display:block; width:calc(100% - 16px); margin:8px auto; padding:7px 12px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px; outline:none; box-sizing:border-box; }
+        .recipient-dropdown .dd-search:focus { border-color:#1D8AC9; }
+        .recipient-dropdown .dd-list { max-height:300px; overflow-y:auto; padding:4px 0; }
+        .recipient-dropdown .dd-list::-webkit-scrollbar { width:6px; }
+        .recipient-dropdown .dd-list::-webkit-scrollbar-track { background:#f1f1f1; }
+        .recipient-dropdown .dd-list::-webkit-scrollbar-thumb { background:#c1c1c1; border-radius:3px; }
+        .recipient-dropdown .dd-list::-webkit-scrollbar-thumb:hover { background:#999; }
+        .recipient-dropdown .dd-item { padding:8px 14px; font-size:13px; cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .recipient-dropdown .dd-item:hover { background:#f0f7ff; }
+        .recipient-dropdown .dd-item.active { background:#1D8AC9; color:#fff; font-weight:600; }
+
         /* Special Styling for Search Input (Add Icon) */
         .dataTables_filter input {
             padding-left: 38px !important;
@@ -1870,9 +1888,18 @@
                             <!-- Recipient Filter -->
                             <div class="control-group" id="recipient-filter-group">
                                 <label class="control-label d-md-block d-none">RECIPIENT:</label>
-                                <select id="recipient_filter" class="unified-select">
+                                <select id="recipient_filter" class="unified-select" style="display:none;">
                                     <option value="">ผู้รับทั้งหมด</option>
                                 </select>
+                                <div class="recipient-dropdown" id="recipientDropdown">
+                                    <button type="button" class="dd-toggle" id="recipientToggle">ผู้รับทั้งหมด</button>
+                                    <div class="dd-menu" id="recipientMenu">
+                                        <input type="text" class="dd-search" id="recipientSearch" placeholder="ค้นหาชื่อผู้รับ...">
+                                        <div class="dd-list" id="recipientList">
+                                            <div class="dd-item active" data-value="">ผู้รับทั้งหมด</div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
                             <!-- Search Container (Filled by JS) -->
@@ -2797,17 +2824,61 @@
                 var sel = $('#recipient_filter');
                 var currentVal = sel.val();
                 sel.find('option:not(:first)').remove();
+                var list = $('#recipientList');
+                list.find('.dd-item:not(:first)').remove();
                 if (res.recipients && res.recipients.length > 0) {
                     res.recipients.forEach(function(r) {
                         sel.append('<option value="' + r.value + '">' + r.label + ' (' + r.count + ')</option>');
+                        list.append('<div class="dd-item" data-value="' + r.value + '">' + r.label + ' (' + r.count + ')</div>');
                     });
                 }
-                if (currentVal) sel.val(currentVal);
+                if (currentVal) {
+                    sel.val(currentVal);
+                    syncRecipientDropdown(currentVal);
+                }
             }
         });
     }
 
-    // When recipient filter changes, reload DataTable
+    // === Custom Recipient Dropdown ===
+    $('#recipientToggle').on('click', function(e) {
+        e.stopPropagation();
+        var menu = $('#recipientMenu');
+        menu.toggleClass('open');
+        if (menu.hasClass('open')) {
+            $('#recipientSearch').val('').trigger('input');
+            setTimeout(function(){ $('#recipientSearch').focus(); }, 50);
+        }
+    });
+    $(document).on('click', function(e) {
+        if (!$(e.target).closest('#recipientDropdown').length) {
+            $('#recipientMenu').removeClass('open');
+        }
+    });
+    $('#recipientSearch').on('input', function() {
+        var q = $(this).val().toLowerCase();
+        $('#recipientList .dd-item').each(function() {
+            $(this).toggle($(this).text().toLowerCase().indexOf(q) !== -1);
+        });
+    });
+    $(document).on('click', '#recipientList .dd-item', function() {
+        var val = $(this).data('value');
+        var label = $(this).text();
+        $('#recipient_filter').val(val === undefined ? '' : val).trigger('change');
+        $('#recipientToggle').text(label);
+        $('#recipientList .dd-item').removeClass('active');
+        $(this).addClass('active');
+        $('#recipientMenu').removeClass('open');
+    });
+    function syncRecipientDropdown(val) {
+        $('#recipientList .dd-item').removeClass('active');
+        $('#recipientList .dd-item').filter(function() {
+            return String($(this).data('value')) === String(val);
+        }).addClass('active');
+        var activeItem = $('#recipientList .dd-item.active');
+        if (activeItem.length) $('#recipientToggle').text(activeItem.text());
+    }
+
     // Custom page length handler (static select - no bounce)
     $('#custom_page_length').on('change', function() {
         var newLen = parseInt($(this).val());
@@ -2815,6 +2886,7 @@
     });
 
     $(document).on('change', '#recipient_filter', function() {
+        syncRecipientDropdown($(this).val());
         $('#dt-mant-table-1').DataTable().ajax.reload();
     });
 

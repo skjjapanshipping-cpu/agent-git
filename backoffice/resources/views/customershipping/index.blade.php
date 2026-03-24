@@ -171,6 +171,30 @@
         .table tbody td { font-size:12px; padding:8px !important; vertical-align:middle !important; }
         .table-striped tbody tr:nth-of-type(odd) { background-color:rgba(248,250,252,0.7) !important; }
         .table-hover tbody tr:hover { background-color:rgba(220,53,69,0.04) !important; }
+        /* ปิด DataTables blue row highlight ไม่ให้เด้ง */
+        table.dataTable tbody tr.selected, table.dataTable tbody tr.selected td,
+        table.dataTable tbody tr.active, table.dataTable tbody tr.active td,
+        table.dataTable tbody tr:focus, table.dataTable tbody tr:focus td { background-color: inherit !important; outline: none !important; box-shadow: none !important; }
+        table.dataTable tbody tr { outline: none !important; }
+        .table tbody tr:focus-within { background: inherit !important; }
+
+        /* Custom recipient dropdown */
+        .recipient-dropdown { position:relative; display:inline-block; }
+        .recipient-dropdown .dd-toggle { padding:4px 28px 4px 10px; font-size:12px; border:1.5px solid #e2e8f0; border-radius:8px; min-width:180px; height:34px; background:#fff; cursor:pointer; text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; position:relative; appearance:none; }
+        .recipient-dropdown .dd-toggle::after { content:'\25BC'; position:absolute; right:8px; top:50%; transform:translateY(-50%); font-size:9px; color:#94a3b8; pointer-events:none; }
+        .recipient-dropdown .dd-toggle:hover { border-color:#dc3545; }
+        .recipient-dropdown .dd-menu { display:none; position:absolute; top:100%; left:0; z-index:9999; background:#fff; border:1.5px solid #e2e8f0; border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,0.15); min-width:280px; margin-top:4px; overflow:hidden; }
+        .recipient-dropdown .dd-menu.open { display:block; }
+        .recipient-dropdown .dd-search { display:block; width:calc(100% - 16px); margin:8px auto; padding:7px 12px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px; outline:none; box-sizing:border-box; }
+        .recipient-dropdown .dd-search:focus { border-color:#dc3545; }
+        .recipient-dropdown .dd-list { max-height:300px; overflow-y:auto; padding:4px 0; }
+        .recipient-dropdown .dd-list::-webkit-scrollbar { width:6px; }
+        .recipient-dropdown .dd-list::-webkit-scrollbar-track { background:#f1f1f1; }
+        .recipient-dropdown .dd-list::-webkit-scrollbar-thumb { background:#c1c1c1; border-radius:3px; }
+        .recipient-dropdown .dd-list::-webkit-scrollbar-thumb:hover { background:#999; }
+        .recipient-dropdown .dd-item { padding:7px 14px; font-size:12px; cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .recipient-dropdown .dd-item:hover { background:#f0f7ff; }
+        .recipient-dropdown .dd-item.active { background:#0084FF; color:#fff; font-weight:600; }
 
         /* Page title */
         .page-title { font-size:18px; font-weight:800; color:#1e293b; display:flex; align-items:center; gap:8px; }
@@ -267,6 +291,11 @@
                                     <input type="hidden" name="track_ids2" id="trackIdsInput2" value="">
                                     <input type="submit" class="btn-modern btn-blue disabled" id="updateSelected2" value="💰 ชำระเงินแล้ว">
                                 </form>
+                                <form method="POST" action="{{ route('update-thai-bill-paid') }}" style="display:inline;">
+                                    @csrf
+                                    <input type="hidden" name="track_ids4" id="trackIdsInput4" value="">
+                                    <input type="submit" class="btn-modern disabled" id="updateSelected4" value="🚚 ชำระค่าส่งไทยแล้ว" style="background:linear-gradient(135deg,#0ea5e9,#06b6d4) !important; color:#fff !important;">
+                                </form>
                             </div>
                         </div>
                         <!-- Row 2: Navigation + Features -->
@@ -326,9 +355,18 @@
                                 <label for="end_date">ถึง</label>
                                 <input type="text" id="end_date" placeholder="วว/ดด/ปปปป" readonly style="cursor:pointer;">
                                 <span style="margin-left:12px; font-size:12px; font-weight:600; color:#64748b;">ผู้รับ</span>
-                                <select id="recipient_filter" style="padding:4px 8px; font-size:12px; border:1.5px solid #e2e8f0; border-radius:8px; min-width:140px; height:34px;">
+                                <select id="recipient_filter" style="display:none;">
                                     <option value="">ผู้รับทั้งหมด</option>
                                 </select>
+                                <div class="recipient-dropdown" id="recipientDropdown">
+                                    <button type="button" class="dd-toggle" id="recipientToggle">ผู้รับทั้งหมด</button>
+                                    <div class="dd-menu" id="recipientMenu">
+                                        <input type="text" class="dd-search" id="recipientSearch" placeholder="ค้นหาชื่อผู้รับ...">
+                                        <div class="dd-list" id="recipientList">
+                                            <div class="dd-item active" data-value="">ผู้รับทั้งหมด</div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="text-center" style="margin-bottom:8px;">
@@ -1027,7 +1065,7 @@
             });
 
 
-            $('#updateSelected,#updateSelected2,#updateSelected3').on('click', function(e) {
+            $('#updateSelected,#updateSelected2,#updateSelected3,#updateSelected4').on('click', function(e) {
 
                 var selectedRows = $('tbody').find(':checkbox:checked');
                 console.log(selectedRows.length);
@@ -1039,6 +1077,7 @@
                     $('#trackIdsInput').val(selectedIds.join(','));
                     $('#trackIdsInput2').val(selectedIds.join(','));
                     $('#trackIdsInput3').val(selectedIds.join(','));
+                    $('#trackIdsInput4').val(selectedIds.join(','));
                     
                     // เก็บค่าการค้นหาปัจจุบันไว้
                     var currentSearch = $("input[type='search']").val();
@@ -1059,6 +1098,7 @@
                 var $btn1 = $('#updateSelected');
                 var $btn2 = $('#updateSelected2');
                 var $btn3 = $('#updateSelected3');
+                var $btn4 = $('#updateSelected4');
                 var selectedRows = $('tbody').find(':checkbox:checked');
                 
                 if (selectedRows.length > 0) {
@@ -1066,11 +1106,13 @@
                     $btn1.removeClass('disabled');
                     $btn2.removeClass('disabled');
                     $btn3.removeClass('disabled');
+                    $btn4.removeClass('disabled');
                 } else {
                     $invoiceBtn.addClass('disabled');
                     $btn1.addClass('disabled');
                     $btn2.addClass('disabled');
                     $btn3.addClass('disabled');
+                    $btn4.addClass('disabled');
                 }
             }
 
@@ -1108,18 +1150,71 @@
                         var sel = $('#recipient_filter');
                         var currentVal = sel.val();
                         sel.find('option:not(:first)').remove();
+                        var list = $('#recipientList');
+                        list.find('.dd-item:not(:first)').remove();
                         if (res.recipients && res.recipients.length > 0) {
                             res.recipients.forEach(function(r) {
                                 sel.append('<option value="' + r.value + '">' + r.label + ' (' + r.count + ')</option>');
+                                list.append('<div class="dd-item" data-value="' + r.value + '">' + r.label + ' (' + r.count + ')</div>');
                             });
                         }
-                        if (currentVal) sel.val(currentVal);
+                        if (currentVal) {
+                            sel.val(currentVal);
+                            syncDropdownHighlight(currentVal);
+                        }
                     }
                 });
             }
 
+            // === Custom Recipient Dropdown ===
+            $('#recipientToggle').on('click', function(e) {
+                e.stopPropagation();
+                var menu = $('#recipientMenu');
+                menu.toggleClass('open');
+                if (menu.hasClass('open')) {
+                    $('#recipientSearch').val('').trigger('input');
+                    setTimeout(function(){ $('#recipientSearch').focus(); }, 50);
+                }
+            });
+
+            $(document).on('click', function(e) {
+                if (!$(e.target).closest('#recipientDropdown').length) {
+                    $('#recipientMenu').removeClass('open');
+                }
+            });
+
+            $('#recipientSearch').on('input', function() {
+                var q = $(this).val().toLowerCase();
+                $('#recipientList .dd-item').each(function() {
+                    var text = $(this).text().toLowerCase();
+                    $(this).toggle(text.indexOf(q) !== -1);
+                });
+            });
+
+            $(document).on('click', '#recipientList .dd-item', function() {
+                var val = $(this).data('value');
+                var label = $(this).text();
+                $('#recipient_filter').val(val === undefined ? '' : val).trigger('change');
+                $('#recipientToggle').text(label);
+                $('#recipientList .dd-item').removeClass('active');
+                $(this).addClass('active');
+                $('#recipientMenu').removeClass('open');
+            });
+
+            function syncDropdownHighlight(val) {
+                $('#recipientList .dd-item').removeClass('active');
+                $('#recipientList .dd-item').filter(function() {
+                    return String($(this).data('value')) === String(val);
+                }).addClass('active');
+                var activeItem = $('#recipientList .dd-item.active');
+                if (activeItem.length) {
+                    $('#recipientToggle').text(activeItem.text());
+                }
+            }
+
             $(document).on('change', '#recipient_filter', function() {
                 $('#shipping-export').addClass('disabled');
+                syncDropdownHighlight($(this).val());
                 dataTable.ajax.reload(null, false);
             });
 

@@ -42,6 +42,7 @@ Route::group(['middleware' => ['role:admin']], function () {
     Route::post('/update-status-shipping2', 'CustomershippingController@update_StatusByIDs')->name('update-status-shipping2');
     Route::post('/update-status-pay2', 'CustomershippingController@update_StatusByIDs2')->name('update-status-pay2');
     Route::post('/update-status-received2', 'CustomershippingController@update_StatusByIDs3')->name('update-status-received2');
+    Route::post('/update-thai-bill-paid', 'CustomershippingController@updateThaiBillPaid')->name('update-thai-bill-paid');
 
     // LINE notification
     Route::post('/send-line-notification', 'CustomershippingController@sendLineNotification')->name('send.line.notification');

@@ -330,6 +330,23 @@ class CustomershippingController extends Controller
     }
 
 
+    public function updateThaiBillPaid(Request $request)
+    {
+        $Ids = explode(',', $request->input('track_ids4'));
+
+        try {
+            Customershipping::whereIn('id', $Ids)->update([
+                'thai_bill_status' => 2
+            ]);
+
+            return redirect()->route('customershippings.index')
+                ->with('success', 'อัปเดตชำระค่าส่งไทยแล้ว ' . count($Ids) . ' รายการ');
+        } catch (\Exception $e) {
+            return redirect()->route('customershippings.index')
+                ->with('error', 'อัปเดตชำระค่าส่งไทยไม่สำเร็จ');
+        }
+    }
+
     /**
      * Show the form for creating a new resource.
      *

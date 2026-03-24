@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+ก#!/usr/bin/env python3
 """Fix LINE webhook group chat lastMessage to include video type"""
 
 filepath = '/opt/skjchat/src/app/api/webhooks/line/route.ts'
