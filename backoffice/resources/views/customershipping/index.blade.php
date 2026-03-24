@@ -815,7 +815,7 @@
                     { "targets": 22, "data": "itemno" },
 
                 ],
-                "lengthMenu": [100, 200, 300, 500, 1000],
+                "lengthMenu": [100, 200, 300, 500, 1000, 1500],
                 "pageLength": 100,
                 "order": [
                     // [13, 'desc'], // เรียงลำดับตาม etd ล่าสุด (desc)

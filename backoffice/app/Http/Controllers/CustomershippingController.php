@@ -142,7 +142,7 @@ class CustomershippingController extends Controller
                             $query->whereBetween('etd', [$request->start_date, $request->end_date]);
                         else if (!empty($request->start_date))
                             $query->whereRaw("DATE(etd) BETWEEN ? AND ?", [$request->start_date, $request->start_date]);
-                    })->orderByRaw('customerno asc')->orderBy('ship_date', 'desc')->take(1000)->get();
+                    })->orderByRaw('customerno asc')->orderBy('ship_date', 'desc')->take(1500)->get();
 
 
                     $sqlQuery = $queryAll->toSql();
