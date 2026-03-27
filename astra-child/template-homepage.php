@@ -11,24 +11,42 @@ get_template_part('template-parts/skj-header');
 <div class="header-spacer"></div>
 
 <!-- HERO SLIDER -->
-<section class="hero-slider" id="heroSlider">
-    <div class="slider-track" id="sliderTrack">
-        <div class="slider-slide">
-            <img src="https://skjjapanshipping.com/wp-content/uploads/2025/03/1.webp" alt="SKJ Japan Shipping - บริการขนส่งสินค้าจากญี่ปุ่นมาไทย" fetchpriority="high" decoding="async" width="1200" height="500">
+<section class="hero-slider" id="heroSlider" aria-label="ภาพสไลด์บริการ SKJ Japan Shipping">
+    <div class="slider-viewport">
+        <div class="slider-track" id="sliderTrack">
+            <div class="slider-slide">
+                <img src="https://skjjapanshipping.com/wp-content/uploads/2025/03/1.webp" alt="SKJ Japan Shipping - บริการขนส่งสินค้าจากญี่ปุ่นมาไทย ทางเรือและทางเครื่องบิน" fetchpriority="high" decoding="async" width="1200" height="500">
+            </div>
+            <div class="slider-slide">
+                <img src="https://skjjapanshipping.com/wp-content/uploads/2025/03/2.webp" alt="Fastest Express - ขนส่งสินค้าจากญี่ปุ่น ปิดตู้สินค้าทุกสัปดาห์ ถึงไทย 14-25 วัน" loading="lazy" decoding="async" width="1200" height="500">
+            </div>
+            <div class="slider-slide">
+                <img src="https://skjjapanshipping.com/wp-content/uploads/2025/03/3.webp" alt="SKJ Japan - รับสั่งซื้อสินค้าจากญี่ปุ่น Yahoo Auctions, Mercari, Rakuten, Amazon JP" loading="lazy" decoding="async" width="1200" height="500">
+            </div>
         </div>
-        <div class="slider-slide">
-            <img src="https://skjjapanshipping.com/wp-content/uploads/2025/03/2.webp" alt="Fastest Express - ขนส่ง ทันใจ ปิดตู้สินค้าทุกสัปดาห์" loading="lazy" decoding="async" width="1200" height="500">
-        </div>
-        <div class="slider-slide">
-            <img src="https://skjjapanshipping.com/wp-content/uploads/2025/03/3.webp" alt="SKJ Japan - บริการด้วยใจ พร้อมส่งมอบพัสดุอย่างปลอดภัย" loading="lazy" decoding="async" width="1200" height="500">
+        <button class="slider-btn slider-prev" onclick="slideMove(-1)" aria-label="สไลด์ก่อนหน้า"><i class="fas fa-chevron-left"></i></button>
+        <button class="slider-btn slider-next" onclick="slideMove(1)" aria-label="สไลด์ถัดไป"><i class="fas fa-chevron-right"></i></button>
+        <div class="slider-dots" role="tablist" aria-label="เลือกสไลด์">
+            <div class="slider-dot active" onclick="slideTo(0)" role="tab" aria-selected="true" aria-label="สไลด์ 1"></div>
+            <div class="slider-dot" onclick="slideTo(1)" role="tab" aria-selected="false" aria-label="สไลด์ 2"></div>
+            <div class="slider-dot" onclick="slideTo(2)" role="tab" aria-selected="false" aria-label="สไลด์ 3"></div>
         </div>
     </div>
-    <button class="slider-btn slider-prev" onclick="slideMove(-1)" style="width:44px;height:44px;min-width:44px;min-height:44px;max-width:44px;max-height:44px;border-radius:50%;background:rgba(255,255,255,0.15);backdrop-filter:blur(8px);color:#fff;border:1px solid rgba(255,255,255,0.2);font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;position:absolute;top:50%;transform:translateY(-50%);left:16px;z-index:2;"><i class="fas fa-chevron-left"></i></button>
-    <button class="slider-btn slider-next" onclick="slideMove(1)" style="width:44px;height:44px;min-width:44px;min-height:44px;max-width:44px;max-height:44px;border-radius:50%;background:rgba(255,255,255,0.15);backdrop-filter:blur(8px);color:#fff;border:1px solid rgba(255,255,255,0.2);font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;position:absolute;top:50%;transform:translateY(-50%);right:16px;z-index:2;"><i class="fas fa-chevron-right"></i></button>
-    <div class="slider-dots">
-        <div class="slider-dot active" onclick="slideTo(0)"></div>
-        <div class="slider-dot" onclick="slideTo(1)"></div>
-        <div class="slider-dot" onclick="slideTo(2)"></div>
+    <div class="hero-overlay">
+        <div class="hero-overlay-content">
+            <span class="hero-badge"><i class="fas fa-shipping-fast"></i> บริการขนส่งครบวงจร</span>
+            <h1>ขนส่งสินค้าจากญี่ปุ่นมาไทย<br><span class="hero-highlight">รวดเร็ว ปลอดภัย ใส่ใจคุณ</span></h1>
+            <p class="hero-sub">ทางเรือ <strong>150 ฿/กก.</strong> เครื่องบิน <strong>339 ฿/กก.</strong> พร้อม Track & Trace</p>
+            <div class="hero-cta-group">
+                <a href="<?php echo esc_url(home_url('/skjtrack/register')); ?>" class="btn btn-white btn-lg hero-btn-primary"><i class="fas fa-user-plus"></i> สมัครสมาชิกฟรี</a>
+                <a href="#calculator" class="btn btn-glass btn-lg hero-btn-secondary"><i class="fas fa-calculator"></i> คำนวณค่าส่ง</a>
+            </div>
+            <div class="hero-trust-row">
+                <span><i class="fas fa-check-circle"></i> ปิดตู้ทุกสัปดาห์</span>
+                <span><i class="fas fa-check-circle"></i> 5+ ปีประสบการณ์</span>
+                <span><i class="fas fa-check-circle"></i> 200,000+ พัสดุจัดส่งสำเร็จ</span>
+            </div>
+        </div>
     </div>
 </section>
 
@@ -86,10 +104,10 @@ get_template_part('template-parts/skj-header');
         <h2>Fastest Express ส่งไว ทันใจ ทุกสัปดาห์</h2>
         <p>ด้วยความเร็วเพียง 14-25 วัน หลังปิดตู้ พร้อมเช็คสถานะ Real-time</p>
         <div class="highlight-stats">
-            <div class="h-stat"><div class="num">14-25</div><div class="label">วันถึงไทย</div></div>
-            <div class="h-stat"><div class="num">5+</div><div class="label">ปีประสบการณ์</div></div>
-            <div class="h-stat"><div class="num">1,000+</div><div class="label">ลูกค้าไว้วางใจ</div></div>
-            <div class="h-stat"><div class="num">200,000+</div><div class="label">พัสดุที่จัดส่งสำเร็จ</div></div>
+            <div class="h-stat"><div class="num" data-count="14" data-prefix="" data-suffix="-25">0</div><div class="label">วันถึงไทย</div></div>
+            <div class="h-stat"><div class="num" data-count="5" data-prefix="" data-suffix="+">0</div><div class="label">ปีประสบการณ์</div></div>
+            <div class="h-stat"><div class="num" data-count="1000" data-prefix="" data-suffix="+">0</div><div class="label">ลูกค้าไว้วางใจ</div></div>
+            <div class="h-stat"><div class="num" data-count="200000" data-prefix="" data-suffix="+">0</div><div class="label">พัสดุที่จัดส่งสำเร็จ</div></div>
         </div>
     </div>
 </section>

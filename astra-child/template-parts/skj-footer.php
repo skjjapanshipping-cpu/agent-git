@@ -88,3 +88,10 @@ function skjCookieAccept(){
     document.getElementById('skjCookieBanner').style.display='none';
 }
 </script>
+
+<!-- Floating LINE Button -->
+<a href="https://lin.ee/whDh44F" target="_blank" rel="noopener" class="floating-line-btn" aria-label="แชทกับเราทาง LINE">
+    <i class="fab fa-line"></i>
+    <span class="floating-line-text">แชทกับเรา</span>
+    <span class="floating-line-pulse"></span>
+</a>
