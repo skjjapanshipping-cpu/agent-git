@@ -7,20 +7,19 @@ use Illuminate\Support\Facades\Auth;
 
 class ScannerAuthController extends Controller
 {
-    /**
-     * แสดงหน้า Login สำหรับคนสแกนพัสดุ
-     */
+    protected function guard()
+    {
+        return Auth::guard('scanner');
+    }
+
     public function showLogin()
     {
-        if (Auth::check() && (Auth::user()->hasRole('scanner') || Auth::user()->hasRole('admin'))) {
+        if ($this->guard()->check() && ($this->guard()->user()->hasRole('scanner') || $this->guard()->user()->hasRole('admin'))) {
             return redirect('/scanner');
         }
         return view('scanner.login');
     }
 
-    /**
-     * ล็อกอินเข้าระบบสแกน
-     */
     public function login(Request $request)
     {
         $request->validate([
@@ -33,12 +32,11 @@ class ScannerAuthController extends Controller
 
         $credentials = $request->only('email', 'password');
 
-        if (Auth::attempt($credentials, $request->filled('remember'))) {
-            $user = Auth::user();
+        if ($this->guard()->attempt($credentials, $request->filled('remember'))) {
+            $user = $this->guard()->user();
 
-            // ตรวจว่าเป็น role scanner เท่านั้น
             if (!$user->hasRole('scanner')) {
-                Auth::logout();
+                $this->guard()->logout();
                 return back()->withErrors(['email' => 'บัญชีนี้ไม่มีสิทธิ์เข้าระบบสแกน'])->withInput();
             }
 
@@ -49,12 +47,9 @@ class ScannerAuthController extends Controller
         return back()->withErrors(['email' => 'ID หรือรหัสผ่านไม่ถูกต้อง'])->withInput();
     }
 
-    /**
-     * ออกจากระบบ
-     */
     public function logout(Request $request)
     {
-        Auth::logout();
+        $this->guard()->logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
         return redirect('/scanner/login');

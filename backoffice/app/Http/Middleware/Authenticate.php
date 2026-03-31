@@ -6,17 +6,10 @@ use Illuminate\Auth\Middleware\Authenticate as Middleware;
 
 class Authenticate extends Middleware
 {
-    /**
-     * Get the path the user should be redirected to when they are not authenticated.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return string|null
-     */
     protected function redirectTo($request)
     {
         if (! $request->expectsJson()) {
-            // Scanner routes redirect to scanner login
-            if ($request->is('scanner') || $request->is('scanner/*')) {
+            if ($request->is('scanner') || $request->is('scanner/*') || $request->is('qr-scan/*') || $request->is('*/qr-scan/*')) {
                 return route('scanner.login');
             }
             return route('login');

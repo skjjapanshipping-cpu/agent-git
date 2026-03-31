@@ -237,11 +237,17 @@ class CustomershippingController extends Controller
                     Log::error('Error updating customerorder: ' . $e->getMessage());
                 }
             }
-            Customershipping::whereIn('id', $Ids)->update([
-                'status' => 3
-            ]); //shipping_status
-
-            // ไม่แจ้งลูกค้าตอนถึงไทย — Invoice จะแจ้งอยู่แล้ว
+            $adminName = \Auth::user()->name ?? 'admin';
+            foreach ($Ids as $id) {
+                Customershipping::where('id', $id)->whereNull('scanned_at')->update([
+                    'status' => 3,
+                    'scanned_at' => now(),
+                    'scanned_by' => $adminName,
+                ]);
+                Customershipping::where('id', $id)->whereNotNull('scanned_at')->update([
+                    'status' => 3,
+                ]);
+            }
 
             return redirect()->route('customershippings.index')
                 ->with('success', 'อัปเดตสินค้าถึงไทยเรียบร้อยแล้ว');
@@ -303,20 +309,25 @@ class CustomershippingController extends Controller
 
         try {
 
-            // อัพเดทสถานะใน customershipping
-            Customershipping::whereIn('id', $Ids)->update([
-                'status' => 4
-            ]); //shipping_status = 4 (สำเร็จ)
-            
-            // อัพเดทสถานะใน customerorder ด้วย
+            $adminName = \Auth::user()->name ?? 'admin';
             foreach ($Ids as $id) {
-                $customershipping = Customershipping::find($id);
-                if ($customershipping) {
-                    // อัพเดท customerorder ที่มี customerno และ itemno เดียวกัน
-                    \App\Models\Customerorder::where('customerno', $customershipping->customerno)
-                        ->where('itemno', $customershipping->itemno)
-                        ->update(['shipping_status' => 4]); // shipping_status = 4 (สำเร็จ)
+                $cs = Customershipping::find($id);
+                if (!$cs) continue;
+
+                $updates = ['status' => 4];
+                if (!$cs->scanned_at) {
+                    $updates['scanned_at'] = now();
+                    $updates['scanned_by'] = $adminName;
                 }
+                if (!$cs->picked_up_at) {
+                    $updates['picked_up_at'] = now();
+                    $updates['picked_up_by'] = $adminName;
+                }
+                $cs->update($updates);
+
+                \App\Models\Customerorder::where('customerno', $cs->customerno)
+                    ->where('itemno', $cs->itemno)
+                    ->update(['shipping_status' => 4]);
             }
             
             // ยังไม่แจ้งลูกค้าจากปุ่มนี้ — ให้แจ้งเฉพาะจาก Pickup Scan เมื่อจ่ายครบเท่านั้น

@@ -197,14 +197,14 @@ Route::get('/scanner/login', 'ScannerAuthController@showLogin')->name('scanner.l
 Route::post('/scanner/login', 'ScannerAuthController@login');
 Route::post('/scanner/logout', 'ScannerAuthController@logout')->name('scanner.logout');
 
-// Scanner Home (scanner + admin role)
-Route::middleware(['auth', 'role:scanner|admin'])->group(function () {
+// Scanner Home (scanner guard — แยก session จาก admin)
+Route::middleware(['auth:scanner'])->group(function () {
     Route::get('/scanner', 'QrScanController@scannerHome')->name('scanner.home');
     Route::get('/scanner/pickup', 'QrScanController@pickupHome')->name('scanner.pickup');
 });
 
-// QR Scan API (accessible by both admin and scanner)
-Route::middleware('auth')->group(function () {
+// QR Scan API (รองรับทั้ง admin และ scanner guard)
+Route::middleware('auth:web,scanner')->group(function () {
     Route::get('/qr-scan/api/box/{box_no}', 'QrScanController@getBoxInfo')->name('qrscan.api.box');
     Route::post('/qr-scan/api/update-status', 'QrScanController@updateBoxStatus')->name('qrscan.api.update-status');
     Route::post('/qr-scan/api/clear-scan', 'QrScanController@clearScan')->name('qrscan.api.clear-scan');

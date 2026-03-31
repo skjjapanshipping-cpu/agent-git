@@ -441,7 +441,7 @@
                                         <th>การจัดส่ง</th>
                                         <th>สถานะชำระเงิน</th>
                                         <th>บิลค่าส่งไทย</th>
-                                        <th>หมายเหตุ</th>
+                                        <th>หมายเหตุ (ลูกค้า)</th>
                                         <th>Note Admin</th>
                                         <th></th>
                                         <th>Items</th>
@@ -710,7 +710,7 @@
                         },
                     { "targets": 8, "visible": {{Session::get('hide') ? 'true' : 'false'}} }, // หน่วยละ
                     { "targets": 9, "visible": {{Session::get('hide') ? 'true' : 'false'}} }, // ค่านำเข้า
-                    { "targets": 12, "visible": {{Session::get('hide') ? 'true' : 'false'}} }, // โกดัง
+                    { "targets": 12, "visible": false }, // โกดัง (ซ่อนถาวร)
                     { "targets": 1, "data": null,title:"No","orderable": false, "render": function (data, type, full, meta) {
                             return meta.row + 1;
                         } },

@@ -4,6 +4,15 @@
  * Modern redesign for skjjapanshipping.com
  */
 
+// Redirect /calculate → /#calculator
+add_action('template_redirect', 'skj_redirect_calculate');
+function skj_redirect_calculate() {
+    if (trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/') === 'calculate') {
+        wp_redirect(home_url('/#calculator'), 301);
+        exit;
+    }
+}
+
 // Enqueue styles and scripts
 add_action('wp_enqueue_scripts', 'skj_child_enqueue_styles', 15);
 function skj_child_enqueue_styles() {

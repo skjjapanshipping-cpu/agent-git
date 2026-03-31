@@ -4,11 +4,13 @@ namespace App\Exports;
 
 use App\Models\Customershipping;
 use Maatwebsite\Excel\Concerns\FromCollection;
-
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithColumnWidths;
+use Maatwebsite\Excel\Concerns\WithEvents;
+use Maatwebsite\Excel\Events\AfterSheet;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
 
-class CustomershippingExport implements FromCollection, WithHeadings, WithColumnWidths
+class CustomershippingExport implements FromCollection, WithHeadings, WithColumnWidths, WithEvents
 {
     protected $sheet;
     protected $etd;
@@ -35,14 +37,13 @@ class CustomershippingExport implements FromCollection, WithHeadings, WithColumn
             'delivery_district',
             'delivery_province',
             'delivery_postcode',
-            \DB::raw('weight * 1000 as weight_in_grams'), // Convert grams to kilograms
+            \DB::raw('weight * 1000 as weight_in_grams'),
             \DB::raw('width'),
             \DB::raw('length'),
             \DB::raw('height'),
             \DB::raw("'' as cod")
         ,\DB::raw("'' as coddata")
         ,'note')
-            ->latest('etd')
             ->where('delivery_type_id', '!=', 1)
             ->where('excel_status', '=', '1');
 
@@ -50,7 +51,6 @@ class CustomershippingExport implements FromCollection, WithHeadings, WithColumn
             $query->whereRaw('DATE(etd)=?', [$this->etd]);
         }
         if (!empty($this->customerno)) {
-            // ใช้ where(function) เพื่อให้เงื่อนไข etd และ delivery_type_id ยังทำงานอยู่
             $customerno = $this->customerno;
             $query->where(function($query) use ($customerno) {
                 $query->whereRaw("customerno like ?", ['%' . $customerno . '%'])
@@ -58,16 +58,13 @@ class CustomershippingExport implements FromCollection, WithHeadings, WithColumn
             });
         }
 
-//        $query->orderBy('box_no');
-//        dd($this->customerno,$query->toSql(),$query->get()->toArray());
-        return $query->orderByRaw('etd DESC, customerno ASC, ship_date DESC')->take(2000)->get();
+        return $query->orderByRaw('customershippings.delivery_fullname ASC, ship_date DESC')->take(2000)->get();
     }
 
 
     public function headings(): array
     {
         return [
-//            'เลขหน้ากล่อง',
             'ชื่อ-นามสกุล',
             'เบอร์โทรศัพท์',
             'ที่อยู่',
@@ -88,7 +85,6 @@ class CustomershippingExport implements FromCollection, WithHeadings, WithColumn
     public function columnWidths(): array
     {
         return [
-//            'A' => 11, // ขนาดเลขหน้ากล่อง
             'A' => 18,
             'B' => 11,
             'C' => 15,
@@ -103,9 +99,50 @@ class CustomershippingExport implements FromCollection, WithHeadings, WithColumn
             'L' => 30,
             'M' => 9,
             'N' => 30
-
         ];
     }
 
+    public function registerEvents(): array
+    {
+        return [
+            AfterSheet::class => function(AfterSheet $event) {
+                $sheet = $event->sheet->getDelegate();
+                $highestRow = $sheet->getHighestRow();
+                $highestCol = $sheet->getHighestColumn();
 
+                // Header: พื้นแดงเข้ม ตัวหนังสือขาว
+                $sheet->getStyle("A1:{$highestCol}1")->applyFromArray([
+                    'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+                    'fill' => [
+                        'fillType' => Fill::FILL_SOLID,
+                        'startColor' => ['rgb' => 'CC0000'],
+                    ],
+                ]);
+
+                // สลับสีแดงอ่อนตามกลุ่มชื่อผู้รับ
+                $currentName = '';
+                $colorToggle = false;
+                $redFill = [
+                    'fill' => [
+                        'fillType' => Fill::FILL_SOLID,
+                        'startColor' => ['rgb' => 'FFE0E0'],
+                    ],
+                ];
+
+                for ($row = 2; $row <= $highestRow; $row++) {
+                    $cellValue = $sheet->getCell('A' . $row)->getValue();
+                    $name = preg_replace('/\s*\(Box\.\d+\)$/', '', $cellValue);
+
+                    if ($name !== $currentName) {
+                        $currentName = $name;
+                        $colorToggle = !$colorToggle;
+                    }
+
+                    if ($colorToggle) {
+                        $sheet->getStyle("A{$row}:{$highestCol}{$row}")->applyFromArray($redFill);
+                    }
+                }
+            },
+        ];
+    }
 }

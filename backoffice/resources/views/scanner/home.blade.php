@@ -71,7 +71,7 @@
             border-radius: 12px;
             border: 3px solid #3b82f6;
             background: #0f172a;
-            color: transparent;
+            color: #fff;
             caret-color: #3b82f6;
             font-size: 24px;
             font-weight: 700;
@@ -79,7 +79,6 @@
             text-align: center;
             letter-spacing: 1px;
         }
-        .scan-input-area input.show-text { color: #fff; }
         .scan-input-area input:focus { outline: none; border-color: #10b981; box-shadow: 0 0 0 4px rgba(16,185,129,0.2); }
         .scan-input-area input::placeholder { color: #475569; font-weight: 400; font-size: 16px; }
         .scan-overlay {
@@ -114,6 +113,7 @@
         .stat-box .lbl { font-size: 11px; color: #64748b; margin-top: 2px; }
         .stat-box.green .num { color: #10b981; }
         .stat-box.yellow .num { color: #f59e0b; }
+        .stat-box.red .num { color: #ef4444; }
         .stat-box.blue .num { color: #3b82f6; }
 
         /* ===== STATUS DISPLAY ===== */
@@ -220,6 +220,7 @@
         }
         .status-green { background: #059669; color: #fff; }
         .status-yellow { background: #f59e0b; color: #fff; }
+        .status-red { background: #dc2626; color: #fff; }
         .empty-msg { padding: 40px 16px; text-align: center; color: #475569; font-size: 14px; }
 
         /* ===== TOAST ===== */
@@ -248,7 +249,7 @@
 <div class="top-bar">
     <div>
         <div class="title"><i class="fa fa-barcode"></i> สแกนรับเข้าสินค้า</div>
-        <div class="user-info">{{ Auth::user()->name }}</div>
+        <div class="user-info">{{ Auth::guard('scanner')->user()->name ?? Auth::user()->name }}</div>
     </div>
     <div style="display:flex;gap:8px;">
         <a href="{{ url('/scanner/pickup') }}" style="padding:6px 14px;border:2px solid rgba(255,255,255,0.3);border-radius:8px;background:transparent;color:#fff;font-size:12px;font-weight:600;font-family:'Prompt',sans-serif;cursor:pointer;text-decoration:none;"><i class="fa fa-truck"></i> จ่ายของ</a>
@@ -284,6 +285,16 @@
                 </div>
                 <button onclick="var v=scanInput.value.trim();if(v){scanInput.value='';fireScan(v);}" style="padding:0 24px;border-radius:12px;border:none;background:#3b82f6;color:#fff;font-size:18px;font-weight:700;font-family:'Prompt',sans-serif;cursor:pointer;">สแกน</button>
             </div>
+            <!-- ETD Round selector for manual box number input -->
+            <div id="manualBoxSection" style="margin-top:14px;padding-top:14px;border-top:1px solid #334155;">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                    <span style="font-size:13px;color:#94a3b8;white-space:nowrap;">📅 รอบปิดตู้:</span>
+                    <select id="etdSelect" style="flex:1;padding:10px 12px;border-radius:8px;border:2px solid #334155;background:#0f172a;color:#fff;font-size:14px;font-weight:600;font-family:'Prompt',sans-serif;">
+                        <option value="">-- ไม่ต้องเลือก (ยิงบาร์โค้ดปกติ) --</option>
+                    </select>
+                </div>
+                <div style="font-size:11px;color:#64748b;text-align:center;">💡 เลือกรอบปิดตู้ → พิมพ์เลขกล่อง (เช่น 42) แล้วกด Enter &nbsp;|&nbsp; ยิงบาร์โค้ดไม่ต้องเลือกรอบ</div>
+            </div>
         </div>
 
         <!-- Stats -->
@@ -295,6 +306,10 @@
             <div class="stat-box yellow">
                 <div class="num" id="countDup">0</div>
                 <div class="lbl">ซ้ำ</div>
+            </div>
+            <div class="stat-box red">
+                <div class="num" id="countFail">0</div>
+                <div class="lbl">ไม่สำเร็จ</div>
             </div>
             <div class="stat-box blue">
                 <div class="num" id="countTotal">0</div>
@@ -359,9 +374,77 @@ var csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('
 var scanInput = document.getElementById('scanInput');
 var countSuccess = 0;
 var countDup = 0;
+var countFail = 0;
 var countTotal = 0;
 var scanTimer = null;
 var scanOverlay = document.getElementById('scanOverlay');
+var sessionAlive = true;
+
+// ===== SESSION KEEP-ALIVE & CSRF REFRESH (ทุก 10 นาที) =====
+setInterval(function() {
+    fetch(apiBase + '/scanner', {
+        method: 'GET',
+        headers: { 'Accept': 'text/html' },
+        credentials: 'same-origin'
+    }).then(function(r) {
+        if (r.ok) {
+            return r.text().then(function(html) {
+                var m = html.match(/meta name="csrf-token" content="([^"]+)"/);
+                if (m) {
+                    csrfToken = m[1];
+                    document.querySelector('meta[name="csrf-token"]').setAttribute('content', csrfToken);
+                }
+                if (!sessionAlive) {
+                    sessionAlive = true;
+                    hideSessionWarning();
+                }
+            });
+        } else if (r.status === 401 || r.redirected) {
+            sessionAlive = false;
+            showSessionWarning();
+        }
+    }).catch(function() {});
+}, 10 * 60 * 1000);
+
+function showSessionWarning() {
+    var w = document.getElementById('sessionWarning');
+    if (!w) {
+        w = document.createElement('div');
+        w.id = 'sessionWarning';
+        w.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#dc2626;color:#fff;padding:16px;text-align:center;font-size:16px;font-weight:700;';
+        w.innerHTML = '⚠️ เซสชันหมดอายุ — กรุณา <a href="javascript:location.reload()" style="color:#fef08a;text-decoration:underline;">รีเฟรชหน้านี้</a> เพื่อยิงบาร์โค้ดต่อ';
+        document.body.prepend(w);
+    }
+    w.style.display = 'block';
+}
+
+function hideSessionWarning() {
+    var w = document.getElementById('sessionWarning');
+    if (w) w.style.display = 'none';
+}
+
+// ===== LOAD ETD ROUNDS =====
+function loadEtdRounds() {
+    fetch(apiBase + '/qr-scan/api/pickup/rounds', { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        var sel = document.getElementById('etdSelect');
+        if (data.success && data.rounds) {
+            data.rounds.forEach(function(r) {
+                var opt = document.createElement('option');
+                opt.value = r.etd;
+                opt.textContent = r.etd_display + ' (' + r.scanned + '/' + r.total + ' สแกนแล้ว)';
+                sel.appendChild(opt);
+            });
+        }
+    })
+    .catch(function() {});
+}
+loadEtdRounds();
+
+function getSelectedEtd() {
+    return document.getElementById('etdSelect').value || '';
+}
 
 // ===== TAB =====
 function showTab(name, el) {
@@ -378,7 +461,7 @@ function focusInput() {
 }
 
 document.addEventListener('click', function(e) {
-    if (e.target !== scanInput && !e.target.closest('.tab-nav') && !e.target.closest('.btn-logout') && !e.target.closest('.btn-clear-history')) {
+    if (e.target !== scanInput && !e.target.closest('.tab-nav') && !e.target.closest('.btn-logout') && !e.target.closest('.btn-clear-history') && e.target.tagName !== 'SELECT' && !e.target.closest('select')) {
         focusInput();
     }
 });
@@ -394,11 +477,19 @@ document.addEventListener('click', warmAudio);
 document.addEventListener('keydown', warmAudio);
 
 // ===== FIRE SCAN (ไม่มี lock — ยิงกี่ตัวก็ได้พร้อมกัน) =====
+var isBarcodeFormat = /^\d{4}-\d+$/;
 function fireScan(raw) {
     var boxNo = raw.trim();
     if (!boxNo || !/^[\dA-Za-z.\-]+$/.test(boxNo)) {
         playErrorSound();
         showToast('❌ บาร์โค้ดผิด!', 'error');
+        return;
+    }
+    var isManual = !isBarcodeFormat.test(boxNo) && /^\d+$/.test(boxNo);
+    if (isManual && !getSelectedEtd()) {
+        playErrorSound();
+        setStatus('error', '❌ กรุณาเลือกรอบปิดตู้ก่อนพิมพ์เลขกล่อง');
+        showToast('เลือกรอบปิดตู้ก่อน!', 'error');
         return;
     }
     setStatus('searching', '🔍 กล่อง ' + boxNo + '...');
@@ -417,18 +508,18 @@ scanInput.addEventListener('keydown', function(e) {
     }
 });
 
-// ===== AUTO-DETECT (fallback ถ้าไม่มี Enter) =====
+// ===== AUTO-DETECT (เฉพาะบาร์โค้ด DDMM-NNN เท่านั้น / ตัวเลขล้วน = รอ Enter) =====
 scanInput.addEventListener('input', function() {
     if (scanInput.value.length > 0) scanOverlay.classList.add('active');
     if (scanTimer) clearTimeout(scanTimer);
     scanTimer = setTimeout(function() {
         scanOverlay.classList.remove('active');
         var val = scanInput.value.trim();
-        if (val) {
+        if (val && isBarcodeFormat.test(val)) {
             scanInput.value = '';
             fireScan(val);
         }
-    }, 300);
+    }, 500);
 });
 
 // ===== STATUS DISPLAY =====
@@ -446,6 +537,7 @@ function setStatus(type, msg) {
 function updateCounters() {
     document.getElementById('countSuccess').textContent = countSuccess;
     document.getElementById('countDup').textContent = countDup;
+    document.getElementById('countFail').textContent = countFail;
     document.getElementById('countTotal').textContent = countTotal;
 }
 
@@ -529,14 +621,22 @@ function showToast(msg, type) {
 
 // ===== LOOKUP =====
 function lookupBox(boxNo) {
-    fetch(apiBase + '/qr-scan/api/box/' + encodeURIComponent(boxNo), {
-        headers: { 'Accept': 'application/json' }
+    var etdQ = getSelectedEtd() ? ('?etd=' + encodeURIComponent(getSelectedEtd())) : '';
+    fetch(apiBase + '/qr-scan/api/box/' + encodeURIComponent(boxNo) + etdQ, {
+        headers: { 'Accept': 'application/json' },
+        credentials: 'same-origin'
     })
-    .then(function(r) { return r.json(); })
+    .then(function(r) {
+        if (r.status === 401 || r.status === 419 || (r.redirected && r.url.indexOf('login') !== -1)) {
+            sessionAlive = false;
+            showSessionWarning();
+            throw new Error('SESSION_EXPIRED');
+        }
+        return r.json();
+    })
     .then(function(data) {
         if (data.success) {
             if (data.parcel.scanned_at) {
-                // ซ้ำ → เสียง + UI ทันที
                 playWarningSound();
                 countDup++; countTotal++;
                 updateCounters();
@@ -546,33 +646,40 @@ function lookupBox(boxNo) {
                 addToHistory(boxNo, data.parcel.customerno, data.parcel.track_no, '⚠️ ซ้ำ');
                 return;
             }
-            // สำเร็จ → เสียง + UI ทันที ไม่ต้องรอ API ตัวที่ 2
-            playSuccessSound();
-            countSuccess++; countTotal++;
-            updateCounters();
-            setStatus('success', '✅ กล่อง <strong>' + boxNo + '</strong> → สินค้าถึงไทยแล้ว (' + data.parcel.customerno + ')');
-            showLastScan(boxNo, data.parcel, 'ok');
-            showToast('✅ ' + boxNo + ' → สินค้าถึงไทยแล้ว', 'success');
-            addToHistory(boxNo, data.parcel.customerno, data.parcel.track_no, 'สินค้าถึงไทยแล้ว');
-            // บันทึกลง DB แบบ background (ไม่ต้องรอ)
-            updateStatusBackground(boxNo);
+            // พบ + ยังไม่สแกน → POST update-status แล้วรอ DB ยืนยัน
+            setStatus('searching', '💾 กำลังบันทึก กล่อง <strong>' + boxNo + '</strong>...');
+            confirmAndUpdate(boxNo, data.parcel);
         } else {
             playErrorSound();
-            countTotal++;
+            countFail++; countTotal++;
             updateCounters();
             setStatus('error', '❌ ไม่พบกล่อง <strong>' + boxNo + '</strong> ในรอบปิดตู้ปัจจุบัน');
             showToast('ไม่พบกล่อง ' + boxNo, 'error');
+            addToHistory(boxNo, '-', '-', '❌ ไม่พบ');
         }
     })
     .catch(function(err) {
+        if (err.message === 'SESSION_EXPIRED') {
+            playErrorSound();
+            countFail++; countTotal++;
+            updateCounters();
+            setStatus('error', '⚠️ เซสชันหมดอายุ — กรุณารีเฟรชหน้า');
+            showToast('⚠️ เซสชันหมดอายุ', 'error');
+            addToHistory(boxNo, '-', '-', '❌ เซสชันหมดอายุ');
+            return;
+        }
         playErrorSound();
+        countFail++; countTotal++;
+        updateCounters();
         setStatus('error', '❌ เกิดข้อผิดพลาด: ' + err.message);
         showToast('เกิดข้อผิดพลาด', 'error');
     });
 }
 
-// บันทึก scanned_at แบบ background — ไม่บล็อก UI
-function updateStatusBackground(boxNo) {
+// บันทึก scanned_at + รอ DB ยืนยันก่อนแสดงผล
+function confirmAndUpdate(boxNo, parcel) {
+    var payload = { box_no: boxNo };
+    if (getSelectedEtd()) payload.etd = getSelectedEtd();
     fetch(apiBase + '/qr-scan/api/update-status', {
         method: 'POST',
         headers: {
@@ -580,8 +687,60 @@ function updateStatusBackground(boxNo) {
             'X-CSRF-TOKEN': csrfToken,
             'Accept': 'application/json'
         },
-        body: JSON.stringify({ box_no: boxNo })
-    }).catch(function() {});
+        body: JSON.stringify(payload),
+        credentials: 'same-origin'
+    })
+    .then(function(r) {
+        if (r.status === 401 || r.status === 419 || (r.redirected && r.url.indexOf('login') !== -1)) {
+            sessionAlive = false;
+            showSessionWarning();
+            throw new Error('SESSION_EXPIRED');
+        }
+        return r.json();
+    })
+    .then(function(result) {
+        if (result.success && result.type === 'duplicate') {
+            playWarningSound();
+            countDup++; countTotal++;
+            updateCounters();
+            setStatus('warning', '⚠️ กล่อง <strong>' + boxNo + '</strong> ถูกสแกนแล้ว! (' + parcel.customerno + ')');
+            showLastScan(boxNo, parcel, 'dup');
+            showToast('⚠️ กล่อง ' + boxNo + ' ถูกสแกนแล้ว!', 'error');
+            addToHistory(boxNo, parcel.customerno, parcel.track_no, '⚠️ ซ้ำ');
+        } else if (result.success) {
+            playSuccessSound();
+            countSuccess++; countTotal++;
+            updateCounters();
+            setStatus('success', '✅ กล่อง <strong>' + boxNo + '</strong> → สินค้าถึงไทยแล้ว (' + parcel.customerno + ')');
+            showLastScan(boxNo, parcel, 'ok');
+            showToast('✅ ' + boxNo + ' → สินค้าถึงไทยแล้ว', 'success');
+            addToHistory(boxNo, parcel.customerno, parcel.track_no, 'สินค้าถึงไทยแล้ว');
+        } else {
+            playErrorSound();
+            countFail++; countTotal++;
+            updateCounters();
+            setStatus('error', '❌ บันทึกไม่สำเร็จ: ' + (result.message || 'ลองใหม่'));
+            showToast('❌ บันทึกไม่สำเร็จ', 'error');
+            addToHistory(boxNo, parcel.customerno, parcel.track_no, '❌ ไม่สำเร็จ');
+        }
+    })
+    .catch(function(err) {
+        if (err.message === 'SESSION_EXPIRED') {
+            playErrorSound();
+            countFail++; countTotal++;
+            updateCounters();
+            setStatus('error', '⚠️ เซสชันหมดอายุ — กรุณารีเฟรชหน้า');
+            showToast('⚠️ เซสชันหมดอายุ', 'error');
+            addToHistory(boxNo, parcel.customerno, parcel.track_no, '❌ เซสชันหมดอายุ');
+            return;
+        }
+        playErrorSound();
+        countFail++; countTotal++;
+        updateCounters();
+        setStatus('error', '❌ เครือข่ายผิดพลาด: ' + err.message);
+        showToast('❌ เครือข่ายผิดพลาด', 'error');
+        addToHistory(boxNo, parcel.customerno, parcel.track_no, '❌ เครือข่ายผิดพลาด');
+    });
 }
 
 function showLastScan(boxNo, parcel, type) {
@@ -616,10 +775,11 @@ function loadHistory() {
         if (item.date === todayStr) {
             if (item.statusText === 'สินค้าถึงไทยแล้ว' || item.statusText === 'รับเข้าแล้ว') countSuccess++;
             else if (item.statusText === '⚠️ ซ้ำ') countDup++;
+            else if (item.statusText.indexOf('❌') !== -1) countFail++;
             countTotal++;
         }
         var tr = document.createElement('tr');
-        var badgeClass = (item.statusText === 'สินค้าถึงไทยแล้ว' || item.statusText === 'รับเข้าแล้ว') ? 'status-green' : 'status-yellow';
+        var badgeClass = (item.statusText === 'สินค้าถึงไทยแล้ว' || item.statusText === 'รับเข้าแล้ว') ? 'status-green' : (item.statusText.indexOf('❌') !== -1 ? 'status-red' : 'status-yellow');
         tr.innerHTML = '<td>' + (history.length - i) + '</td>' +
             '<td>' + item.time + '</td>' +
             '<td style="font-weight:700;">' + item.boxNo + '</td>' +
@@ -639,7 +799,7 @@ function addToHistory(boxNo, customer, trackNo, statusText) {
     var dateStr = ('0' + now.getDate()).slice(-2) + '/' + ('0' + (now.getMonth()+1)).slice(-2) + '/' + now.getFullYear();
 
     historyCount++;
-    var badgeClass = (statusText === 'สินค้าถึงไทยแล้ว' || statusText === 'รับเข้าแล้ว') ? 'status-green' : 'status-yellow';
+    var badgeClass = (statusText === 'สินค้าถึงไทยแล้ว' || statusText === 'รับเข้าแล้ว') ? 'status-green' : (statusText.indexOf('❌') !== -1 ? 'status-red' : 'status-yellow');
     var tr = document.createElement('tr');
     tr.innerHTML = '<td>' + historyCount + '</td>' +
         '<td>' + time + '</td>' +
@@ -661,7 +821,7 @@ function clearHistory() {
     document.getElementById('historyBody').innerHTML = '';
     document.getElementById('emptyHistory').style.display = 'block';
     historyCount = 0;
-    countSuccess = 0; countDup = 0; countTotal = 0;
+    countSuccess = 0; countDup = 0; countFail = 0; countTotal = 0;
     updateCounters();
     showToast('ล้างประวัติสแกนเรียบร้อย', 'success');
 }

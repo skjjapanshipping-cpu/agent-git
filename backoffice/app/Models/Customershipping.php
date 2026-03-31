@@ -54,7 +54,8 @@ class Customershipping extends Model
         'delivery_postcode','delivery_type_id','delivery_fullname','note', 'width', 'length', 'height','etd','note_admin','excel_status','iswholeprice','pay_status',
         'itemno',
         'shippop_purchase_id','thai_tracking_no','thai_courier','thai_shipping_price','thai_delivery_status','shippop_booked_at',
-        'thai_bill_status','thai_bill_amount','thai_bill_pdf','thai_billed_at'];
+        'thai_bill_status','thai_bill_amount','thai_bill_pdf','thai_billed_at',
+        'scanned_at','scanned_by','picked_up_at','picked_up_by'];
 
     protected $casts = [
         'ship_date' => 'datetime:d/m/Y',

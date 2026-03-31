@@ -202,7 +202,7 @@
 <div class="top-bar">
     <div>
         <div class="title"><i class="fa fa-truck"></i> สแกนจ่ายของ</div>
-        <div class="user-info">{{ Auth::user()->name }}</div>
+        <div class="user-info">{{ Auth::guard('scanner')->user()->name ?? Auth::user()->name }}</div>
     </div>
     <div class="nav-btns">
         <a href="{{ url('/scanner') }}" class="btn-back"><i class="fa fa-barcode"></i> สแกน</a>
@@ -236,10 +236,14 @@
 
 <!-- ===== STEP 1: เลือกลูกค้า ===== -->
 <div class="section" id="sec-select">
+    <div id="selectedRoundBanner" style="background:linear-gradient(135deg,#7c3aed,#6d28d9);border-radius:12px;padding:12px 16px;margin-bottom:10px;text-align:center;">
+        <div style="font-size:12px;color:rgba(255,255,255,0.7);">📅 รอบปิดตู้ที่เลือก</div>
+        <div id="selectedRoundText" style="font-size:18px;font-weight:800;color:#fff;margin-top:2px;">-</div>
+    </div>
     <div class="search-box">
         <div class="icon">👤</div>
         <div class="hint">พิมพ์รหัสลูกค้า หรือเลือกจากรายการด้านล่าง</div>
-        <input type="text" id="customerSearch" placeholder="ANW-xxx" autocomplete="off">
+        <input type="text" id="customerSearch" placeholder="ANW-xxx" autocomplete="off" value="ANW-">
     </div>
     <div class="customer-list" id="customerList">
         <div style="text-align:center;color:#64748b;padding:20px;">กำลังโหลด...</div>
@@ -274,10 +278,12 @@
 
     <!-- Scan Input -->
     <div class="scan-input-area">
-        <div style="margin-bottom:8px;text-align:center;font-size:14px;font-weight:700;color:#c084fc;">🌟 ยิงบาร์โค้ด = อัพเดทสถานะ "สำเร็จ"</div>
+        <div style="margin-bottom:8px;text-align:center;font-size:14px;font-weight:700;color:#c084fc;">🌟 ยิงบาร์โค้ด หรือ พิมพ์เลขกล่อง = อัพเดทสถานะ "สำเร็จ"</div>
         <div style="display:flex;gap:8px;">
-            <input type="text" id="pickupInput" placeholder="สแกนบาร์โค้ดกล่องเพื่อจ่ายของ..." autocomplete="off">
+            <input type="text" id="pickupInput" placeholder="สแกนบาร์โค้ด หรือพิมพ์เลขกล่อง..." autocomplete="off">
+            <button onclick="var v=pickupInput.value.trim();if(v){pickupInput.value='';firePickupScan(v);}" style="padding:0 20px;border-radius:12px;border:none;background:#7c3aed;color:#fff;font-size:16px;font-weight:700;font-family:'Prompt',sans-serif;cursor:pointer;white-space:nowrap;">สแกน</button>
         </div>
+        <div style="font-size:11px;color:#64748b;text-align:center;margin-top:8px;">💡 บาร์โค้ดไม่ชัด? พิมพ์เลขกล่อง (เช่น 42) แล้วกด Enter</div>
     </div>
 
     <!-- Status -->
@@ -296,10 +302,31 @@
 <script>
 var apiBase = (window.location.pathname.indexOf('/skjtrack') !== -1) ? '/skjtrack' : '';
 var csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-var selectedRounds = []; // array of 'YYYY-MM-DD' strings
+var selectedRounds = [];
 var currentCustomer = null;
 var parcelsData = [];
 var scanTimer = null;
+var sessionAlive = true;
+
+// ===== SESSION KEEP-ALIVE & CSRF REFRESH (ทุก 10 นาที) =====
+setInterval(function() {
+    fetch(apiBase + '/scanner/pickup', { method: 'GET', headers: { 'Accept': 'text/html' }, credentials: 'same-origin' })
+    .then(function(r) {
+        if (r.ok) {
+            return r.text().then(function(html) {
+                var m = html.match(/meta name="csrf-token" content="([^"]+)"/);
+                if (m) { csrfToken = m[1]; document.querySelector('meta[name="csrf-token"]').setAttribute('content', csrfToken); }
+                if (!sessionAlive) { sessionAlive = true; var w = document.getElementById('sessionWarning'); if (w) w.style.display = 'none'; }
+            });
+        } else if (r.status === 401 || r.redirected) { sessionAlive = false; showSessionWarning(); }
+    }).catch(function() {});
+}, 10 * 60 * 1000);
+
+function showSessionWarning() {
+    var w = document.getElementById('sessionWarning');
+    if (!w) { w = document.createElement('div'); w.id = 'sessionWarning'; w.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#dc2626;color:#fff;padding:16px;text-align:center;font-size:16px;font-weight:700;'; w.innerHTML = '⚠️ เซสชันหมดอายุ — กรุณา <a href="javascript:location.reload()" style="color:#fef08a;text-decoration:underline;">รีเฟรชหน้านี้</a>'; document.body.prepend(w); }
+    w.style.display = 'block';
+}
 
 // ===== NAVIGATION =====
 function showSection(sec) {
@@ -323,9 +350,22 @@ function confirmRounds() {
     document.getElementById('step0').className = 'step done';
     document.getElementById('step1').className = 'step active';
     document.getElementById('step2').className = 'step';
-    document.getElementById('customerSearch').value = '';
-    document.getElementById('customerSearch').focus();
+    updateRoundBanner();
+    var cs = document.getElementById('customerSearch');
+    cs.value = 'ANW-';
+    cs.focus();
+    cs.setSelectionRange(cs.value.length, cs.value.length);
     loadCustomers();
+}
+
+function updateRoundBanner() {
+    var labels = [];
+    selectedRounds.forEach(function(etd) {
+        for (var i = 0; i < _roundsData.length; i++) {
+            if (_roundsData[i].etd === etd) { labels.push(_roundsData[i].etd_display); break; }
+        }
+    });
+    document.getElementById('selectedRoundText').textContent = labels.length > 0 ? labels.join(' , ') : '-';
 }
 
 function goToStep1() {
@@ -334,7 +374,11 @@ function goToStep1() {
     document.getElementById('step0').className = 'step done';
     document.getElementById('step1').className = 'step active';
     document.getElementById('step2').className = 'step';
-    document.getElementById('customerSearch').focus();
+    updateRoundBanner();
+    var cs = document.getElementById('customerSearch');
+    cs.value = 'ANW-';
+    cs.focus();
+    cs.setSelectionRange(cs.value.length, cs.value.length);
     loadCustomers();
 }
 
@@ -365,10 +409,6 @@ function loadRounds() {
             return;
         }
         renderRounds(data.rounds);
-        // Auto-select latest round
-        if (data.rounds.length > 0) {
-            toggleRound(data.rounds[0].etd);
-        }
     })
     .catch(function() {
         document.getElementById('roundList').innerHTML = '<div style="text-align:center;color:#ef4444;padding:20px;">เกิดข้อผิดพลาด</div>';
@@ -540,11 +580,11 @@ function firePickupScan(raw) {
     var boxNo = raw.trim();
     if (!boxNo || !/^[\dA-Za-z.\-]+$/.test(boxNo)) {
         playErrorSound();
-        showToast('❌ บาร์โค้ดผิด!', 'error');
+        showToast('❌ รูปแบบไม่ถูกต้อง!', 'error');
         return;
     }
 
-    setStatus('ready', '🔍 กำลังตรวจสอบ...');
+    setStatus('ready', '🔍 กำลังตรวจสอบ กล่อง ' + boxNo + '...');
 
     fetch(apiBase + '/qr-scan/api/pickup/scan', {
         method: 'POST',
@@ -553,9 +593,13 @@ function firePickupScan(raw) {
             'X-CSRF-TOKEN': csrfToken,
             'Accept': 'application/json'
         },
-        body: JSON.stringify({ box_no: boxNo, customerno: currentCustomer, etd: etdParam() })
+        body: JSON.stringify({ box_no: boxNo, customerno: currentCustomer, etd: etdParam() }),
+        credentials: 'same-origin'
     })
-    .then(function(r) { return r.json(); })
+    .then(function(r) {
+        if (r.status === 401 || r.status === 419 || (r.redirected && r.url.indexOf('login') !== -1)) { sessionAlive = false; showSessionWarning(); throw new Error('SESSION_EXPIRED'); }
+        return r.json();
+    })
     .then(function(data) {
         if (!data.success) {
             playErrorSound();
@@ -598,6 +642,7 @@ function firePickupScan(raw) {
         }
     })
     .catch(function(err) {
+        if (err.message === 'SESSION_EXPIRED') { playErrorSound(); setStatus('error', '⚠️ เซสชันหมดอายุ — กรุณารีเฟรชหน้า'); return; }
         playErrorSound();
         setStatus('error', '❌ เกิดข้อผิดพลาด');
     });
@@ -616,15 +661,16 @@ pickupInput.addEventListener('keydown', function(e) {
     }
 });
 
+var isBarcodeFormat = /^\d{4}-\d+$/;
 pickupInput.addEventListener('input', function() {
     if (scanTimer) clearTimeout(scanTimer);
     scanTimer = setTimeout(function() {
         var val = pickupInput.value.trim();
-        if (val) {
+        if (val && isBarcodeFormat.test(val)) {
             pickupInput.value = '';
             firePickupScan(val);
         }
-    }, 300);
+    }, 500);
 });
 
 // Keep focus on scan input in step 2

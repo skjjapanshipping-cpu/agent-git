@@ -241,7 +241,7 @@ class CustomerShippingViewController extends Controller
         // จำนวนพัสดุรายเดือน (2 เดือนย้อนหลัง + เดือนนี้ + 1 เดือนข้างหน้า) — ใช้ etd
         $monthlyData = [];
         for ($i = 2; $i >= -1; $i--) {
-            $month = Carbon::now()->subMonths($i);
+            $month = Carbon::now()->startOfMonth()->subMonths($i);
             $count = Customershipping::where('customerno', $customerno)
                 ->where('excel_status', 1)
                 ->whereYear('etd', $month->year)

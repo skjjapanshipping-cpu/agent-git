@@ -9,6 +9,17 @@ use App\Helpers\ChatNotify;
 
 class QrScanController extends Controller
 {
+    private function getAuthUser()
+    {
+        return \Auth::guard('scanner')->user() ?? \Auth::guard('web')->user();
+    }
+
+    private function getAuthUserName()
+    {
+        $user = $this->getAuthUser();
+        return $user ? $user->name : 'scanner';
+    }
+
     /**
      * Generate เลขกล่องอัตโนมัติ ตามรอบปิดตู้ (ETD)
      * 1 กล่อง = 1 QR = 1 รายการสินค้า
@@ -146,19 +157,37 @@ class QrScanController extends Controller
         ]);
 
         $box_no = $request->input('box_no');
+        $etdDates = $this->parseEtdDates($request->input('etd'));
 
-        $parcel = $this->findParcelByBarcode($box_no);
+        $parcel = $this->findParcelSmart($box_no, $etdDates);
 
         if (!$parcel) {
             return response()->json([
                 'success' => false,
+                'type' => 'not_found',
                 'message' => "ไม่พบพัสดุกล่อง {$box_no}",
             ]);
         }
 
-        $parcel->scanned_at = now();
-        $parcel->status = 3; // สินค้าถึงไทยแล้ว
-        $parcel->save();
+        // Atomic update: ป้องกัน race condition เมื่อ 2+ เครื่องยิงพร้อมกัน
+        $scannerName = $this->getAuthUserName();
+        $affected = Customershipping::where('id', $parcel->id)
+            ->whereNull('scanned_at')
+            ->update([
+                'scanned_at' => now(),
+                'status' => 3,
+                'scanned_by' => $scannerName,
+            ]);
+
+        if ($affected === 0) {
+            $parcel->refresh();
+            return response()->json([
+                'success' => true,
+                'type' => 'duplicate',
+                'status_name' => 'สินค้าถึงไทยแล้ว',
+                'message' => "กล่อง {$box_no} ถูกสแกนไปแล้วเมื่อ " . ($parcel->scanned_at ? $parcel->scanned_at->format('d/m/Y H:i') : '-'),
+            ]);
+        }
 
         // Sync สถานะไปที่ customerorder (shipping_status = 3)
         try {
@@ -169,8 +198,22 @@ class QrScanController extends Controller
             \Log::error('Scan sync customerorder error: ' . $e->getMessage());
         }
 
+        // Sync destination_date ไปที่ tracks (หน้าเช็คเลขพัสดุ)
+        try {
+            if ($parcel->track_no) {
+                $trackNoClean = str_replace('-', '', $parcel->track_no);
+                \App\Models\Track::where('status', 1)
+                    ->whereRaw("REPLACE(track_no, '-', '') = ?", [$trackNoClean])
+                    ->whereNull('destination_date')
+                    ->update(['destination_date' => now()->toDateString()]);
+            }
+        } catch (\Exception $e) {
+            \Log::error('Scan sync track destination_date error: ' . $e->getMessage());
+        }
+
         return response()->json([
             'success' => true,
+            'type' => 'ok',
             'status_name' => 'สินค้าถึงไทยแล้ว',
             'message' => "สแกนกล่อง {$box_no} สำเร็จ — สินค้าถึงไทยแล้ว",
         ]);
@@ -192,7 +235,19 @@ class QrScanController extends Controller
         }
 
         $parcel->scanned_at = null;
+        $parcel->scanned_by = null;
+        $parcel->picked_up_at = null;
+        $parcel->picked_up_by = null;
+        $parcel->status = 2;
         $parcel->save();
+
+        try {
+            \App\Models\Customerorder::where('customerno', $parcel->customerno)
+                ->where('itemno', $parcel->itemno)
+                ->update(['shipping_status' => 2]);
+        } catch (\Exception $e) {
+            \Log::error('ClearScan sync customerorder error: ' . $e->getMessage());
+        }
 
         return response()->json(['success' => true, 'message' => 'ลบสถานะสแกนเรียบร้อย']);
     }
@@ -247,11 +302,12 @@ class QrScanController extends Controller
     }
 
     /**
-     * API: ดึงข้อมูลพัสดุจาก box_no (สำหรับ scanner)
+     * API: ดึงข้อมูลพัสดุจาก box_no (สำหรับ scanner) — รองรับทั้งบาร์โค้ดและเลขกล่อง
      */
-    public function getBoxInfo($box_no)
+    public function getBoxInfo(Request $request, $box_no)
     {
-        $parcel = $this->findParcelByBarcode($box_no);
+        $etdDates = $this->parseEtdDates($request->query('etd'));
+        $parcel = $this->findParcelSmart($box_no, $etdDates);
 
         if (!$parcel) {
             return response()->json(['success' => false, 'message' => 'ไม่พบกล่อง ' . $box_no]);
@@ -293,23 +349,63 @@ class QrScanController extends Controller
     }
 
     /**
-     * Helper: ค้นหาพัสดุจากบาร์โค้ด DDMM-NNN → หา box_no ในรอบ ETD ที่ตรงกัน (ปีล่าสุด)
+     * Helper: ค้นหาพัสดุจากบาร์โค้ด DDMM-NNN หรือ เลขกล่องตรงๆ (ต้องระบุ ETD)
      */
     private function findParcelByBarcode($barcode, $extraQuery = null)
     {
-        // แปลง DDMM-NNN → หา box_no = N ในรอบ ETD ที่ day/month ตรงกัน (เอาปีล่าสุด)
         $parsed = $this->parseBarcodeValue($barcode);
-        if (!$parsed) {
-            return null;
+
+        if ($parsed) {
+            $query = Customershipping::where('box_no', $parsed['box_no'])
+                ->where('excel_status', '1')
+                ->whereDay('etd', $parsed['day'])
+                ->whereMonth('etd', $parsed['month'])
+                ->orderBy('etd', 'desc');
+            if ($extraQuery) $extraQuery($query);
+            return $query->first();
         }
 
-        $query = Customershipping::where('box_no', $parsed['box_no'])
+        return null;
+    }
+
+    /**
+     * Helper: ค้นหาพัสดุจากเลขกล่องตรงๆ (plain box number) ภายในรอบ ETD ที่กำหนด
+     */
+    private function findParcelByBoxNumber($boxNumber, $etdDates = null)
+    {
+        $boxNumber = ltrim($boxNumber, '0') ?: '0';
+
+        $query = Customershipping::where('box_no', $boxNumber)
             ->where('excel_status', '1')
-            ->whereDay('etd', $parsed['day'])
-            ->whereMonth('etd', $parsed['month'])
-            ->orderBy('etd', 'desc');
-        if ($extraQuery) $extraQuery($query);
+            ->whereNotNull('box_no')
+            ->where('box_no', '!=', '');
+
+        if ($etdDates && count($etdDates) > 0) {
+            $this->applyEtdFilter($query, $etdDates);
+        } else {
+            $query->orderBy('etd', 'desc');
+        }
+
         return $query->first();
+    }
+
+    /**
+     * Helper: ค้นหาพัสดุอัจฉริยะ — ลองบาร์โค้ดก่อน ถ้าไม่ได้ ลองเลขกล่องตรงๆ
+     */
+    private function findParcelSmart($input, $etdDates = null, $extraQuery = null)
+    {
+        $parcel = $this->findParcelByBarcode($input, function ($q) use ($etdDates, $extraQuery) {
+            if ($etdDates) $this->applyEtdFilter($q, $etdDates);
+            if ($extraQuery) $extraQuery($q);
+        });
+
+        if ($parcel) return $parcel;
+
+        if (preg_match('/^\d+$/', $input)) {
+            return $this->findParcelByBoxNumber($input, $etdDates);
+        }
+
+        return null;
     }
 
     /**
@@ -350,10 +446,13 @@ class QrScanController extends Controller
     /**
      * API: ดึงรอบปิดตู้ที่มีอยู่ (สำหรับเลือกรอบ)
      */
+    private static $scannerMinEtd = '2026-03-09';
+
     public function getAvailableRounds()
     {
         $rounds = Customershipping::where('excel_status', '1')
             ->whereNotNull('box_no')->where('box_no', '!=', '')
+            ->whereDate('etd', '>=', self::$scannerMinEtd)
             ->select('etd')
             ->selectRaw('COUNT(*) as total')
             ->selectRaw('SUM(CASE WHEN picked_up_at IS NOT NULL THEN 1 ELSE 0 END) as picked_up')
@@ -437,12 +536,8 @@ class QrScanController extends Controller
         $customerno = $request->input('customerno');
         $etdDates = $this->parseEtdDates($request->input('etd'));
 
-        // ค้นหากล่องในรอบที่เลือก (รองรับบาร์โค้ด DDMM-NNN)
-        $parcel = $this->findParcelByBarcode($boxNo, function ($q) use ($etdDates) {
-            if ($etdDates) {
-                $this->applyEtdFilter($q, $etdDates);
-            }
-        });
+        // ค้นหากล่องในรอบที่เลือก (รองรับทั้งบาร์โค้ด DDMM-NNN และเลขกล่องตรงๆ)
+        $parcel = $this->findParcelSmart($boxNo, $etdDates);
 
         if (!$parcel) {
             return response()->json([
@@ -462,12 +557,28 @@ class QrScanController extends Controller
             ]);
         }
 
-        // เช็คซ้ำ
-        if ($parcel->picked_up_at) {
+        // Atomic update: ป้องกัน race condition เมื่อ 2+ เครื่องยิงพร้อมกัน
+        $scannerName = $this->getAuthUserName();
+        $updateData = [
+            'picked_up_at' => now(),
+            'picked_up_by' => $scannerName,
+            'status' => 4,
+        ];
+        if (!$parcel->scanned_at) {
+            $updateData['scanned_at'] = now();
+            $updateData['scanned_by'] = $scannerName;
+        }
+
+        $affected = Customershipping::where('id', $parcel->id)
+            ->whereNull('picked_up_at')
+            ->update($updateData);
+
+        if ($affected === 0) {
+            $parcel->refresh();
             return response()->json([
                 'success' => true,
                 'type' => 'duplicate',
-                'message' => "กล่อง {$boxNo} จ่ายแล้วเมื่อ " . $parcel->picked_up_at->format('H:i'),
+                'message' => "กล่อง {$boxNo} จ่ายแล้วเมื่อ " . ($parcel->picked_up_at ? $parcel->picked_up_at->format('H:i') : '-'),
                 'parcel' => [
                     'box_no' => $parcel->box_no,
                     'track_no' => $parcel->track_no,
@@ -475,12 +586,6 @@ class QrScanController extends Controller
                 ],
             ]);
         }
-
-        // บันทึกจ่ายของ + เปลี่ยนสถานะเป็น สำเร็จ (status 4)
-        $parcel->picked_up_at = now();
-        $parcel->picked_up_by = \Auth::user()->name ?? 'scanner';
-        $parcel->status = 4;
-        $parcel->save();
 
         // Sync สถานะไปที่ customerorder (shipping_status = 4)
         try {
@@ -572,8 +677,12 @@ class QrScanController extends Controller
     public function scanHistoryData(Request $request)
     {
         $query = Customershipping::whereNotNull('scanned_at')
-            ->where('excel_status', '1');
+            ->where('excel_status', '1')
+            ->whereDate('etd', '>=', self::$scannerMinEtd);
 
+        if ($request->filled('etd')) {
+            $query->whereDate('etd', $request->etd);
+        }
         if ($request->filled('date')) {
             $query->whereDate('scanned_at', $request->date);
         }
@@ -584,18 +693,59 @@ class QrScanController extends Controller
         $items = $query->orderBy('scanned_at', 'desc')->limit(2000)->get();
 
         $hasPickup = \Schema::hasColumn('customershippings', 'picked_up_at');
+        $hasScannedBy = \Schema::hasColumn('customershippings', 'scanned_by');
 
-        $total = Customershipping::whereNotNull('scanned_at')->where('excel_status', '1')->count();
-        $today = Customershipping::whereNotNull('scanned_at')->where('excel_status', '1')->whereDate('scanned_at', today())->count();
-        $latestEtd = Customershipping::where('excel_status', '1')->whereNotNull('box_no')->where('box_no', '!=', '')->max('etd');
+        // Stats based on current filter
+        $statsQuery = Customershipping::whereNotNull('scanned_at')->where('excel_status', '1')
+            ->whereDate('etd', '>=', self::$scannerMinEtd);
+        if ($request->filled('etd')) {
+            $statsQuery->whereDate('etd', $request->etd);
+        }
+        $totalInRound = (clone $statsQuery)->count();
+        $totalInRoundToday = (clone $statsQuery)->whereDate('scanned_at', today())->count();
+
+        // Total parcels in this ETD round (scanned + not scanned)
+        $totalParcelsInRound = 0;
+        if ($request->filled('etd')) {
+            $totalParcelsInRound = Customershipping::where('excel_status', '1')
+                ->whereDate('etd', $request->etd)
+                ->whereNotNull('box_no')->where('box_no', '!=', '')
+                ->count();
+        }
+
+        $total = Customershipping::whereNotNull('scanned_at')->where('excel_status', '1')
+            ->whereDate('etd', '>=', self::$scannerMinEtd)->count();
+        $today = Customershipping::whereNotNull('scanned_at')->where('excel_status', '1')
+            ->whereDate('etd', '>=', self::$scannerMinEtd)->whereDate('scanned_at', today())->count();
+
+        // Available ETD rounds with scan counts (เฉพาะรอบที่เปิดใช้ระบบสแกน)
+        $rounds = Customershipping::where('excel_status', '1')
+            ->whereNotNull('box_no')->where('box_no', '!=', '')
+            ->whereDate('etd', '>=', self::$scannerMinEtd)
+            ->select('etd')
+            ->selectRaw('COUNT(*) as total')
+            ->selectRaw('SUM(CASE WHEN scanned_at IS NOT NULL THEN 1 ELSE 0 END) as scanned')
+            ->groupBy('etd')
+            ->orderBy('etd', 'desc')
+            ->limit(20)
+            ->get()
+            ->map(function ($r) {
+                return [
+                    'etd' => $r->etd ? $r->etd->format('Y-m-d') : null,
+                    'etd_display' => $r->etd ? $r->etd->format('d/m/Y') : '-',
+                    'total' => $r->total,
+                    'scanned' => (int) $r->scanned,
+                ];
+            });
 
         return response()->json([
             'stats' => [
-                'total' => $total,
-                'today' => $today,
-                'latest_etd' => $latestEtd ? \Carbon\Carbon::parse($latestEtd)->format('d/m/Y') : null,
+                'total' => $request->filled('etd') ? $totalInRound : $total,
+                'today' => $request->filled('etd') ? $totalInRoundToday : $today,
+                'total_parcels' => $totalParcelsInRound,
             ],
-            'items' => $items->map(function ($item) use ($hasPickup) {
+            'rounds' => $rounds,
+            'items' => $items->map(function ($item) use ($hasPickup, $hasScannedBy) {
                 return [
                     'box_no' => $item->box_no,
                     'customerno' => $item->customerno,
@@ -603,6 +753,7 @@ class QrScanController extends Controller
                     'weight' => $item->weight,
                     'etd' => $item->etd ? $item->etd->format('d/m/Y') : '-',
                     'scanned_at' => $item->scanned_at->format('d/m/Y H:i'),
+                    'scanned_by' => $hasScannedBy ? ($item->scanned_by ?? '-') : '-',
                     'picked_up' => $hasPickup ? ($item->picked_up_at !== null) : false,
                 ];
             }),
