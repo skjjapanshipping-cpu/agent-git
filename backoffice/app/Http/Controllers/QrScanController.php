@@ -547,6 +547,15 @@ class QrScanController extends Controller
             ]);
         }
 
+        // ป้องกันจ่ายของโดยยังไม่ผ่านขั้นตอนรับเข้า
+        if (!$parcel->scanned_at) {
+            return response()->json([
+                'success' => false,
+                'type' => 'not_received',
+                'message' => "❌ กล่อง {$boxNo} ยังไม่ได้สแกนรับเข้า กรุณาสแกนรับเข้าก่อนจ่ายของ",
+            ]);
+        }
+
         // ป้องกันจ่ายผิดคน
         if ($parcel->customerno !== $customerno) {
             return response()->json([
@@ -559,19 +568,13 @@ class QrScanController extends Controller
 
         // Atomic update: ป้องกัน race condition เมื่อ 2+ เครื่องยิงพร้อมกัน
         $scannerName = $this->getAuthUserName();
-        $updateData = [
-            'picked_up_at' => now(),
-            'picked_up_by' => $scannerName,
-            'status' => 4,
-        ];
-        if (!$parcel->scanned_at) {
-            $updateData['scanned_at'] = now();
-            $updateData['scanned_by'] = $scannerName;
-        }
-
         $affected = Customershipping::where('id', $parcel->id)
             ->whereNull('picked_up_at')
-            ->update($updateData);
+            ->update([
+                'picked_up_at' => now(),
+                'picked_up_by' => $scannerName,
+                'status' => 4,
+            ]);
 
         if ($affected === 0) {
             $parcel->refresh();

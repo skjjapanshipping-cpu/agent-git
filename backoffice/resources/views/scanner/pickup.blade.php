@@ -533,8 +533,14 @@ function loadCustomerParcels(customerno) {
             updateProgress(0, 0);
             return;
         }
-        var roundInfo = selectedRounds.length > 1 ? (selectedRounds.length + ' รอบ') : '';
-        document.getElementById('selEtd').textContent = 'รอบปิดตู้ที่เลือก' + (roundInfo ? ' (' + roundInfo + ')' : '') + ' · ' + data.total + ' ชิ้น';
+        var roundLabels = [];
+        selectedRounds.forEach(function(etd) {
+            for (var i = 0; i < _roundsData.length; i++) {
+                if (_roundsData[i].etd === etd) { roundLabels.push(_roundsData[i].etd_display); break; }
+            }
+        });
+        var roundText = roundLabels.length > 0 ? roundLabels.join(', ') : '-';
+        document.getElementById('selEtd').textContent = 'รอบปิดตู้ ' + roundText + ' · ' + data.total + ' ชิ้น';
         parcelsData = data.parcels;
         updateProgress(data.picked_up, data.total);
         renderParcels();
@@ -603,7 +609,10 @@ function firePickupScan(raw) {
     .then(function(data) {
         if (!data.success) {
             playErrorSound();
-            if (data.type === 'wrong_customer') {
+            if (data.type === 'not_received') {
+                setStatus('error', data.message);
+                showToast('❌ ยังไม่ได้สแกนรับเข้า!', 'error');
+            } else if (data.type === 'wrong_customer') {
                 setStatus('error', data.message);
                 showToast('❌ ผิดคน! ของ ' + data.actual_customer, 'error');
             } else {
