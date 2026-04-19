@@ -117,9 +117,11 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get('customershippingsexport/{start_date?}', 'CustomershippingController@export')->name('customershippingsexport');
     Route::get('customershippingsexport2/{start_date?}', 'CustomershippingController@export2')->name('customershippingsexport2');
     Route::get('customershippings-labels/{etd_date}', 'CustomershippingController@exportLabels')->name('customershippings.labels');
+    Route::get('customershippings-pile-labels/{etd_date}', 'CustomershippingController@exportPileLabels')->name('customershippings.pile-labels');
 
     //frontend export
     Route::get('customershippingsviewexport2/{customerno?}/{start_date?}', 'CustomerShippingViewController@export2')->name('customershippingsviewexport2');
+    Route::get('download-box-images/{customerno}/{start_date}', 'CustomerShippingViewController@downloadBoxImages')->name('download.box.images');
 
     Route::get('customershippingview/{customershipping}/edit', 'CustomerShippingViewController@edit')->name('customershippingview.edit');
 //    Route::put('customershippingview/{customershipping}', 'CustomerShippingViewController@update')->name('customershippingview.update');
@@ -129,7 +131,6 @@ Route::group(['middleware' => ['auth']], function () {
     Route::post('fetchcustomershippingsview', 'CustomerShippingViewController@fetchCustomershippingsview')->name('fetch.customershippingsview');
     Route::post('fetch-recipients', 'CustomerShippingViewController@getRecipients')->name('fetch.recipients');
     Route::post('generate-invoice-qr', 'CustomerShippingViewController@generateInvoiceQr')->name('generate.invoice.qr');
-    Route::post('update-thai-bill-paid', 'CustomershippingController@updateThaiBillPaid')->name('update-thai-bill-paid');
     Route::post('fetch-admin-recipients', 'CustomershippingController@getAdminRecipients')->name('fetch.admin.recipients');
     Route::get('fetch-thai-shipping-summary', 'CustomershippingController@fetchThaiShippingSummary')->name('fetch.thai.shipping.summary');
     Route::post('batch-update-recipient', 'CustomerShippingViewController@batchUpdateRecipient')->name('batch.update.recipient');
@@ -213,6 +214,7 @@ Route::middleware('auth:web,scanner')->group(function () {
     Route::get('/qr-scan/api/pickup/customers', 'QrScanController@getPickupCustomers')->name('qrscan.api.pickup-customers');
     Route::get('/qr-scan/api/pickup/customer/{customerno}', 'QrScanController@getCustomerParcels')->name('qrscan.api.pickup-customer');
     Route::post('/qr-scan/api/pickup/scan', 'QrScanController@pickupScan')->name('qrscan.api.pickup-scan');
+    Route::get('/qr-scan/api/tts', 'QrScanController@ttsProxy')->name('qrscan.api.tts');
 });
 
 // Scan History (admin)

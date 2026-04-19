@@ -16,6 +16,11 @@ use Illuminate\Support\Facades\Log;
 
 class InvoiceController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('auth');
+    }
+
     public function generateInvoice($etd, $customerno, $shipping_ids = null)
     {
         // ถ้ามี shipping_ids ให้ใช้รายการที่เลือก
@@ -40,7 +45,9 @@ class InvoiceController extends Controller
             return response()->view('errors.404', ['message' => 'กรุณาตรวจสอบรหัสลูกค้าให้ถูกต้อง หรือไม่พบข้อมูลในระบบ'], 404);
         }
         $customer = User::where('customerno', $customerno)->first();
-        // dd($customer->toArray());
+        if (!$customer) {
+            return redirect()->back()->with('error', 'ไม่พบข้อมูลลูกค้า');
+        }
         // อัพเดทสถานะการชำระเงินเป็น "รอโอน" ถ้ายังไม่ได้ชำระเงิน
         foreach ($shippings as $shipping) {
             if ($shipping->pay_status != 2) { // ถ้าไม่ใช่สถานะ "ชำระเงินแล้ว"
@@ -138,6 +145,9 @@ class InvoiceController extends Controller
         }
 
         $customer = User::where('customerno', $customerno)->first();
+        if (!$customer) {
+            return redirect()->back()->with('error', 'ไม่พบข้อมูลลูกค้า');
+        }
 
         // Batch update status แทนวน save() ทีละแถว (ลด N queries เหลือ 1)
         Customerorder::whereIn('id', $ids)
@@ -245,6 +255,7 @@ class InvoiceController extends Controller
     {
         if (!empty($shippingIds)) {
             $shippings = Customershipping::whereIn('id', $shippingIds)
+                ->where('customerno', $customerno)
                 ->orderBy('ship_date', 'desc')
                 ->get();
         } else {
@@ -262,6 +273,9 @@ class InvoiceController extends Controller
         }
 
         $customer = User::where('customerno', $customerno)->first();
+        if (!$customer) {
+            return null;
+        }
 
         $defaultConfig = (new ConfigVariables())->getDefaults();
         $fontDirs = $defaultConfig['fontDir'];
@@ -521,8 +535,10 @@ class InvoiceController extends Controller
         $totalFailed = $results['failed'];
         $totalNotFound = $results['not_found'];
 
+        $allFailed = $totalSent === 0 && ($totalFailed > 0 || $totalNotFound > 0);
+
         return response()->json([
-            'success' => true,
+            'success' => !$allFailed,
             'message' => "ส่งบิลสำเร็จ {$totalSent} ราย, ไม่พบในแชท {$totalNotFound} ราย, ล้มเหลว {$totalFailed} ราย",
             'results' => $results,
         ]);

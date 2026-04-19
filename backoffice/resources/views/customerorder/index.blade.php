@@ -71,6 +71,35 @@
             float: none !important;
             flex: 1 !important;
             overflow-x: hidden !important;
+            overflow-y: scroll !important; /* always show scrollbar to prevent layout shift */
+        }
+
+        /* Kill perfectScrollbar visuals */
+        .main-panel,
+        .main-panel:hover,
+        .main-panel:focus,
+        .main-panel:active,
+        .ps-container,
+        .ps-container:hover {
+            outline: 0 none !important;
+            outline-style: none !important;
+            border: none !important;
+            box-shadow: none !important;
+        }
+        .ps-scrollbar-x-rail, .ps-scrollbar-y-rail, .ps__rail-x, .ps__rail-y,
+        .ps-container > .ps-scrollbar-x-rail, .ps-container > .ps-scrollbar-y-rail {
+            display: none !important; opacity: 0 !important; visibility: hidden !important;
+            width: 0 !important; height: 0 !important;
+        }
+
+        /* Kill ALL unwanted animations & transitions on content */
+        .main-panel > .content,
+        .main-panel > .content > *,
+        .container-fluid,
+        .card,
+        .card-header {
+            animation: none !important;
+            transition: none !important;
         }
 
         /* HIDE OLD NAVBAR/HEADERS */
@@ -197,8 +226,8 @@
         .toolbar-group { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
         .toolbar-group-label { font-size:11px; color:#94a3b8; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; margin-right:2px; white-space:nowrap; }
         .toolbar-spacer { flex:1; }
-        .btn-modern { border-radius:8px !important; font-size:12px !important; font-weight:600 !important; padding:6px 14px !important; border:none !important; transition:all 0.2s !important; display:inline-flex !important; align-items:center !important; gap:5px !important; white-space:nowrap !important; }
-        .btn-modern:hover { transform:translateY(-1px); box-shadow:0 4px 12px rgba(0,0,0,0.15) !important; }
+        .btn-modern { border-radius:8px !important; font-size:12px !important; font-weight:600 !important; padding:6px 14px !important; border:none !important; transition:none !important; display:inline-flex !important; align-items:center !important; gap:5px !important; white-space:nowrap !important; }
+        .btn-modern:hover { box-shadow:0 4px 12px rgba(0,0,0,0.15) !important; }
         .btn-modern i { font-size:13px; }
         .btn-modern.btn-red { background:linear-gradient(135deg,#dc3545,#c82333) !important; color:#fff !important; }
         .btn-modern.btn-blue { background:linear-gradient(135deg,#0084FF,#0066cc) !important; color:#fff !important; }
@@ -213,13 +242,14 @@
         .date-filter-bar input { border-radius:8px; border:2px solid #e2e8f0; padding:6px 12px; font-size:13px; max-width:180px; transition:border-color 0.2s; }
         .date-filter-bar input:focus { border-color:#dc3545; outline:none; box-shadow:0 0 0 3px rgba(220,53,69,0.1); }
         .stats-row { display:flex; flex-wrap:wrap; gap:12px; justify-content:center; margin:16px 0; }
-        .stat-card { background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:12px 20px; text-align:center; min-width:130px; flex:1; max-width:200px; transition:all 0.2s; }
+        .stat-card { background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:12px 20px; text-align:center; min-width:130px; flex:1; max-width:200px; transition:none; }
         .stat-card:hover { border-color:#dc3545; box-shadow:0 4px 12px rgba(220,53,69,0.1); }
         .stat-card .stat-label { font-size:11px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; }
         .stat-card .stat-value { font-size:20px; font-weight:800; color:#1e293b; margin-top:2px; }
         .stat-card .stat-unit { font-size:12px; color:#64748b; font-weight:500; }
         .stat-card.stat-highlight { border-left:4px solid #dc3545; }
-        .table thead th { background:#f8fafc !important; color:#475569 !important; font-size:11px !important; font-weight:700 !important; text-transform:uppercase !important; letter-spacing:0.3px !important; border-bottom:2px solid #e2e8f0 !important; padding:10px 8px !important; }
+        .table thead th { background:#f8fafc !important; color:#475569 !important; font-size:11px !important; font-weight:700 !important; text-transform:uppercase !important; letter-spacing:0.3px !important; border-bottom:2px solid #e2e8f0 !important; padding:10px 20px 10px 8px !important; position:relative !important; }
+        .table thead th.sorting, .table thead th.sorting_asc, .table thead th.sorting_desc { padding-right:26px !important; }
         .table tbody td { font-size:12px; padding:8px !important; vertical-align:middle !important; }
         .table-striped tbody tr:nth-of-type(odd) { background-color:rgba(248,250,252,0.7) !important; }
         .table-hover tbody tr:hover { background-color:rgba(220,53,69,0.04) !important; }
@@ -228,7 +258,7 @@
 
         /* === Modern Action Buttons === */
         .action-btns { display:flex; gap:6px; margin-top:6px; }
-        .btn-act { display:inline-flex; align-items:center; gap:4px; padding:5px 12px; border-radius:6px; font-size:11px; font-weight:600; text-decoration:none; border:none; cursor:pointer; transition:all 0.2s; }
+        .btn-act { display:inline-flex; align-items:center; gap:4px; padding:5px 12px; border-radius:6px; font-size:11px; font-weight:600; text-decoration:none; border:none; cursor:pointer; transition:none; }
         .btn-act-edit { background:#eef2ff; color:#4f46e5; border:1px solid #c7d2fe; }
         .btn-act-edit:hover { background:#4f46e5; color:#fff; text-decoration:none; box-shadow:0 2px 6px rgba(79,70,229,0.3); }
         .btn-act-del { background:#fef2f2; color:#dc2626; border:1px solid #fecaca; }
@@ -289,7 +319,7 @@
             text-decoration: none;
             font-size: 0.9rem;
             font-weight: 500;
-            transition: all 0.3s;
+            transition: none;
             width: 100%;
             justify-content: center;
         }
@@ -313,6 +343,27 @@
     </style>
 @endsection
 @section('extra-script')
+    <script>
+    // Destroy perfectScrollbar & prevent re-init (same as My Shipping)
+    (function(){
+        var mp = document.querySelector('.main-panel');
+        if (mp) {
+            if (typeof $ !== 'undefined' && $.fn.perfectScrollbar) {
+                try { $('.main-panel').perfectScrollbar('destroy'); } catch(e) {}
+                $.fn.perfectScrollbar = function() { return this; };
+            }
+            mp.classList.remove('ps', 'ps--active-x', 'ps--active-y', 'ps-container', 'ps-theme-default', 'ps-active-x', 'ps-active-y');
+            var rails = mp.querySelectorAll('.ps__rail-x, .ps__rail-y, .ps-scrollbar-x-rail, .ps-scrollbar-y-rail, .ps__thumb-x, .ps__thumb-y, .ps-scrollbar-x, .ps-scrollbar-y');
+            rails.forEach(function(r) { r.remove(); });
+            mp.setAttribute('tabindex', '-1');
+            mp.style.cssText += 'overflow:auto!important;outline:none!important;border:none!important;';
+        }
+        $('html').removeClass('perfect-scrollbar-on').addClass('perfect-scrollbar-off');
+        // Remove content-fade-in animation
+        var content = document.querySelector('.main-panel > .content') || document.querySelector('.dashboard-content');
+        if (content) content.classList.remove('content-fade-in');
+    })();
+    </script>
     <script src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.11/clipboard.min.js"></script>
 

@@ -5,10 +5,14 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Customershipping;
 use Illuminate\Support\Facades\DB;
-use App\Helpers\ChatNotify;
 
 class QrScanController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('auth')->except(['ttsProxy']);
+    }
+
     private function getAuthUser()
     {
         return \Auth::guard('scanner')->user() ?? \Auth::guard('web')->user();
@@ -141,6 +145,10 @@ class QrScanController extends Controller
         $parcel = $this->findParcelByBarcode($box_no, function ($q) {
             $q->orderBy('etd', 'desc')->orderBy('id', 'desc');
         });
+
+        if (!$parcel) {
+            return back()->with('error', 'ไม่พบพัสดุ');
+        }
 
         $statuses = DB::table('shipping_statuses')->get();
 
@@ -517,6 +525,13 @@ class QrScanController extends Controller
                     'etd' => $p->etd ? $p->etd->format('d/m/Y') : '-',
                     'picked_up_at' => $p->picked_up_at ? $p->picked_up_at->format('d/m/Y H:i') : null,
                     'scanned_at' => $p->scanned_at ? $p->scanned_at->format('d/m/Y H:i') : null,
+                    'iswholeprice' => (int) $p->iswholeprice,
+                    'width' => $p->width,
+                    'length' => $p->length,
+                    'height' => $p->height,
+                    'import_cost' => $p->import_cost,
+                    'delivery_fullname' => $p->delivery_fullname,
+                    'box_image' => $p->box_image,
                 ];
             })->values(),
         ]);
@@ -566,15 +581,31 @@ class QrScanController extends Controller
             ]);
         }
 
+        // บันทึกขนาดกล่อง (ราคาเหมา) ถ้ามี
+        $dimensionData = [];
+        if ($parcel->iswholeprice == 1) {
+            $w = $request->input('width');
+            $l = $request->input('length');
+            $h = $request->input('height');
+            if ($w && $l && $h) {
+                $dimensionData = [
+                    'width' => round((float)$w, 2),
+                    'length' => round((float)$l, 2),
+                    'height' => round((float)$h, 2),
+                    'import_cost' => round((float)$w * (float)$l * (float)$h * 0.01, 2),
+                ];
+            }
+        }
+
         // Atomic update: ป้องกัน race condition เมื่อ 2+ เครื่องยิงพร้อมกัน
         $scannerName = $this->getAuthUserName();
         $affected = Customershipping::where('id', $parcel->id)
             ->whereNull('picked_up_at')
-            ->update([
+            ->update(array_merge([
                 'picked_up_at' => now(),
                 'picked_up_by' => $scannerName,
                 'status' => 4,
-            ]);
+            ], $dimensionData));
 
         if ($affected === 0) {
             $parcel->refresh();
@@ -586,6 +617,7 @@ class QrScanController extends Controller
                     'box_no' => $parcel->box_no,
                     'track_no' => $parcel->track_no,
                     'weight' => $parcel->weight,
+                    'delivery_fullname' => $parcel->delivery_fullname,
                 ],
             ]);
         }
@@ -609,19 +641,23 @@ class QrScanController extends Controller
         $total = (clone $progQuery)->count();
         $pickedUp = (clone $progQuery)->whereNotNull('picked_up_at')->count();
 
-        // แจ้งลูกค้าอัตโนมัติเมื่อจ่ายครบทุกชิ้น
-        if ($pickedUp >= $total) {
-            ChatNotify::notifyIfPickupComplete($parcel, $etdDates);
+        $parcel->refresh();
+        $importCostMsg = '';
+        if (!empty($dimensionData)) {
+            $importCostMsg = " (ค่านำเข้า: {$dimensionData['import_cost']} บาท)";
         }
 
         return response()->json([
             'success' => true,
             'type' => 'ok',
-            'message' => "✅ จ่ายกล่อง {$boxNo} สำเร็จ",
+            'message' => "✅ จ่ายกล่อง {$boxNo} สำเร็จ{$importCostMsg}",
             'parcel' => [
                 'box_no' => $parcel->box_no,
                 'track_no' => $parcel->track_no,
                 'weight' => $parcel->weight,
+                'iswholeprice' => (int) $parcel->iswholeprice,
+                'import_cost' => $parcel->import_cost,
+                'delivery_fullname' => $parcel->delivery_fullname,
             ],
             'progress' => [
                 'picked_up' => $pickedUp,
@@ -761,5 +797,48 @@ class QrScanController extends Controller
                 ];
             }),
         ]);
+    }
+
+    /**
+     * TTS Proxy: ส่งข้อความไปให้ Google Translate อ่านเป็นเสียงภาษาไทย แล้ว stream กลับ
+     */
+    public function ttsProxy(Request $request)
+    {
+        $text = $request->query('q', '');
+        if (!$text || mb_strlen($text) > 200) {
+            return response('', 400);
+        }
+
+        $url = 'https://translate.google.com/translate_tts?'
+            . http_build_query([
+                'ie' => 'UTF-8',
+                'tl' => 'th',
+                'client' => 'tw-ob',
+                'q' => $text,
+            ]);
+
+        try {
+            $ch = curl_init($url);
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_TIMEOUT => 5,
+                CURLOPT_USERAGENT => 'Mozilla/5.0',
+                CURLOPT_SSL_VERIFYPEER => false,
+            ]);
+            $audio = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($httpCode !== 200 || !$audio) {
+                return response('', 502);
+            }
+
+            return response($audio)
+                ->header('Content-Type', 'audio/mpeg')
+                ->header('Cache-Control', 'public, max-age=86400');
+        } catch (\Exception $e) {
+            return response('', 502);
+        }
     }
 }

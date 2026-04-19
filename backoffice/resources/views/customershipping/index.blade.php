@@ -311,6 +311,7 @@
                                 <button id="shipping-export" class="btn-modern btn-green disabled"><i class="fa fa-file-excel-o"></i> Shipping Excel</button>
                                 <a href="{{url('customershippingsexport2')}}" id="data-export" class="btn-modern btn-blue"><i class="fa fa-database"></i> Data Excel</a>
                                 <button id="btn-export-labels" class="btn-modern btn-pink"><i class="fa fa-tags"></i> PDF Label</button>
+                                <button id="btn-pile-labels" class="btn-modern btn-pink" style="background:linear-gradient(135deg,#7c3aed,#9333ea) !important;"><i class="fa fa-cubes"></i> Label กอง ANW-820</button>
                                 <a href="{{url('customershippingsimport')}}" class="btn-modern btn-orange"><i class="fa fa-upload"></i> Import</a>
                             </div>
                             <div class="toolbar-group" style="margin-left:4px;">
@@ -410,7 +411,7 @@
                                     </div>
                                     <i class="fa fa-chevron-down ts-chevron" style="color:#94a3b8; font-size:12px;"></i>
                                 </div>
-                                <div id="thaiShipBody" style="padding:14px 18px;">
+                                <div id="thaiShipBody" style="padding:14px 18px; display:none;">
                                     <!-- Progress bar -->
                                     <div id="tsProgressBar" style="display:flex; height:8px; border-radius:8px; overflow:hidden; background:#f1f5f9; margin-bottom:14px;"></div>
                                     <!-- Customer chips -->
@@ -492,6 +493,7 @@
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/th.js"></script>
     <script>
+        function escHtml(s) { if (!s) return ''; var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
         $(function () {
             // ฟังก์ชันหาวันจันทร์ในอาทิตย์นั้นๆ
             function getMondayInWeek(dateString) {
@@ -577,22 +579,22 @@
             
             setDefaultMonday();
             
-            // เพิ่ม debounce สำหรับ search input
             var searchTimeout;
-            $(document).on('input', 'input[type="search"]', function() {
-                // ปิดปุ่ม SHIPPING EXPORT EXCEL เมื่อเริ่มพิมพ์
+            var lastSentSearch = null;
+            $(document).on('input search', 'input[type="search"]', function() {
                 $('#shipping-export').addClass('disabled');
-                
                 clearTimeout(searchTimeout);
                 searchTimeout = setTimeout(function() {
-                    dataTable.search($('input[type="search"]').val()).draw();
-                }, 1500); // รอ 1.5 วินาทีหลังหยุดพิมพ์
+                    var val = $.trim($('input[type="search"]').val() || '');
+                    lastSentSearch = val;
+                    dataTable.search(val).draw();
+                }, 800);
             });
             
             var dataTable = $('#dt-mant-table-1').DataTable({
                 "processing": true,
                 "serverSide": true,
-                "search": false, // ปิดการค้นหาอัตโนมัติของ DataTable
+                "searchDelay": 99999999,
                 "language": {
                     "processing": "กำลังโหลด..."
                 },
@@ -601,9 +603,9 @@
                     "dataType": "json",
                     "type": "POST",
                     "data": function (d){
-                        // trim ค่า search เพื่อป้องกัน whitespace และรับค่าครบถ้วน
                         var searchValue = $("input[type='search']").val();
                         d.search = searchValue ? $.trim(searchValue) : '';
+                        lastSentSearch = d.search;
                         
                         d.status = $("select.status").val();
                         d.delivery_type_id = $("select.delivery_type_id").val();
@@ -697,7 +699,7 @@
                     });
 
                     // โหลดค่าการค้นหาจาก session และตั้งค่าให้กับฟิลด์การค้นหา
-                    console.log('test:{{Session::get('search')??''}}')
+                    console.log('test:', @json(Session::get('search') ?? ''))
 
 
                 },
@@ -785,9 +787,9 @@
                         }
                     },
                     { "targets": 16, "data": "delivery_type_name", orderable:false, "render": function(data, type, row) {
-                        var html = data;
-                        if (row.delivery_fullname && row.delivery_fullname.trim()) {
-                            html += '<br><span style="color:#dc2626;font-size:10px;font-weight:600;"><i class="fa fa-user"></i> ' + row.delivery_fullname + '</span>';
+                        var html = escHtml(data);
+                        if (row.delivery_type_id != 1 && row.delivery_fullname && row.delivery_fullname.trim()) {
+                            html += '<br><span style="color:#dc2626;font-size:10px;font-weight:600;"><i class="fa fa-user"></i> ' + escHtml(row.delivery_fullname) + '</span>';
                         }
                         return html;
                     }},
@@ -797,7 +799,6 @@
                         "orderable": false,
                         "render": function(data, type, row) {
                             let statusClass = '';
-                            console.log(data);
                             switch(data) {
                                 case 'ยังไม่ชำระเงิน':
                                     statusClass = 'danger';
@@ -809,10 +810,16 @@
                                     statusClass = 'success';
                                     break;
                             }
-                            
-                            return `<div class="status-container">
-                                        <span title="${data}" class="dot bg-${statusClass}"></span>
-                                    </div>`;
+
+                            var amt = '';
+                            if (data !== 'ยังไม่ชำระเงิน' && row.invoice_group_total && row.invoice_group_total !== '-') {
+                                amt = '<div style="font-size:10px;color:#555;margin-top:2px;">฿' + row.invoice_group_total + '</div>';
+                            }
+
+                            return '<div class="status-container" style="text-align:center;">' +
+                                        '<span title="' + data + '" class="dot bg-' + statusClass + '"></span>' +
+                                        amt +
+                                    '</div>';
                         }
                     },
                     {
@@ -862,49 +869,30 @@
             });
 
             @if ($search = Session::get('search'))
-            $("input[type='search']").val('{{ $search }}');
-            $("#sessionSearch").val('{{ $search }}');
-            console.log('get search');
-            dataTable.search('{{ $search }}').draw();
+            var initSearch = @json($search);
             @else
-            // ตั้งค่า default value "ANW-" ในช่องค้นหา
-            var defaultSearch = 'ANW-';
-            $("input[type='search']").val(defaultSearch);
-            $("#sessionSearch").val(defaultSearch);
-            dataTable.search(defaultSearch).draw();
+            var initSearch = 'ANW-';
             @endif
+            $("input[type='search']").val(initSearch);
+            $("#sessionSearch").val(initSearch);
+            lastSentSearch = $.trim(initSearch);
+            dataTable.search(initSearch).draw();
 
             // (date change handled by Flatpickr onChange above)
             // สร้างตัวแปรเพื่อเก็บสถานะการโหลดครั้งแรกและค่าการค้นหาก่อนหน้า
             var initialLoad = true;
             var previousSearchValue = ''; // เก็บค่าการค้นหาก่อนหน้า
+            var previousStartDate = '';
             
             // เพิ่มตัวแปรเพื่อป้องกัน race condition
             var pendingRequestId = null; // เก็บ request ID ที่กำลังรอ response (สำรองไว้)
 
 
             dataTable.on('xhr.dt', function(e, settings, json, xhr) {
-                // ดึงข้อมูลที่ส่งกลับมาจากการเรียกใช้ AJAX
-                {{--settings.oPreviousSearch.sSearch !== '{{ $search }}'||--}}
-                
-                // ตรวจสอบว่า response นี้เป็น response ล่าสุดหรือไม่ (ป้องกัน race condition)
-                // โดยเปรียบเทียบ search value จาก response กับ search value ปัจจุบัน
                 var currentSearch = $.trim($("input[type='search']").val());
-                var responseSearch = settings.oPreviousSearch ? settings.oPreviousSearch.sSearch : '';
-                
-                // ตรวจสอบว่า search value ตรงกับค่าปัจจุบันหรือไม่
-                // ถ้าไม่ตรง และมีค่าค้นหา แสดงว่าเป็น response เก่า ไม่ต้องอัพเดท URL และยอดรวม
-                // แต่ถ้าไม่มีค่าค้นหาเลย (ทั้งสองฝั่ง) ให้อัพเดทได้ (กรณีโหลดครั้งแรก)
-                var isLatestResponse = (responseSearch === currentSearch) || (!currentSearch && !responseSearch);
-                
-                if (!isLatestResponse && (currentSearch || responseSearch)) {
-                    console.log('Ignoring outdated response - response search:', responseSearch, 'current search:', currentSearch);
-                    // ไม่ต้องอัพเดท URL และยอดรวม เพราะเป็น response เก่า
-                    return; // ข้ามการอัพเดททั้งหมด
+                if (lastSentSearch !== null && lastSentSearch !== currentSearch) {
+                    return;
                 }
-                
-                // อัพเดท URL และยอดรวมเฉพาะเมื่อเป็น response ล่าสุด
-                console.log('Updating summary and URLs - response search:', responseSearch, 'current search:', currentSearch);
                 $('#data-export').attr('href',json.data_export_link);
                 $('#shipping-export').attr('href',json.shipping_export_link);
                 pendingRequestId = null; // clear pending request
@@ -949,12 +937,12 @@
                 //     $('#total_records').text(totalFilteredRows);
                 // }, 100);
                 
-                // คืนค่าการค้นหาหลังจากอัพเดทสถานะ
                 var preservedSearch = sessionStorage.getItem('preservedSearch');
                 if (preservedSearch) {
                     $("input[type='search']").val(preservedSearch);
+                    lastSentSearch = $.trim(preservedSearch);
                     dataTable.search(preservedSearch).draw();
-                    sessionStorage.removeItem('preservedSearch'); // ลบค่าที่เก็บไว้หลังจากใช้แล้ว
+                    sessionStorage.removeItem('preservedSearch');
                 }
 
             });
@@ -1298,14 +1286,26 @@
                 }
                 
                 var selectedIds = [];
+                var customerno = '';
                 selectedRows.each(function() {
                     selectedIds.push($(this).val());
+                    if (!customerno) {
+                        var row = dataTable.row($(this).closest('tr'));
+                        var data = row.data();
+                        if (data && data.customerno) customerno = data.customerno;
+                    }
                 });
+
+                if (!customerno) {
+                    customerno = $.trim($("input[type='search']").val());
+                }
+                if (!customerno) {
+                    alert('ไม่พบรหัสลูกค้า กรุณาเลือกรายการหรือค้นหาลูกค้าก่อน');
+                    return false;
+                }
                 
                 var startDate = $('#start_date').val();
-                var customerno = $("input[type='search']").val();
                 
-                // สร้าง URL สำหรับ Invoice พร้อมส่งไอดีรายการที่เลือก
                 var url = "{{ route('invoice.generate', ['etd' => ':etd', 'customerno' => ':customerno', 'shipping_ids' => ':shipping_ids']) }}";
                 url = url.replace(':etd', startDate)
                          .replace(':customerno', customerno)
@@ -1349,6 +1349,18 @@
                     return;
                 }
                 var url = "{{ url('customershippings-labels') }}/" + startDate;
+                window.open(url, '_blank');
+            });
+
+            // Export Pile Labels (ANW-820)
+            $('#btn-pile-labels').on('click', function(e) {
+                e.preventDefault();
+                var startDate = $('#start_date').val();
+                if (!startDate) {
+                    alert('กรุณาเลือกวันที่ปิดตู้ก่อน');
+                    return;
+                }
+                var url = "{{ url('customershippings-pile-labels') }}/" + startDate;
                 window.open(url, '_blank');
             });
 
@@ -1487,11 +1499,14 @@
                     $('.chat-invoice-check').each(function() { allCns.push($(this).val()); });
                     if (allCns.length === 0) return;
                     $.ajax({
-                        url: 'https://chat.skjjapanshipping.com/api/invoice-check',
+                        url: "{{ route('send.invoice.chat') }}",
                         type: 'POST',
-                        contentType: 'application/json',
-                        headers: { 'X-API-Key': 'skjchat-invoice-2026' },
-                        data: JSON.stringify({ customer_nos: allCns, etd: etdFormatted }),
+                        data: {
+                            check_only: true,
+                            customer_nos: allCns,
+                            etd: etdFormatted,
+                            _token: "{{ csrf_token() }}"
+                        },
                         success: function(res) {
                             if (res.success && res.results) {
                                 var connectedCount = 0;
@@ -1552,7 +1567,6 @@
                     + '🙏🏻 ขอบคุณครับผม 🙏';
                 $('#invoiceChatMessageTemplate').val(messageTemplate);
                 $('#invoiceChatMessengerFee').val('');
-                $('#invoiceChatQrUrl').val('');
                 $('#invoiceChatResult').html('').hide();
                 $('#invoiceChatSendBtn').prop('disabled', false).text('📩 ส่งบิล');
 
@@ -1563,7 +1577,6 @@
             $(document).on('click', '#invoiceChatSendBtn', function() {
                 var etdDate = $('#start_date').val();
                 var messageTemplate = $('#invoiceChatMessageTemplate').val();
-                var qrImageUrl = $('#invoiceChatQrUrl').val();
                 var messengerFee = parseFloat($('#invoiceChatMessengerFee').val()) || 0;
 
                 // เก็บ customerno ที่ติ๊ก
@@ -1601,7 +1614,6 @@
                         customer_nos: selectedCustomers,
                         shipping_ids_map: shippingIdsMap,
                         message_template: messageTemplate,
-                        qr_image_url: qrImageUrl,
                         messenger_fee: messengerFee,
                         _token: "{{ csrf_token() }}"
                     },
@@ -2079,7 +2091,11 @@
                         var summaryParts = [];
                         if (successCount > 0) summaryParts.push('✅ สำเร็จ ' + successCount + ' ราย');
                         if (failedCount > 0) summaryParts.push('❌ ไม่สำเร็จ ' + failedCount + ' ราย');
-                        $('#tsResult').html('<div class="alert ' + alertClass + '" style="padding:8px 12px;"><b>' + summaryParts.join(' &nbsp;|&nbsp; ') + '</b></div>').show();
+                        var warningHtml = '';
+                        if (response.parse_warning) {
+                            warningHtml = '<div class="alert alert-danger" style="padding:6px 12px;margin-bottom:4px;"><b>' + response.parse_warning + '</b></div>';
+                        }
+                        $('#tsResult').html(warningHtml + '<div class="alert ' + alertClass + '" style="padding:8px 12px;"><b>' + summaryParts.join(' &nbsp;|&nbsp; ') + '</b></div>').show();
                     },
                     error: function(xhr) {
                         btn.prop('disabled', false).html('🚚 ส่งบิล LINE แจ้งค่าส่งไทย');
@@ -2425,12 +2441,8 @@
                             </div>
                             <small class="text-muted">ใช้ <code>@{{ค่าแมส}}</code> และ <code>@{{ยอดรวมทั้งหมด}}</code> ในข้อความเพื่อแทนค่าอัตโนมัติ</small>
                         </div>
-                        <div class="form-group mb-2">
-                            <label class="mb-1"><b>URL รูป QR รับเงิน</b> <small class="text-muted">(ไม่บังคับ)</small></label>
-                            <input type="text" class="form-control form-control-sm" id="invoiceChatQrUrl" placeholder="https://chat.skjjapanshipping.com/uploads/qr-payment.jpg">
-                        </div>
                         <div class="text-muted" style="font-size: 11px; line-height: 1.6;">
-                            <b>ระบบจะส่ง:</b> 1) ข้อความด้านบน 2) PDF ใบแจ้งหนี้ 3) รูป QR (ถ้ามี)
+                            <b>ระบบจะส่ง:</b> 1) ข้อความด้านบน 2) PDF ใบแจ้งหนี้ 3) QR PromptPay (สร้างอัตโนมัติ)
                         </div>
                     </div>
                 </div>

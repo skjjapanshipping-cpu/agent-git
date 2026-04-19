@@ -214,6 +214,120 @@ class CustomerShippingViewController extends Controller
         return Excel::download(new CustomershippigviewHtmlExport($request->start_date,$request->customerno,$request->recipient_filter), 'shipping_data_' . time() . '.xlsx');
     }
 
+    public function downloadBoxImages($customerno, $start_date)
+    {
+        set_time_limit(300);
+
+        $user = Auth::user();
+        if (!$user->hasRole('admin') && $user->customerno !== $customerno) {
+            abort(403);
+        }
+
+        $etdDate = Carbon::parse($start_date);
+        $etdLabel = $etdDate->format('d.m.Y');
+
+        $items = Customershipping::where('excel_status', '1')
+            ->where('customerno', $customerno)
+            ->whereRaw("DATE(etd) = ?", [$start_date])
+            ->whereNotNull('box_image')
+            ->where('box_image', '!=', '')
+            ->where('box_image', '!=', '-')
+            ->select('box_no', 'box_image')
+            ->distinct('box_no')
+            ->get()
+            ->unique('box_no');
+
+        if ($items->isEmpty()) {
+            return back()->with('error', 'ไม่พบรูปหน้ากล่องในรอบปิดตู้นี้');
+        }
+
+        // Collect all download jobs: [ [url, fileName], ... ]
+        $jobs = [];
+        foreach ($items as $item) {
+            $raw = trim($item->box_image);
+            $urls = [];
+            if (str_starts_with($raw, '[')) {
+                try { $urls = json_decode($raw, true) ?: []; } catch (\Exception $e) { $urls = [$raw]; }
+            } elseif (str_contains($raw, ',')) {
+                $urls = array_filter(array_map('trim', explode(',', $raw)));
+            } else {
+                $urls = [$raw];
+            }
+
+            foreach ($urls as $idx => $url) {
+                $url = trim($url);
+                if (empty($url) || $url === '-') continue;
+                $suffix = count($urls) > 1 ? '_' . ($idx + 1) : '';
+                $fileName = "Box.{$item->box_no} รอบปิดตู้ {$etdLabel}{$suffix}.jpg";
+                $jobs[] = [$url, $fileName];
+            }
+        }
+
+        if (empty($jobs)) {
+            return back()->with('error', 'ไม่พบรูปหน้ากล่องในรอบปิดตู้นี้');
+        }
+
+        $tempFile = tempnam(sys_get_temp_dir(), 'boximg_') . '.zip';
+        $zip = new \ZipArchive();
+        if ($zip->open($tempFile, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+            abort(500, 'Cannot create ZIP');
+        }
+
+        // Download in parallel batches of 10 using curl_multi
+        $batchSize = 10;
+        $added = 0;
+
+        foreach (array_chunk($jobs, $batchSize) as $batch) {
+            $mh = curl_multi_init();
+            $handles = [];
+
+            foreach ($batch as $i => [$url, $fileName]) {
+                $ch = curl_init($url);
+                curl_setopt_array($ch, [
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_FOLLOWLOCATION => true,
+                    CURLOPT_MAXREDIRS      => 5,
+                    CURLOPT_TIMEOUT        => 20,
+                    CURLOPT_CONNECTTIMEOUT => 10,
+                    CURLOPT_SSL_VERIFYPEER => false,
+                    CURLOPT_USERAGENT      => 'Mozilla/5.0',
+                ]);
+                curl_multi_add_handle($mh, $ch);
+                $handles[$i] = ['ch' => $ch, 'fileName' => $fileName];
+            }
+
+            $running = null;
+            do {
+                curl_multi_exec($mh, $running);
+                curl_multi_select($mh, 1);
+            } while ($running > 0);
+
+            foreach ($handles as $h) {
+                $httpCode = curl_getinfo($h['ch'], CURLINFO_HTTP_CODE);
+                $imgData = curl_multi_getcontent($h['ch']);
+                curl_multi_remove_handle($mh, $h['ch']);
+                curl_close($h['ch']);
+
+                if ($httpCode === 200 && $imgData && strlen($imgData) > 100) {
+                    $zip->addFromString($h['fileName'], $imgData);
+                    $added++;
+                }
+            }
+
+            curl_multi_close($mh);
+        }
+
+        $zip->close();
+
+        if ($added === 0) {
+            @unlink($tempFile);
+            return back()->with('error', 'ไม่สามารถดาวน์โหลดรูปหน้ากล่องได้');
+        }
+
+        $zipName = strtoupper($customerno) . " รอบปิดตู้ {$etdLabel}.zip";
+        return response()->download($tempFile, $zipName)->deleteFileAfterSend(true);
+    }
+
     public function analytics()
     {
         $user = Auth::user();

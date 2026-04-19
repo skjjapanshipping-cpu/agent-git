@@ -105,12 +105,52 @@
             display: none !important;
         }
 
+        /* Kill all unwanted animations on dashboard content */
+        .dashboard-content,
+        .modern-page-header,
+        .modern-header-actions-wrap {
+            animation: none !important;
+            transition: none !important;
+        }
+
         /* Override pseudo elements */
         .main-panel::before,
         .main-panel::after {
             display: none !important;
             content: none !important;
             background: none !important;
+        }
+
+        /* Kill ALL perfectScrollbar visuals from paper-dashboard */
+        .main-panel,
+        .main-panel:hover,
+        .main-panel:focus,
+        .main-panel:active,
+        .ps-container,
+        .ps-container:hover,
+        .ps-container:focus {
+            outline: 0 none !important;
+            outline-style: none !important;
+            border: none !important;
+            box-shadow: none !important;
+            -webkit-tap-highlight-color: transparent !important;
+        }
+        .ps-scrollbar-x-rail,
+        .ps-scrollbar-y-rail,
+        .ps__rail-x,
+        .ps__rail-y,
+        .ps-container > .ps-scrollbar-x-rail,
+        .ps-container > .ps-scrollbar-y-rail,
+        .ps-container.ps-active-x > .ps-scrollbar-x-rail,
+        .ps-container.ps-active-y > .ps-scrollbar-y-rail,
+        .ps-container:hover > .ps-scrollbar-x-rail,
+        .ps-container:hover > .ps-scrollbar-y-rail {
+            display: none !important;
+            opacity: 0 !important;
+            visibility: hidden !important;
+            width: 0 !important;
+            height: 0 !important;
+            background: transparent !important;
         }
 
         /* Dashboard Content - Cover entire panel area */
@@ -596,6 +636,9 @@
             display: flex;
             gap: 15px;
         }
+        .mobile-actions-toggle {
+            display: none;
+        }
         
         /* Checkbox */
         .custom-checkbox {
@@ -898,10 +941,49 @@
                 margin-bottom: 10px;
             }
             
+            .mobile-actions-toggle {
+                display: flex !important;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                width: 100%;
+                padding: 12px 16px;
+                border: 2px solid #e2e8f0;
+                border-radius: 12px;
+                background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+                color: #475569;
+                font-size: 0.95rem;
+                font-weight: 700;
+                font-family: inherit;
+                cursor: pointer;
+                margin-bottom: 0;
+                transition: none !important;
+                animation: none !important;
+                transform: none !important;
+                contain: layout style;
+            }
+            .mobile-actions-toggle * {
+                transition: none !important;
+                animation: none !important;
+                transform: none !important;
+            }
+            .mobile-actions-toggle:active {
+                background: #e2e8f0;
+            }
+            .mobile-actions-toggle .mobile-actions-arrow {
+                margin-left: auto;
+                font-size: 0.8rem;
+            }
             .modern-header-actions {
                 width: 100%;
                 flex-direction: column;
                 gap: 10px;
+                display: none !important;
+                margin-top: 0;
+            }
+            .modern-header-actions.mobile-open {
+                display: flex !important;
+                margin-top: 10px;
             }
             
             /* Full width buttons */
@@ -1574,17 +1656,90 @@
         .ab-form-actions button { padding: 8px 16px; border-radius: 8px; font-size: 0.82rem; font-weight: 600; cursor: pointer; border: none; }
         .ab-form-save { background: #1D8AC9; color: white; }
         .ab-form-cancel { background: #f1f5f9; color: #64748b; }
+        .ab-fg.position-relative { position: relative; }
+        #abForm .search-results {
+            position: absolute; top: 100%; left: 0; right: 0;
+            background: white; border: 1.5px solid #e2e8f0; border-radius: 8px;
+            max-height: 180px; overflow-y: auto; z-index: 10001;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15); display: none;
+        }
+        #abForm .search-results .search-item {
+            padding: 8px 12px; cursor: pointer; font-size: 0.82rem;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        #abForm .search-results .search-item:hover { background: #f0f9ff; }
 
         @media (max-width: 768px) {
-            .summary-cards-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-            .summary-card { padding: 14px 16px; }
-            .summary-card-icon { width: 40px; height: 40px; font-size: 1rem; }
-            .summary-card-info .sc-value { font-size: 1.1rem; }
+            .summary-cards-grid {
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 6px !important;
+                margin-bottom: 12px !important;
+            }
+            .summary-card {
+                padding: 8px 10px !important;
+                gap: 6px !important;
+                border-radius: 10px !important;
+                min-width: 0 !important;
+                overflow: hidden !important;
+            }
+            .summary-card-icon {
+                width: 28px !important;
+                height: 28px !important;
+                min-width: 28px !important;
+                max-width: 28px !important;
+                font-size: 0.7rem !important;
+                flex-shrink: 0 !important;
+                border-radius: 7px !important;
+            }
+            .summary-card-info {
+                min-width: 0 !important;
+                overflow: hidden !important;
+                flex: 1 !important;
+            }
+            .summary-card-info .sc-label {
+                font-size: 0.58rem !important;
+                white-space: nowrap !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+            }
+            .summary-card-info .sc-value {
+                font-size: 0.82rem !important;
+                white-space: nowrap !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+                line-height: 1.2 !important;
+            }
+            .summary-card-info .sc-value small {
+                font-size: 0.5rem !important;
+            }
+            .summary-card:hover {
+                transform: none !important;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.04) !important;
+            }
             .action-banner { flex-direction: column; align-items: flex-start; }
             .qv-modal { width: 98%; max-width: none; border-radius: 16px; }
             .inv-modal { width: 98%; max-width: none; border-radius: 16px; }
             .ab-modal { width: 98%; max-width: none; border-radius: 16px; }
             .ab-form-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 400px) {
+            .summary-cards-grid {
+                grid-template-columns: 1fr !important;
+                gap: 6px !important;
+            }
+            .summary-card {
+                padding: 10px 12px !important;
+                gap: 10px !important;
+            }
+            .summary-card-icon {
+                width: 32px !important;
+                height: 32px !important;
+                min-width: 32px !important;
+                max-width: 32px !important;
+                font-size: 0.8rem !important;
+            }
+            .summary-card-info .sc-label { font-size: 0.65rem !important; }
+            .summary-card-info .sc-value { font-size: 0.95rem !important; }
         }
     </style>
 @endsection
@@ -1623,28 +1778,37 @@
                             <p>จัดการและติดตามสถานะการจัดส่งสินค้าของคุณ</p>
                         </div>
                     </div>
-                    <div class="modern-header-actions">
-                        <a href="{{url('customershippingsexport2')}}" id="data-export" class="btn btn-export-green">
-                            <i class="fa fa-file-excel-o"></i> Export Excel
-                        </a>
-                        <!-- Form Hidden, Button Outside -->
-                        <form method="POST" action="{{ route('update-delivery-type') }}" id="updateForm" style="display:none;">
-                            @csrf
-                            <input type="hidden" name="track_ids" id="trackIdsInput" value="">
-                        </form>
-                        
-                        <button type="button" id="updateSelected" class="btn btn-modern btn-modern-primary" onclick="checkAndUpdateSelection()">
-                            <i class="fa fa-check-circle"></i> เลือกจัดส่งที่อยู่ปัจจุบัน
+                    <div class="modern-header-actions-wrap">
+                        <button type="button" class="mobile-actions-toggle" id="mobileActionsToggle" onclick="toggleMobileActions()">
+                            <span style="font-size:1rem;">&#9776;</span> <span id="mobileActionsLabel">เมนู</span>
+                            <span class="mobile-actions-arrow" id="mobileActionsArrow">&#9662;</span>
                         </button>
-                        <button type="button" class="btn btn-modern btn-modern-accent" onclick="openBatchRecipientModal()">
-                            <i class="fa fa-users"></i> กำหนดผู้รับ
-                        </button>
-                        <button type="button" class="btn-invoice-trigger" onclick="openInvoiceModal()">
-                            <i class="fa fa-qrcode"></i> ชำระเงิน
-                        </button>
-                        <button type="button" class="btn-ab-trigger" onclick="openAddressBook()">
-                            <i class="fa fa-address-book"></i> สมุดที่อยู่
-                        </button>
+                        <div class="modern-header-actions" id="headerActions">
+                            <a href="#" id="data-export" class="btn btn-export-green" style="opacity:0.5;pointer-events:none;" onclick="return !!this.getAttribute('data-ready');">
+                                <i class="fa fa-file-excel-o"></i> Export Excel
+                            </a>
+                            <a href="#" id="box-image-download" class="btn btn-export-green" style="background:linear-gradient(135deg,#3b82f6,#2563eb);border:none;opacity:0.5;pointer-events:none;" onclick="return !!this.getAttribute('data-ready');">
+                                <i class="fa fa-picture-o"></i> ดาวน์โหลดรูปกล่อง
+                            </a>
+                            <!-- Form Hidden, Button Outside -->
+                            <form method="POST" action="{{ route('update-delivery-type') }}" id="updateForm" style="display:none;">
+                                @csrf
+                                <input type="hidden" name="track_ids" id="trackIdsInput" value="">
+                            </form>
+                            
+                            <button type="button" id="updateSelected" class="btn btn-modern btn-modern-primary" onclick="checkAndUpdateSelection()">
+                                <i class="fa fa-check-circle"></i> เลือกจัดส่งที่อยู่ปัจจุบัน
+                            </button>
+                            <button type="button" class="btn btn-modern btn-modern-accent" onclick="openBatchRecipientModal()">
+                                <i class="fa fa-users"></i> กำหนดผู้รับ
+                            </button>
+                            <button type="button" id="btn-invoice" class="btn-invoice-trigger" style="opacity:0.5;pointer-events:none;" onclick="openInvoiceModal()">
+                                <i class="fa fa-qrcode"></i> ชำระเงิน
+                            </button>
+                            <button type="button" id="btn-addressbook" class="btn-ab-trigger" style="opacity:0.5;pointer-events:none;" onclick="openAddressBook()">
+                                <i class="fa fa-address-book"></i> สมุดที่อยู่
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -1806,21 +1970,25 @@
                                         <label>ที่อยู่</label>
                                         <input type="text" id="ab-address" placeholder="บ้านเลขที่ ซอย ถนน">
                                     </div>
-                                    <div class="ab-fg">
+                                    <div class="ab-fg position-relative">
                                         <label>แขวง/ตำบล</label>
-                                        <input type="text" id="ab-subdistrict" placeholder="ตำบล">
+                                        <input type="text" id="ab_subdistrict" placeholder="พิมพ์เพื่อค้นหาตำบล">
+                                        <div id="ab_subdistrict-results" class="search-results"></div>
                                     </div>
-                                    <div class="ab-fg">
+                                    <div class="ab-fg position-relative">
                                         <label>เขต/อำเภอ</label>
-                                        <input type="text" id="ab-district" placeholder="อำเภอ">
+                                        <input type="text" id="ab_district" placeholder="พิมพ์เพื่อค้นหาอำเภอ">
+                                        <div id="ab_district-results" class="search-results"></div>
                                     </div>
-                                    <div class="ab-fg">
+                                    <div class="ab-fg position-relative">
                                         <label>จังหวัด</label>
-                                        <input type="text" id="ab-province" placeholder="จังหวัด">
+                                        <input type="text" id="ab_province" placeholder="พิมพ์เพื่อค้นหาจังหวัด">
+                                        <div id="ab_province-results" class="search-results"></div>
                                     </div>
-                                    <div class="ab-fg">
+                                    <div class="ab-fg position-relative">
                                         <label>รหัสไปรษณีย์</label>
-                                        <input type="text" id="ab-postcode" placeholder="xxxxx">
+                                        <input type="text" id="ab_postcode" placeholder="พิมพ์รหัสไปรษณีย์">
+                                        <div id="ab_postcode-results" class="search-results"></div>
                                     </div>
                                 </div>
                                 <div class="ab-form-actions">
@@ -1878,10 +2046,12 @@
                             <div class="control-group" id="length-container">
                                 <label class="control-label d-md-block d-none">SHOW:</label>
                                 <select id="custom_page_length" class="unified-select">
-                                    <option value="100" selected>100</option>
-                                    <option value="150">150</option>
-                                    <option value="200">200</option>
-                                    <option value="300">300</option>
+                                    <option value="500" selected>500</option>
+                                    <option value="600">600</option>
+                                    <option value="700">700</option>
+                                    <option value="800">800</option>
+                                    <option value="900">900</option>
+                                    <option value="1000">1000</option>
                                 </select>
                             </div>
                             
@@ -1977,6 +2147,14 @@
             });
         }
     });
+
+    /* Mobile actions toggle */
+    function toggleMobileActions() {
+        var actions = document.getElementById('headerActions');
+        var label = document.getElementById('mobileActionsLabel');
+        var isOpen = actions.classList.toggle('mobile-open');
+        label.textContent = isOpen ? 'ซ่อนเมนู' : 'เมนู';
+    }
 
     /* ... Gallery Functions (Same as previous) ... */
     var currentGalleryImages = [];
@@ -2328,6 +2506,25 @@
 @endsection
 
 @section('extra-script')
+    <script>
+    // Destroy perfectScrollbar on .main-panel (paper-dashboard auto-inits on Windows)
+    (function(){
+        var mp = document.querySelector('.main-panel');
+        if (mp) {
+            if (typeof $ !== 'undefined' && $.fn.perfectScrollbar) {
+                try { $('.main-panel').perfectScrollbar('destroy'); } catch(e) {}
+                // Kill the plugin entirely so it can never re-init
+                $.fn.perfectScrollbar = function() { return this; };
+            }
+            mp.classList.remove('ps', 'ps--active-x', 'ps--active-y', 'ps-container', 'ps-theme-default', 'ps-active-x', 'ps-active-y');
+            var rails = mp.querySelectorAll('.ps__rail-x, .ps__rail-y, .ps-scrollbar-x-rail, .ps-scrollbar-y-rail, .ps__thumb-x, .ps__thumb-y, .ps-scrollbar-x, .ps-scrollbar-y');
+            rails.forEach(function(r) { r.remove(); });
+            mp.setAttribute('tabindex', '-1');
+            mp.style.cssText += 'overflow:auto!important;outline:none!important;border:none!important;';
+        }
+        $('html').removeClass('perfect-scrollbar-on').addClass('perfect-scrollbar-off');
+    })();
+    </script>
     <script src="{{ asset('js/thai-address-search.js') }}"></script>
     <script>
         // Update Select Global Function (Same as previous)
@@ -2356,8 +2553,8 @@
             }
 
             var dataTable = $('#dt-mant-table-1').DataTable({
-                "pageLength": 100,
-                "lengthMenu": [[100, 150, 200, 300], [100, 150, 200, 300]],
+                "pageLength": 500,
+                "lengthMenu": [[500, 600, 700, 800, 900, 1000], [500, 600, 700, 800, 900, 1000]],
                 "processing": true,
                 "serverSide": true,
                 "paging": true,
@@ -2499,7 +2696,33 @@
             $('#checkAll').on('change', function () { $(':checkbox', dataTable.rows().nodes()).prop('checked', $(this).prop('checked')); });
             
             dataTable.on('xhr.dt', function (e, settings, json, xhr) {
-                if (json.data_export_link) $('#data-export').attr('href', json.data_export_link);
+                var startVal = $('#start_date').val();
+                var exportBtn = document.getElementById('data-export');
+                var boxBtn = document.getElementById('box-image-download');
+                var invoiceBtn = document.getElementById('btn-invoice');
+                var abBtn = document.getElementById('btn-addressbook');
+                if (startVal) {
+                    var cn = '{{\App\User::find(auth()->id())->customerno}}';
+                    if (json.data_export_link) exportBtn.href = json.data_export_link;
+                    [exportBtn, boxBtn, invoiceBtn, abBtn].forEach(function(b) {
+                        b.style.opacity = '1';
+                        b.style.pointerEvents = 'auto';
+                        b.removeAttribute('title');
+                    });
+                    exportBtn.setAttribute('data-ready', '1');
+                    boxBtn.href = '{{ url("download-box-images") }}/' + encodeURIComponent(cn) + '/' + startVal;
+                    boxBtn.setAttribute('data-ready', '1');
+                } else {
+                    exportBtn.href = '#';
+                    boxBtn.href = '#';
+                    [exportBtn, boxBtn, invoiceBtn, abBtn].forEach(function(b) {
+                        b.style.opacity = '0.5';
+                        b.style.pointerEvents = 'none';
+                        b.title = 'กรุณาเลือกรอบปิดตู้ก่อน';
+                    });
+                    exportBtn.removeAttribute('data-ready');
+                    boxBtn.removeAttribute('data-ready');
+                }
                 // Update Summary Cards
                 var etdLabel = json.start_date ? ('รอบปิดตู้ (' + json.start_date + ')') : 'รอบปิดตู้ (ทั้งหมด)';
                 $('#sc-round-label').text(etdLabel);
@@ -2715,12 +2938,14 @@
         function abShowAddForm() {
             $('#abFormTitle').text('เพิ่มที่อยู่ใหม่');
             $('#ab-edit-id').val('');
-            $('#ab-label, #ab-fullname, #ab-mobile, #ab-address, #ab-subdistrict, #ab-district, #ab-province, #ab-postcode').val('');
+            $('#ab-label, #ab-fullname, #ab-mobile, #ab-address, #ab_subdistrict, #ab_district, #ab_province, #ab_postcode').val('');
+            $('#abForm .search-results').hide();
             $('#abForm').addClass('active');
         }
         function abCancelForm() {
             $('#abForm').removeClass('active');
             $('#ab-edit-id').val('');
+            $('#abForm .search-results').hide();
         }
 
         function abSaveForm() {
@@ -2732,10 +2957,10 @@
                 fullname: fullname,
                 mobile: $('#ab-mobile').val().trim(),
                 address: $('#ab-address').val().trim(),
-                subdistrict: $('#ab-subdistrict').val().trim(),
-                district: $('#ab-district').val().trim(),
-                province: $('#ab-province').val().trim(),
-                postcode: $('#ab-postcode').val().trim(),
+                subdistrict: $('#ab_subdistrict').val().trim(),
+                district: $('#ab_district').val().trim(),
+                province: $('#ab_province').val().trim(),
+                postcode: $('#ab_postcode').val().trim(),
                 _token: "{{ csrf_token() }}"
             };
             var url, method;
@@ -2770,10 +2995,10 @@
                 $('#ab-fullname').val(a.fullname || '');
                 $('#ab-mobile').val(a.mobile || '');
                 $('#ab-address').val(a.address || '');
-                $('#ab-subdistrict').val(a.subdistrict || '');
-                $('#ab-district').val(a.district || '');
-                $('#ab-province').val(a.province || '');
-                $('#ab-postcode').val(a.postcode || '');
+                $('#ab_subdistrict').val(a.subdistrict || '');
+                $('#ab_district').val(a.district || '');
+                $('#ab_province').val(a.province || '');
+                $('#ab_postcode').val(a.postcode || '');
                 $('#abForm').addClass('active');
             });
         }
@@ -3335,6 +3560,17 @@
                 }
             });
         }
+    }
+
+    // Thai address search for address book modal
+    if (typeof initThaiAddressSearch === 'function') {
+        initThaiAddressSearch({
+            formId: '#abForm',
+            provinceField: '#ab_province',
+            amphoeField: '#ab_district',
+            tambonField: '#ab_subdistrict',
+            zipcodeField: '#ab_postcode'
+        });
     }
 
     // Close modal on ESC or backdrop click

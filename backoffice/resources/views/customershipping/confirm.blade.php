@@ -385,6 +385,21 @@
                         </div>
                     @endif
 
+                    @if ($importErrors = Session::get('import_errors'))
+                        <div class="alert alert-danger" style="margin:12px 20px; border-radius:10px;">
+                            <h5 style="margin:0 0 8px; font-weight:700; font-size:14px;">
+                                <i class="fa fa-exclamation-triangle"></i>
+                                ⚠️ นำเข้าไม่สำเร็จ {{ count($importErrors) }} รายการ
+                            </h5>
+                            <p style="font-size:12px; color:#721c24; margin-bottom:8px;">รายการต่อไปนี้ไม่ถูกนำเข้าเนื่องจากข้อมูลไม่ตรงตามรูปแบบ กรุณาตรวจสอบไฟล์ Excel:</p>
+                            <ul style="font-size:12px; margin:0; padding-left:20px;">
+                                @foreach ($importErrors as $err)
+                                    <li style="margin-bottom:3px;">{{ $err }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+
                     <div class="card-body">
                         <div class="table-responsive">
                             <table class="table table-striped table-hover" id="dt-mant-table-1">

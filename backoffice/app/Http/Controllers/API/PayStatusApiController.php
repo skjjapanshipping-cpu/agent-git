@@ -39,6 +39,7 @@ class PayStatusApiController extends Controller
         // === MODE 1: Direct update by shipping_ids (preferred) ===
         if (!empty($shippingIds) && is_array($shippingIds)) {
             $updated = Customershipping::whereIn('id', $shippingIds)
+                ->where('customerno', $customerno)
                 ->whereIn('pay_status', [1, 5])
                 ->update(['pay_status' => 2]);
 
@@ -57,67 +58,83 @@ class PayStatusApiController extends Controller
         $etdParam = $request->input('etd', '');
         $isThaiShipping = str_contains($etdParam, 'thai-bill');
 
-        $importQuery = Customershipping::where('customerno', $customerno)
-            ->where('excel_status', '1')
-            ->whereIn('pay_status', [1, 5]);
-
-        $shippings = $importQuery->get();
         $matchedImport = false;
+        $importResponse = null;
 
-        if (!$isThaiShipping && $shippings->isNotEmpty()) {
-            $etdGroups = $shippings->groupBy(function ($s) {
-                return $s->etd ? $s->etd->format('Y-m-d') : 'unknown';
-            });
+        if (!$isThaiShipping) {
+            DB::transaction(function () use ($customerno, $slipAmount, $transRef, &$matchedImport, &$importResponse) {
+                $shippings = Customershipping::where('customerno', $customerno)
+                    ->where('excel_status', '1')
+                    ->whereIn('pay_status', [1, 5])
+                    ->lockForUpdate()
+                    ->get();
 
-            $matchedEtd = null;
-            $matchedTotal = 0;
-            $tolerance = 1.0;
+                if ($shippings->isEmpty()) return;
 
-            foreach ($etdGroups as $etdKey => $group) {
-                $total = $group->sum(function ($s) {
-                    $codRate = $s->cod_rate ?? 0.25;
-                    return $s->import_cost + ($s->cod * $codRate);
+                $etdGroups = $shippings->groupBy(function ($s) {
+                    return $s->etd ? $s->etd->format('Y-m-d') : 'unknown';
                 });
 
-                if (abs($total - $slipAmount) <= $tolerance) {
-                    $matchedEtd = $etdKey;
-                    $matchedTotal = $total;
-                    break;
+                $matchedEtd = null;
+                $matchedTotal = 0;
+                $tolerance = 1.0;
+
+                foreach ($etdGroups as $etdKey => $group) {
+                    $total = $group->sum(function ($s) {
+                        $codRate = $s->cod_rate ?? 0.25;
+                        return $s->import_cost + ($s->cod * $codRate);
+                    });
+
+                    if (abs($total - $slipAmount) <= $tolerance) {
+                        $matchedEtd = $etdKey;
+                        $matchedTotal = $total;
+                        break;
+                    }
                 }
-            }
 
-            if ($matchedEtd) {
-                $matchedGroup = $etdGroups[$matchedEtd];
-                $updatedIds = $matchedGroup->pluck('id')->toArray();
+                if ($matchedEtd) {
+                    $matchedGroup = $etdGroups[$matchedEtd];
+                    $updatedIds = $matchedGroup->pluck('id')->toArray();
 
-                Customershipping::whereIn('id', $updatedIds)
-                    ->whereIn('pay_status', [1, 5])
-                    ->update(['pay_status' => 2]);
+                    Customershipping::whereIn('id', $updatedIds)
+                        ->whereIn('pay_status', [1, 5])
+                        ->update(['pay_status' => 2]);
 
-                Log::info("[CHAT-PAY] Updated pay_status=2 for {$customerno}, ETD={$matchedEtd}, amount=฿{$matchedTotal}, transRef={$transRef}, records=" . count($updatedIds));
+                    Log::info("[CHAT-PAY] Updated pay_status=2 for {$customerno}, ETD={$matchedEtd}, amount=฿{$matchedTotal}, transRef={$transRef}, records=" . count($updatedIds));
 
-                return response()->json([
-                    'success' => true,
-                    'message' => "อัพเดทสถานะชำระค่านำเข้าแล้ว: {$customerno} รอบ {$matchedEtd}",
-                    'customerno' => $customerno,
-                    'etd' => $matchedEtd,
-                    'amount' => $matchedTotal,
-                    'updated_count' => count($updatedIds),
-                    'type' => 'import_cost',
-                ]);
-            }
+                    $matchedImport = true;
+                    $importResponse = [
+                        'success' => true,
+                        'message' => "อัพเดทสถานะชำระค่านำเข้าแล้ว: {$customerno} รอบ {$matchedEtd}",
+                        'customerno' => $customerno,
+                        'etd' => $matchedEtd,
+                        'amount' => $matchedTotal,
+                        'updated_count' => count($updatedIds),
+                        'type' => 'import_cost',
+                    ];
+                }
+            });
+        }
+
+        if ($matchedImport) {
+            return response()->json($importResponse);
         }
 
         // === MODE 3: Match by thai_bill_amount (ค่าส่งไทย — บิลแยก) ===
-        $thaiBillShippings = Customershipping::where('customerno', $customerno)
-            ->where('excel_status', '1')
-            ->where('thai_bill_status', 1)  // รอโอน
-            ->whereNotNull('thai_bill_amount')
-            ->where('thai_bill_amount', '>', 0)
-            ->get();
+        $matchedThai = false;
+        $thaiResponse = null;
 
-        if ($thaiBillShippings->isNotEmpty()) {
-            // Group by thai_bill_amount เพื่อ match กับยอดสลิป
+        DB::transaction(function () use ($customerno, $slipAmount, $transRef, &$matchedThai, &$thaiResponse) {
+            $thaiBillShippings = Customershipping::where('customerno', $customerno)
+                ->where('excel_status', '1')
+                ->where('thai_bill_status', 1)
+                ->whereNotNull('thai_bill_amount')
+                ->where('thai_bill_amount', '>', 0)
+                ->lockForUpdate()
+                ->get();
+
+            if ($thaiBillShippings->isEmpty()) return;
+
             $billGroups = $thaiBillShippings->groupBy('thai_bill_amount');
             $tolerance = 1.0;
 
@@ -131,22 +148,32 @@ class PayStatusApiController extends Controller
 
                     Log::info("[CHAT-PAY] Updated thai_bill_status=2 for {$customerno}, amount=฿{$billAmount}, transRef={$transRef}, records=" . count($updatedIds));
 
-                    return response()->json([
+                    $matchedThai = true;
+                    $thaiResponse = [
                         'success' => true,
                         'message' => "อัพเดทสถานะชำระค่าส่งไทยแล้ว: {$customerno} ฿" . number_format($billAmount, 2),
                         'customerno' => $customerno,
                         'amount' => (float)$billAmount,
                         'updated_count' => count($updatedIds),
                         'type' => 'thai_shipping',
-                    ]);
+                    ];
+                    return;
                 }
             }
+        });
+
+        if ($matchedThai) {
+            return response()->json($thaiResponse);
         }
 
         // === ไม่ match ทั้ง 2 ประเภท ===
         $etdTotals = [];
-        if ($shippings->isNotEmpty()) {
-            $etdGroups = $shippings->groupBy(function ($s) {
+        $pendingImports = Customershipping::where('customerno', $customerno)
+            ->where('excel_status', '1')
+            ->whereIn('pay_status', [1, 5])
+            ->get();
+        if ($pendingImports->isNotEmpty()) {
+            $etdGroups = $pendingImports->groupBy(function ($s) {
                 return $s->etd ? $s->etd->format('Y-m-d') : 'unknown';
             });
             foreach ($etdGroups as $etdKey => $group) {
@@ -157,8 +184,14 @@ class PayStatusApiController extends Controller
                 $etdTotals[] = "ค่านำเข้า {$etdKey}: ฿" . number_format($total, 2);
             }
         }
-        if ($thaiBillShippings->isNotEmpty()) {
-            $billGroups = $thaiBillShippings->groupBy('thai_bill_amount');
+        $pendingThaiBills = Customershipping::where('customerno', $customerno)
+            ->where('excel_status', '1')
+            ->where('thai_bill_status', 1)
+            ->whereNotNull('thai_bill_amount')
+            ->where('thai_bill_amount', '>', 0)
+            ->get();
+        if ($pendingThaiBills->isNotEmpty()) {
+            $billGroups = $pendingThaiBills->groupBy('thai_bill_amount');
             foreach ($billGroups as $billAmount => $group) {
                 $etdTotals[] = "ค่าส่งไทย: ฿" . number_format($billAmount, 2);
             }

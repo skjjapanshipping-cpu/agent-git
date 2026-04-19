@@ -14,7 +14,13 @@ use Illuminate\Support\Facades\Log;
 
 class CustomershippingsImport implements ToModel
 {
+    protected $errors = [];
+    protected $rowIndex = 0;
 
+    public function getErrors(): array
+    {
+        return $this->errors;
+    }
 
     /**
      * @param array $row
@@ -23,9 +29,9 @@ class CustomershippingsImport implements ToModel
      */
     public function model(array $row)
     {
+        $this->rowIndex++;
 
         if ($row['ship_date'] == 'วันที่่' || empty($row['customerno'])) {
-//            echo "Row:" . $row['image_index'] . " <br>";
             return null;
         }
 //        dd($row);
@@ -151,12 +157,30 @@ class CustomershippingsImport implements ToModel
                 'shipping_method'=>!empty($row['shipping_method']) ? intval($row['shipping_method']) : 1 //1=ทางเรือ, 2=ทางเครื่องบิน
             ]);
         } catch (QueryException $e) {
+            $errMsg = "แถว {$this->rowIndex}: {$row['customerno']} (Track: {$row['track_no']}) — " . $this->friendlyDbError($e->getMessage());
             Log::error('CustomershippingsImport QueryException: ' . $e->getMessage(), ['sql' => $e->getSql()]);
+            $this->errors[] = $errMsg;
             return null;
         } catch (\Exception $e) {
+            $errMsg = "แถว {$this->rowIndex}: {$row['customerno']} (Track: {$row['track_no']}) — {$e->getMessage()}";
             Log::error('CustomershippingsImport Exception: ' . $e->getMessage(), ['row' => $row]);
+            $this->errors[] = $errMsg;
             return null;
         }
+    }
+
+    protected function friendlyDbError(string $msg): string
+    {
+        if (preg_match("/Data too long for column '(\w+)'/", $msg, $m)) {
+            return "ข้อมูลคอลัมน์ '{$m[1]}' ยาวเกินกว่าที่ฐานข้อมูลรองรับ";
+        }
+        if (preg_match("/Duplicate entry '(.+)' for key/", $msg, $m)) {
+            return "ข้อมูลซ้ำ: {$m[1]}";
+        }
+        if (str_contains($msg, 'cannot be null')) {
+            return "มีข้อมูลบังคับที่เป็นค่าว่าง";
+        }
+        return $msg;
     }
 
     protected function getGoogleDriveFileId($url)

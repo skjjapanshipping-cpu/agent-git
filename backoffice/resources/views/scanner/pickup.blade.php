@@ -168,7 +168,123 @@
         .parcel-item .check { font-size: 18px; color: #10b981; }
         .parcel-item .pending-dot { width: 18px; height: 18px; border-radius: 50%; border: 2px solid #475569; }
         .parcel-item.just-scanned { border-left-color: #a78bfa; background: #2d1b69; animation: flashScan 0.5s; }
+        .parcel-item.wholeprice { border-right: 3px solid #f59e0b; }
+        .badge-wp { display:inline-block; background:#92400e; color:#fbbf24; font-size:9px; font-weight:700; padding:1px 6px; border-radius:6px; margin-left:4px; }
         @keyframes flashScan { from { background: #7c3aed; } to { background: #2d1b69; } }
+
+        /* Re-check mode */
+        .recheck-banner {
+            display: none; background: linear-gradient(135deg, #b45309, #d97706);
+            border-radius: 16px; padding: 14px; text-align: center; margin: 12px 0;
+        }
+        .recheck-banner.show { display: block; }
+        .recheck-banner .rc-title { font-size: 18px; font-weight: 800; }
+        .recheck-banner .rc-sub { font-size: 13px; opacity: 0.9; margin-top: 2px; }
+        .recheck-banner .rc-progress { font-size: 22px; font-weight: 800; margin-top: 6px; }
+        .btn-recheck {
+            padding: 10px 16px; border-radius: 12px; border: 2px solid #d97706;
+            background: transparent; color: #fbbf24; font-size: 13px; font-weight: 700;
+            font-family: 'Prompt', sans-serif; cursor: pointer; width: 100%; margin-bottom: 8px;
+        }
+        .btn-recheck:active { background: #92400e; }
+        .btn-recheck.active-mode { background: #92400e; border-color: #f59e0b; }
+        .parcel-item.rc-verified { border-left-color: #3b82f6 !important; background: #1e3a5f !important; opacity: 1 !important; }
+        .parcel-item.rc-pending { border-left-color: #d97706 !important; opacity: 0.5 !important; }
+
+        /* Pile grouping (กองแยก) */
+        .pile-header {
+            background: linear-gradient(135deg, #1e3a5f, #1e293b);
+            border-radius: 10px; padding: 10px 14px; margin-bottom: 4px; margin-top: 12px;
+            display: flex; align-items: center; justify-content: space-between;
+            border-left: 4px solid var(--pile-color, #7c3aed);
+        }
+        .pile-header:first-child { margin-top: 0; }
+        .pile-header .pile-label {
+            font-size: 16px; font-weight: 800; color: var(--pile-color, #a78bfa);
+        }
+        .pile-header .pile-name {
+            font-size: 12px; color: #cbd5e1; margin-left: 8px; font-weight: 400;
+        }
+        .pile-header .pile-count {
+            font-size: 13px; font-weight: 700; color: #94a3b8;
+            background: #0f172a; padding: 4px 10px; border-radius: 8px;
+        }
+        .pile-header .pile-count.pile-done { background: #065f46; color: #6ee7b7; }
+        .pile-item { border-left-color: var(--pile-color, #334155) !important; }
+        .pile-announce {
+            display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.9); border: 3px solid var(--pile-color, #a78bfa);
+            border-radius: 24px; padding: 32px 48px; text-align: center;
+            z-index: 9998; animation: popIn 0.3s ease;
+            min-width: 280px;
+        }
+        .pile-announce.show { display: block; }
+        .pile-announce .pile-num { font-size: 48px; font-weight: 900; color: var(--pile-color, #a78bfa); }
+        .pile-announce .pile-boxes { font-size: 22px; font-weight: 700; color: #fff; margin-top: 4px; }
+        .pile-announce .pile-recipient { font-size: 14px; color: #94a3b8; margin-top: 8px; }
+        .badge-pile { display:inline-block; font-size:9px; font-weight:700; padding:1px 6px; border-radius:6px; margin-left:4px; color:#fff; }
+        .badge-self { display:inline-block; background:#dc2626; color:#fff; font-size:10px; font-weight:800; padding:2px 8px; border-radius:6px; margin-right:4px; }
+
+        /* Dimension Modal */
+        .dim-overlay {
+            display:none; position:fixed; top:0; left:0; right:0; bottom:0;
+            background:rgba(0,0,0,0.7); z-index:10000;
+            align-items:center; justify-content:center; padding:16px;
+        }
+        .dim-overlay.show { display:flex; }
+        .dim-modal {
+            background:#1e293b; border-radius:20px; padding:24px; width:100%; max-width:400px;
+            animation: popIn 0.3s ease;
+        }
+        .dim-modal h3 { text-align:center; font-size:18px; font-weight:800; color:#fbbf24; margin-bottom:4px; }
+        .dim-modal .box-label { text-align:center; font-size:14px; color:#94a3b8; margin-bottom:16px; }
+        .dim-row {
+            display:flex; align-items:center; gap:6px; margin-bottom:12px; justify-content:center; flex-wrap:wrap;
+        }
+        .dim-row input {
+            width:80px; padding:10px 6px; border-radius:10px; border:2px solid #334155;
+            background:#0f172a; color:#fff; font-size:18px; font-weight:700;
+            font-family:'Prompt',sans-serif; text-align:center;
+        }
+        .dim-row input:focus { outline:none; border-color:#f59e0b; }
+        .dim-row .x { font-size:18px; font-weight:800; color:#94a3b8; }
+        .dim-result {
+            text-align:center; margin:12px 0 16px; font-size:14px; color:#94a3b8;
+        }
+        .dim-result .price { font-size:24px; font-weight:800; color:#f59e0b; }
+        .dim-btn-row { display:flex; gap:8px; }
+        .dim-btn {
+            flex:1; padding:14px; border-radius:12px; border:none;
+            font-size:16px; font-weight:700; font-family:'Prompt',sans-serif; cursor:pointer;
+        }
+        .dim-btn-cancel { background:#334155; color:#94a3b8; }
+        .dim-btn-confirm { background:#f59e0b; color:#000; }
+        .dim-btn-confirm:disabled { opacity:0.4; cursor:not-allowed; }
+        .dim-btn-skip { background:#7c3aed; color:#fff; }
+
+        /* Image Preview Modal */
+        .img-overlay {
+            display:none; position:fixed; top:0; left:0; right:0; bottom:0;
+            background:rgba(0,0,0,0.85); z-index:10001;
+            align-items:center; justify-content:center; padding:16px;
+            flex-direction:column;
+        }
+        .img-overlay.show { display:flex; }
+        .img-overlay .img-title {
+            font-size:16px; font-weight:800; color:#fff; margin-bottom:12px; text-align:center;
+        }
+        .img-overlay img {
+            max-width:90vw; max-height:70vh; border-radius:12px;
+            object-fit:contain; background:#1e293b;
+        }
+        .img-overlay .img-no {
+            color:#94a3b8; font-size:14px; margin-top:16px; text-align:center;
+        }
+        .img-overlay .img-close {
+            position:absolute; top:16px; right:16px; background:rgba(255,255,255,0.15);
+            border:none; color:#fff; font-size:24px; width:40px; height:40px;
+            border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center;
+        }
 
         /* Btn change customer */
         .btn-change {
@@ -258,6 +374,17 @@
         <div class="etd-info" id="selEtd">-</div>
     </div>
 
+    <!-- Change Customer (top) -->
+    <button class="btn-change" onclick="goToStep1()" style="margin-bottom:8px;"><i class="fa fa-exchange"></i> เปลี่ยนลูกค้า</button>
+    <button class="btn-recheck" id="btnRecheck" onclick="toggleRecheckMode()"><i class="fa fa-refresh"></i> เช็คอีกรอบ</button>
+
+    <!-- Re-check Banner -->
+    <div class="recheck-banner" id="recheckBanner">
+        <div class="rc-title">🔄 โหมดเช็คอีกรอบ</div>
+        <div class="rc-sub">ยิงบาร์โค้ดเพื่อตรวจสอบพัสดุอีกครั้ง</div>
+        <div class="rc-progress"><span id="rcChecked">0</span> / <span id="rcTotal">0</span></div>
+    </div>
+
     <!-- Progress -->
     <div class="progress-section">
         <div class="progress-bar-bg">
@@ -292,8 +419,45 @@
     <!-- Parcel List -->
     <div class="parcel-list" id="parcelList"></div>
 
-    <!-- Change Customer -->
-    <button class="btn-change" onclick="goToStep1()"><i class="fa fa-exchange"></i> เปลี่ยนลูกค้า</button>
+</div>
+
+<!-- Dimension Modal (ราคาเหมา) -->
+<div class="dim-overlay" id="dimOverlay">
+    <div class="dim-modal">
+        <h3>📐 วัดขนาดกล่อง</h3>
+        <div class="box-label" id="dimBoxLabel">Box.xxx — ราคาเหมา</div>
+        <div class="dim-row">
+            <input type="number" id="dimWidth" step="0.01" min="0" placeholder="กว้าง" inputmode="decimal">
+            <span class="x">×</span>
+            <input type="number" id="dimLength" step="0.01" min="0" placeholder="ยาว" inputmode="decimal">
+            <span class="x">×</span>
+            <input type="number" id="dimHeight" step="0.01" min="0" placeholder="สูง" inputmode="decimal">
+        </div>
+        <div class="dim-result">
+            <span style="font-size:12px;">× 0.01 =</span><br>
+            <span class="price" id="dimPrice">0.00</span> <span>บาท</span>
+        </div>
+        <div class="dim-btn-row">
+            <button class="dim-btn dim-btn-cancel" onclick="closeDimModal()">ยกเลิก</button>
+            <button class="dim-btn dim-btn-skip" onclick="confirmDim(true)">ข้ามไปก่อน</button>
+            <button class="dim-btn dim-btn-confirm" id="dimConfirmBtn" onclick="confirmDim(false)" disabled>ยืนยัน</button>
+        </div>
+    </div>
+</div>
+
+<!-- Pile Announce (กองแยก) -->
+<div class="pile-announce" id="pileAnnounce">
+    <div class="pile-num" id="pileAnnounceNum">กอง 1</div>
+    <div class="pile-boxes" id="pileAnnounceBoxes">= 2 กล่อง</div>
+    <div class="pile-recipient" id="pileAnnounceName">Anocha Suksangsri</div>
+</div>
+
+<!-- Image Preview -->
+<div class="img-overlay" id="imgOverlay" onclick="closeImgPreview(event)">
+    <button class="img-close" onclick="closeImgPreview(event)">✕</button>
+    <div class="img-title" id="imgTitle"></div>
+    <img id="imgPreview" src="" alt="">
+    <div class="img-no" id="imgNoImage" style="display:none;">📷 ไม่มีรูปพัสดุ</div>
 </div>
 
 <!-- Toast -->
@@ -307,6 +471,32 @@ var currentCustomer = null;
 var parcelsData = [];
 var scanTimer = null;
 var sessionAlive = true;
+var pileMap = {};       // { delivery_fullname: { pileNum, count, parcels, color } }
+var pileByBox = {};     // { box_no: pileNum }
+var hasPiles = false;   // only true for ANW-820 with multiple recipients
+var recheckMode = false;
+var recheckSet = {};    // { box_no: true } — boxes verified in re-check
+
+function isSB(name) { return name && name.indexOf('SB ') === 0; }
+function sortSBLast(a, b) {
+    var aSB = isSB(a), bSB = isSB(b);
+    if (aSB && !bSB) return 1;
+    if (!aSB && bSB) return -1;
+    if (a < b) return -1;
+    if (a > b) return 1;
+    return 0;
+}
+
+var PILE_COLORS = [
+    '#7c3aed','#059669','#dc2626','#2563eb','#d97706','#ec4899','#0891b2','#65a30d',
+    '#9333ea','#e11d48','#0d9488','#ca8a04','#6366f1','#16a34a','#ea580c','#8b5cf6',
+    '#0284c7','#be185d','#4f46e5','#15803d','#c2410c','#7e22ce','#0369a1','#9f1239',
+    '#0e7490','#a16207','#4338ca','#166534','#9a3412','#6d28d9','#075985','#881337',
+    '#155e75','#854d0e','#3730a3','#14532d','#7c2d12','#581c87','#0c4a6e','#4c0519',
+    '#134e4a','#713f12','#312e81','#052e16','#431407','#3b0764','#083344','#500724',
+    '#115e59','#78350f','#1e1b4b','#022c22','#7c2d12','#4a044e','#164e63','#4c0519',
+    '#0f766e','#92400e','#3730a3','#064e3b','#9a3412','#86198f','#0e7490','#9f1239'
+];
 
 // ===== SESSION KEEP-ALIVE & CSRF REFRESH (ทุก 10 นาที) =====
 setInterval(function() {
@@ -384,6 +574,11 @@ function goToStep1() {
 
 function goToStep2(customerno) {
     currentCustomer = customerno;
+    recheckMode = false;
+    recheckSet = {};
+    document.getElementById('btnRecheck').classList.remove('active-mode');
+    document.getElementById('btnRecheck').innerHTML = '<i class="fa fa-refresh"></i> เช็คอีกรอบ';
+    document.getElementById('recheckBanner').classList.remove('show');
     showSection('sec-scan');
     document.getElementById('step0').className = 'step done';
     document.getElementById('step1').className = 'step done';
@@ -404,7 +599,7 @@ function loadRounds() {
     fetch(apiBase + '/qr-scan/api/pickup/rounds', { headers: { 'Accept': 'application/json' } })
     .then(function(r) { return r.json(); })
     .then(function(data) {
-        if (!data.success || !data.rounds.length) {
+        if (!data.success || !data.rounds || !data.rounds.length) {
             document.getElementById('roundList').innerHTML = '<div style="text-align:center;color:#64748b;padding:20px;">ไม่พบรอบปิดตู้</div>';
             return;
         }
@@ -542,6 +737,7 @@ function loadCustomerParcels(customerno) {
         var roundText = roundLabels.length > 0 ? roundLabels.join(', ') : '-';
         document.getElementById('selEtd').textContent = 'รอบปิดตู้ ' + roundText + ' · ' + data.total + ' ชิ้น';
         parcelsData = data.parcels;
+        buildPileMap(data.customerno, data.parcels);
         updateProgress(data.picked_up, data.total);
         renderParcels();
     })
@@ -564,21 +760,253 @@ function updateProgress(picked, total) {
     }
 }
 
+function buildPileMap(customerno, parcels) {
+    pileMap = {};
+    pileByBox = {};
+    hasPiles = false;
+
+    var names = {};
+    parcels.forEach(function(p) {
+        var name = p.delivery_fullname || '';
+        if (name) names[name] = true;
+    });
+    var uniqueNames = Object.keys(names).sort(sortSBLast);
+
+    if (customerno && customerno.toUpperCase().indexOf('ANW-820') === 0 && uniqueNames.length > 1) {
+        hasPiles = true;
+        uniqueNames.forEach(function(name, idx) {
+            pileMap[name] = { pileNum: idx + 1, count: 0, picked: 0, color: PILE_COLORS[idx % PILE_COLORS.length] };
+        });
+        parcels.forEach(function(p) {
+            var name = p.delivery_fullname || '';
+            if (pileMap[name]) {
+                pileMap[name].count++;
+                if (p.picked_up_at) pileMap[name].picked++;
+                pileByBox[p.box_no] = pileMap[name].pileNum;
+            }
+        });
+    }
+}
+
 function renderParcels(justScannedBox) {
     var html = '';
-    parcelsData.forEach(function(p) {
-        var isDone = !!p.picked_up_at;
-        var extraClass = isDone ? ' done' : '';
-        if (justScannedBox && p.box_no === justScannedBox) extraClass = ' just-scanned';
-        var boxNum = p.box_no.replace(/^BOX-\d{8}-0*/, '');
 
-        html += '<div class="parcel-item' + extraClass + '">' +
-            '<div><div class="box">📦 Box.' + boxNum + (selectedRounds.length > 1 ? ' <span style="font-size:10px;color:#94a3b8;">(' + (p.etd || '') + ')</span>' : '') + '</div>' +
-            '<div class="track">' + (p.track_no || '-') + (p.weight ? ' · ' + p.weight + 'kg' : '') + '</div></div>' +
-            (isDone ? '<span class="check">✅</span>' : '<span class="pending-dot"></span>') +
-            '</div>';
-    });
+    if (hasPiles) {
+        var grouped = {};
+        parcelsData.forEach(function(p) {
+            var name = p.delivery_fullname || 'ไม่ระบุ';
+            if (!grouped[name]) grouped[name] = [];
+            grouped[name].push(p);
+        });
+
+        var sortedNames = Object.keys(grouped).sort(sortSBLast);
+        sortedNames.forEach(function(name, idx) {
+            var pile = pileMap[name] || { pileNum: idx+1, count: grouped[name].length, picked: 0, color: PILE_COLORS[idx % PILE_COLORS.length] };
+            var picked = 0;
+            grouped[name].forEach(function(p) { if (p.picked_up_at) picked++; });
+            var allDone = picked >= grouped[name].length;
+            var countClass = allDone ? ' pile-done' : '';
+            var isSelfPickup = isSB(name);
+            var selfBadge = isSelfPickup ? '<span class="badge-self">รับเอง</span> ' : '';
+
+            html += '<div class="pile-header" style="--pile-color:' + pile.color + ';">' +
+                '<div><span class="pile-label" style="color:' + pile.color + ';">' + selfBadge + 'กอง ' + pile.pileNum + '</span>' +
+                '<span class="pile-name">' + name + '</span></div>' +
+                '<span class="pile-count' + countClass + '">' + (allDone ? '✅ ครบ' : picked + '/' + grouped[name].length) + '</span></div>';
+
+            grouped[name].forEach(function(p) {
+                html += renderParcelItem(p, justScannedBox, pile.color, pile.pileNum);
+            });
+        });
+    } else {
+        parcelsData.forEach(function(p) {
+            html += renderParcelItem(p, justScannedBox, null, null);
+        });
+    }
+
     document.getElementById('parcelList').innerHTML = html;
+}
+
+function renderParcelItem(p, justScannedBox, pileColor, pileNum) {
+    var isDone = !!p.picked_up_at;
+    var extraClass = isDone ? ' done' : '';
+    if (p.iswholeprice === 1) extraClass += ' wholeprice';
+    if (pileColor) extraClass += ' pile-item';
+    if (justScannedBox && p.box_no === justScannedBox) extraClass += ' just-scanned';
+    var boxNum = p.box_no.replace(/^BOX-\d{8}-0*/, '');
+    var wpBadge = p.iswholeprice === 1 ? '<span class="badge-wp">ราคาเหมา</span>' : '';
+    var pileBadge = (hasPiles && pileNum) ? '<span class="badge-pile" style="background:' + pileColor + ';">กอง' + pileNum + '</span>' : '';
+    var dimInfo = '';
+    if (p.iswholeprice === 1 && p.import_cost && parseFloat(p.import_cost) > 0) {
+        dimInfo = ' · ค่านำเข้า ' + parseFloat(p.import_cost).toFixed(2) + '฿';
+    } else if (p.iswholeprice === 1 && isDone && (!p.import_cost || parseFloat(p.import_cost) === 0)) {
+        dimInfo = ' · <span style="color:#fbbf24;">ยังไม่ได้วัดขนาด</span>';
+    }
+
+    var pileStyle = pileColor ? ' style="--pile-color:' + pileColor + ';cursor:pointer;"' : ' style="cursor:pointer;"';
+    return '<div class="parcel-item' + extraClass + '"' + pileStyle + ' onclick="showParcelImage(\'' + p.box_no.replace(/'/g, "\\'") + '\')">' +
+        '<div><div class="box">📦 Box.' + boxNum + wpBadge + pileBadge + (selectedRounds.length > 1 ? ' <span style="font-size:10px;color:#94a3b8;">(' + (p.etd || '') + ')</span>' : '') + '</div>' +
+        '<div class="track">' + (p.track_no || '-') + (p.weight ? ' · ' + p.weight + 'kg' : '') + dimInfo + '</div></div>' +
+        (isDone ? '<span class="check">✅</span>' : '<span class="pending-dot"></span>') +
+        '</div>';
+}
+
+// ===== DIMENSION MODAL (ราคาเหมา) =====
+var _pendingDimScan = null;
+
+function findParcelByBarcode(raw) {
+    var parsed = raw.match(/^(\d{2})(\d{2})-(\d+)$/);
+    if (parsed) {
+        var boxNum = parseInt(parsed[3], 10).toString();
+        for (var i = 0; i < parcelsData.length; i++) {
+            if (parcelsData[i].box_no === boxNum) return parcelsData[i];
+        }
+    }
+    var plain = raw.replace(/^0+/, '') || '0';
+    for (var i = 0; i < parcelsData.length; i++) {
+        if (parcelsData[i].box_no === plain || parcelsData[i].box_no === raw) return parcelsData[i];
+    }
+    return null;
+}
+
+function openDimModal(boxNo, parcel) {
+    _pendingDimScan = boxNo;
+    var boxNum = parcel ? parcel.box_no.replace(/^BOX-\d{8}-0*/, '') : boxNo;
+    document.getElementById('dimBoxLabel').textContent = '📦 Box.' + boxNum + ' — ราคาเหมา';
+    document.getElementById('dimWidth').value = '';
+    document.getElementById('dimLength').value = '';
+    document.getElementById('dimHeight').value = '';
+    document.getElementById('dimPrice').textContent = '0.00';
+    document.getElementById('dimConfirmBtn').disabled = true;
+    document.getElementById('dimOverlay').classList.add('show');
+    setTimeout(function() { document.getElementById('dimWidth').focus(); }, 200);
+}
+
+function closeDimModal() {
+    document.getElementById('dimOverlay').classList.remove('show');
+    _pendingDimScan = null;
+    setTimeout(function() { document.getElementById('pickupInput').focus(); }, 100);
+}
+
+function calcDim() {
+    var w = parseFloat(document.getElementById('dimWidth').value) || 0;
+    var l = parseFloat(document.getElementById('dimLength').value) || 0;
+    var h = parseFloat(document.getElementById('dimHeight').value) || 0;
+    var result = w * l * h * 0.01;
+    document.getElementById('dimPrice').textContent = result.toFixed(2);
+    document.getElementById('dimConfirmBtn').disabled = !(w > 0 && l > 0 && h > 0);
+}
+
+document.getElementById('dimWidth').addEventListener('input', calcDim);
+document.getElementById('dimLength').addEventListener('input', calcDim);
+document.getElementById('dimHeight').addEventListener('input', calcDim);
+
+['dimWidth','dimLength','dimHeight'].forEach(function(id, idx) {
+    document.getElementById(id).addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            var next = ['dimWidth','dimLength','dimHeight','dimConfirmBtn'][idx + 1];
+            if (next === 'dimConfirmBtn') {
+                var btn = document.getElementById(next);
+                if (!btn.disabled) confirmDim(false);
+            } else {
+                document.getElementById(next).focus();
+            }
+        }
+    });
+});
+
+function confirmDim(skip) {
+    if (!_pendingDimScan) return;
+    var boxNo = _pendingDimScan;
+    document.getElementById('dimOverlay').classList.remove('show');
+
+    var dims = null;
+    if (!skip) {
+        var w = parseFloat(document.getElementById('dimWidth').value) || 0;
+        var l = parseFloat(document.getElementById('dimLength').value) || 0;
+        var h = parseFloat(document.getElementById('dimHeight').value) || 0;
+        if (w > 0 && l > 0 && h > 0) {
+            dims = { width: w, length: l, height: h };
+        }
+    }
+
+    _pendingDimScan = null;
+    doPickupScan(boxNo, dims);
+}
+
+// ===== RE-CHECK MODE =====
+function toggleRecheckMode() {
+    recheckMode = !recheckMode;
+    var btn = document.getElementById('btnRecheck');
+    var banner = document.getElementById('recheckBanner');
+    if (recheckMode) {
+        recheckSet = {};
+        btn.classList.add('active-mode');
+        btn.innerHTML = '<i class="fa fa-times"></i> ออกจากโหมดเช็ค';
+        banner.classList.add('show');
+        document.getElementById('rcTotal').textContent = parcelsData.length;
+        document.getElementById('rcChecked').textContent = '0';
+        setStatus('warning', '🔄 โหมดเช็คอีกรอบ — ยิงบาร์โค้ดเพื่อตรวจสอบ');
+        renderRecheckParcels();
+        playWarningSound();
+        showToast('🔄 เข้าโหมดเช็คอีกรอบ', 'warning');
+    } else {
+        btn.classList.remove('active-mode');
+        btn.innerHTML = '<i class="fa fa-refresh"></i> เช็คอีกรอบ';
+        banner.classList.remove('show');
+        setStatus('ready', '📦 พร้อมจ่ายของ — ยิงบาร์โค้ดได้เลย');
+        renderParcels();
+    }
+    setTimeout(function() { document.getElementById('pickupInput').focus(); }, 100);
+}
+
+function renderRecheckParcels() {
+    var list = document.getElementById('parcelList');
+    var html = '';
+    parcelsData.forEach(function(p) {
+        var verified = recheckSet[p.box_no] ? true : false;
+        var cls = verified ? 'rc-verified' : 'rc-pending';
+        var icon = verified ? '<span class="check">✅</span>' : '<span class="pending-dot" style="border-color:#d97706;"></span>';
+        html += '<div class="parcel-item ' + cls + '">' +
+            '<div><div class="box">กล่อง ' + p.box_no + '</div>' +
+            '<div class="track">' + (p.tracking || '-') + '</div></div>' +
+            icon + '</div>';
+    });
+    list.innerHTML = html;
+}
+
+function doRecheckScan(boxNo) {
+    var found = null;
+    parcelsData.forEach(function(p) {
+        if (p.box_no === boxNo || p.box_no.replace(/^BOX-\d{8}-0*/, '') === boxNo) {
+            found = p;
+        }
+    });
+    if (!found) {
+        playErrorSound();
+        setStatus('error', '❌ กล่อง ' + boxNo + ' ไม่อยู่ในรายการของลูกค้านี้!');
+        showToast('❌ ไม่พบกล่อง ' + boxNo, 'error');
+        return;
+    }
+    if (recheckSet[found.box_no]) {
+        playWarningSound();
+        setStatus('warning', '⚠️ กล่อง ' + found.box_no + ' ตรวจสอบแล้ว');
+        showToast('⚠️ ตรวจสอบแล้ว', 'warning');
+        return;
+    }
+    recheckSet[found.box_no] = true;
+    playSuccessSound();
+    var checked = Object.keys(recheckSet).length;
+    var total = parcelsData.length;
+    document.getElementById('rcChecked').textContent = checked;
+    setStatus('success', '✅ กล่อง ' + found.box_no + ' ผ่าน! (' + checked + '/' + total + ')');
+    showToast('✅ กล่อง ' + found.box_no + ' ผ่าน!', 'success');
+    renderRecheckParcels();
+    if (checked >= total) {
+        setStatus('success', '🎉 เช็คครบทุกชิ้นแล้ว! (' + checked + '/' + total + ')');
+        showToast('🎉 เช็คครบแล้ว!', 'success');
+    }
 }
 
 // ===== SCAN PICKUP =====
@@ -590,7 +1018,29 @@ function firePickupScan(raw) {
         return;
     }
 
+    if (recheckMode) {
+        doRecheckScan(boxNo);
+        return;
+    }
+
+    var parcel = findParcelByBarcode(boxNo);
+    if (parcel && parcel.iswholeprice === 1 && !parcel.picked_up_at) {
+        openDimModal(boxNo, parcel);
+        return;
+    }
+
+    doPickupScan(boxNo, null);
+}
+
+function doPickupScan(boxNo, dims) {
     setStatus('ready', '🔍 กำลังตรวจสอบ กล่อง ' + boxNo + '...');
+
+    var payload = { box_no: boxNo, customerno: currentCustomer, etd: etdParam() };
+    if (dims) {
+        payload.width = dims.width;
+        payload.length = dims.length;
+        payload.height = dims.height;
+    }
 
     fetch(apiBase + '/qr-scan/api/pickup/scan', {
         method: 'POST',
@@ -599,7 +1049,7 @@ function firePickupScan(raw) {
             'X-CSRF-TOKEN': csrfToken,
             'Accept': 'application/json'
         },
-        body: JSON.stringify({ box_no: boxNo, customerno: currentCustomer, etd: etdParam() }),
+        body: JSON.stringify(payload),
         credentials: 'same-origin'
     })
     .then(function(r) {
@@ -624,8 +1074,20 @@ function firePickupScan(raw) {
 
         if (data.type === 'duplicate') {
             playWarningSound();
-            setStatus('warning', '⚠️ ' + data.message);
-            showToast('⚠️ จ่ายแล้ว!', 'warning');
+            var dupPileInfo = '';
+            if (hasPiles && data.parcel && data.parcel.delivery_fullname && pileMap[data.parcel.delivery_fullname]) {
+                var dp = pileMap[data.parcel.delivery_fullname];
+                dupPileInfo = ' [กอง' + dp.pileNum + ']';
+                var pileIsComplete = dp.picked >= dp.count;
+                if (pileIsComplete) {
+                    dupPileInfo += ' ✅ ครบแล้ว!';
+                }
+                setTimeout(function() {
+                    announcePile(dp.pileNum, dp.count, data.parcel.delivery_fullname, dp.color, dp.picked);
+                }, 500);
+            }
+            setStatus('warning', '⚠️ ' + data.message + dupPileInfo);
+            showToast('⚠️ จ่ายแล้ว!' + dupPileInfo, 'warning');
             return;
         }
 
@@ -634,20 +1096,49 @@ function firePickupScan(raw) {
         var prog = data.progress;
         updateProgress(prog.picked_up, prog.total);
 
-        // Update local data
+        // Update local data — match by server-confirmed box_no or raw input
+        var serverBoxNo = data.parcel.box_no || '';
+        var scannedParcel = null;
         parcelsData.forEach(function(p) {
-            if (p.box_no.indexOf(boxNo) !== -1 || p.box_no.replace(/^BOX-\d{8}-0*/, '') === boxNo) {
+            if (p.box_no === serverBoxNo || p.box_no === boxNo || p.box_no.replace(/^BOX-\d{8}-0*/, '') === boxNo) {
                 p.picked_up_at = 'just now';
+                if (data.parcel.import_cost) p.import_cost = data.parcel.import_cost;
+                scannedParcel = p;
             }
         });
+
+        // Update pile picked count
+        var pileName = (scannedParcel && scannedParcel.delivery_fullname) || data.parcel.delivery_fullname || '';
+        if (hasPiles && pileName && pileMap[pileName]) {
+            pileMap[pileName].picked++;
+        }
+
         renderParcels(data.parcel.box_no);
+
+        // Pile announcement (TTS + visual) — delay 500ms so success sound finishes first
+        if (hasPiles) {
+            var dName = (scannedParcel && scannedParcel.delivery_fullname) || data.parcel.delivery_fullname || '';
+            if (dName && pileMap[dName]) {
+                (function(dn) {
+                    setTimeout(function() {
+                        announcePile(pileMap[dn].pileNum, pileMap[dn].count, dn, pileMap[dn].color, pileMap[dn].picked);
+                    }, 500);
+                })(dName);
+            }
+        }
 
         if (prog.complete) {
             setStatus('success', '🎉 ครบแล้ว! จ่าย ' + prog.picked_up + '/' + prog.total + ' ชิ้น');
             showToast('🎉 ครบแล้ว!', 'success');
         } else {
-            setStatus('success', '✅ จ่าย Box.' + boxNo + ' สำเร็จ → อัพเดทสถานะสำเร็จ (' + prog.picked_up + '/' + prog.total + ')');
-            showToast('✅ ' + prog.picked_up + '/' + prog.total, 'success');
+            var extra = data.parcel.import_cost ? ' (ค่านำเข้า ' + parseFloat(data.parcel.import_cost).toFixed(2) + '฿)' : '';
+            var pileInfo = '';
+            if (hasPiles) {
+                var dN = (scannedParcel && scannedParcel.delivery_fullname) || data.parcel.delivery_fullname || '';
+                if (dN && pileMap[dN]) pileInfo = ' [กอง' + pileMap[dN].pileNum + ']';
+            }
+            setStatus('success', '✅ จ่าย Box.' + boxNo + ' สำเร็จ' + pileInfo + extra + ' (' + prog.picked_up + '/' + prog.total + ')');
+            showToast('✅ ' + prog.picked_up + '/' + prog.total + pileInfo, 'success');
         }
     })
     .catch(function(err) {
@@ -682,11 +1173,16 @@ pickupInput.addEventListener('input', function() {
     }, 500);
 });
 
-// Keep focus on scan input in step 2
+// Keep focus on scan input in step 2 (skip when modals are open)
 document.addEventListener('click', function(e) {
     if (document.getElementById('sec-scan').classList.contains('active')) {
+        if (e.target.closest('.dim-modal') || e.target.closest('.dim-overlay') || e.target.closest('.img-overlay')) return;
         if (!e.target.closest('.btn-change') && !e.target.closest('.btn-back') && !e.target.closest('.btn-logout')) {
-            setTimeout(function() { pickupInput.focus(); }, 10);
+            setTimeout(function() {
+                if (!document.getElementById('dimOverlay').classList.contains('show') && !document.getElementById('imgOverlay').classList.contains('show')) {
+                    pickupInput.focus();
+                }
+            }, 10);
         }
     }
 });
@@ -775,6 +1271,101 @@ function warmAudio() {
 }
 document.addEventListener('click', warmAudio);
 document.addEventListener('keydown', warmAudio);
+
+// ===== PILE ANNOUNCEMENT (กองแยก) =====
+var _pileAnnounceTimer = null;
+
+function announcePile(pileNum, totalBoxes, recipientName, color, pickedCount) {
+    var el = document.getElementById('pileAnnounce');
+    var selfPickup = isSB(recipientName);
+    var pileComplete = pickedCount >= totalBoxes;
+    el.style.setProperty('--pile-color', color || '#a78bfa');
+
+    var prefix = selfPickup ? '📦 รับเอง · ' : '';
+    document.getElementById('pileAnnounceNum').textContent = prefix + 'กอง ' + pileNum;
+
+    if (pileComplete) {
+        document.getElementById('pileAnnounceBoxes').textContent = '= ' + totalBoxes + ' กล่อง ✅ ครบแล้ว!';
+    } else {
+        document.getElementById('pileAnnounceBoxes').textContent = pickedCount + ' / ' + totalBoxes + ' กล่อง';
+    }
+    document.getElementById('pileAnnounceName').textContent = recipientName || '';
+    el.classList.add('show');
+
+    if (_pileAnnounceTimer) clearTimeout(_pileAnnounceTimer);
+    _pileAnnounceTimer = setTimeout(function() { el.classList.remove('show'); }, pileComplete ? 4500 : 3000);
+
+    speakPile(pileNum, totalBoxes, selfPickup, pileComplete);
+}
+
+function speakPile(pileNum, totalBoxes, selfPickup, pileComplete) {
+    var text;
+    if (pileComplete) {
+        text = (selfPickup ? 'รับเอง ' : '') + 'กอง ' + pileNum + ' เท่ากับ ' + totalBoxes + ' กล่อง ครบแล้วค่ะ';
+    } else {
+        text = (selfPickup ? 'รับเอง ' : '') + 'กอง ' + pileNum;
+    }
+    console.log('[TTS] speakPile:', text, 'pileComplete:', pileComplete);
+    var url = apiBase + '/qr-scan/api/tts?q=' + encodeURIComponent(text);
+
+    fetch(url, { credentials: 'same-origin' })
+        .then(function(r) {
+            if (!r.ok) throw new Error('TTS ' + r.status);
+            return r.blob();
+        })
+        .then(function(blob) {
+            var blobUrl = URL.createObjectURL(blob);
+            var audio = new Audio(blobUrl);
+            audio.volume = 1.0;
+            audio.play().then(function() {
+                console.log('[TTS] playing:', text);
+                audio.onended = function() { URL.revokeObjectURL(blobUrl); };
+            }).catch(function(e) {
+                console.error('[TTS] play failed:', e);
+                URL.revokeObjectURL(blobUrl);
+            });
+        })
+        .catch(function(e) { console.error('[TTS] fetch failed:', e); });
+}
+
+// ===== IMAGE PREVIEW =====
+function showParcelImage(boxNo) {
+    var parcel = null;
+    for (var i = 0; i < parcelsData.length; i++) {
+        if (parcelsData[i].box_no === boxNo) { parcel = parcelsData[i]; break; }
+    }
+    if (!parcel) return;
+
+    var boxNum = parcel.box_no.replace(/^BOX-\d{8}-0*/, '');
+    document.getElementById('imgTitle').textContent = '📦 Box.' + boxNum + ' — ' + (parcel.track_no || '-');
+
+    var imgEl = document.getElementById('imgPreview');
+    var noImgEl = document.getElementById('imgNoImage');
+
+    var rawImg = (parcel.box_image || '').trim();
+    if (rawImg && rawImg !== '-') {
+        var imgSrc = rawImg.indexOf('http') === 0 ? rawImg : (apiBase + '/' + rawImg);
+        imgEl.src = imgSrc;
+        imgEl.style.display = 'block';
+        noImgEl.style.display = 'none';
+        imgEl.onerror = function() {
+            imgEl.style.display = 'none';
+            noImgEl.style.display = 'block';
+        };
+    } else {
+        imgEl.style.display = 'none';
+        noImgEl.style.display = 'block';
+    }
+
+    document.getElementById('imgOverlay').classList.add('show');
+}
+
+function closeImgPreview(e) {
+    if (e && e.target !== e.currentTarget && !e.target.classList.contains('img-close')) return;
+    document.getElementById('imgOverlay').classList.remove('show');
+    document.getElementById('imgPreview').src = '';
+    setTimeout(function() { document.getElementById('pickupInput').focus(); }, 100);
+}
 
 // ===== INIT =====
 loadRounds();

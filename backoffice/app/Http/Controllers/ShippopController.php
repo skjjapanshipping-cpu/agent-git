@@ -28,12 +28,16 @@ class ShippopController extends Controller
         $request->validate([
             'customer_nos'   => 'required|array|min:1',
             'invoice_files'  => 'required|array|min:1',
-            'invoice_files.*' => 'file|max:10240',
+            'invoice_files.*' => 'file|max:10240|mimes:pdf,jpg,jpeg,png',
         ]);
 
         $customerNos = $request->input('customer_nos');
         $message     = $request->input('message', '');
         $etd         = $request->input('etd', '');
+
+        if (count($customerNos) > 1) {
+            return back()->with('error', 'กรุณาส่งบิลค่าส่งไทยทีละ 1 รหัสลูกค้า');
+        }
 
         // รับ customer_map (JSON) จาก frontend — เก็บ shipping IDs ที่ Admin เลือกต่อลูกค้า
         $customerMap = [];
@@ -97,6 +101,12 @@ class ShippopController extends Controller
         }
         Log::info('[THAI-BILL] Total from all PDFs', ['fileCount' => count($uploadedFiles), 'totalAmount' => $totalAmount]);
 
+        $hasPdfFiles = collect($uploadedFiles)->contains('isPdf', true);
+        $parseWarning = null;
+        if ($hasPdfFiles && $totalAmount == 0) {
+            $parseWarning = '⚠️ ไม่สามารถอ่านยอดเงินจาก PDF ได้ — ยอดจะเป็น 0 บาท กรุณาตรวจสอบ';
+        }
+
         // 3) ส่งผ่าน SKJ Chat API + บันทึก DB ให้ลูกค้าแต่ละราย
         $chatApiUrl = 'https://chat.skjjapanshipping.com/api/thai-bill-send';
         $chatApiKey = 'skjchat-invoice-2026';
@@ -142,8 +152,7 @@ class ShippopController extends Controller
                     $platform = $data['platform'] ?? '';
                     $statusMsg = "ส่งผ่านแชทสำเร็จ → {$contactName} ({$platform})";
                 } elseif ($response->status() === 404) {
-                    // ไม่พบในระบบแชท — fallback ส่ง LINE โดยตรง
-                    $statusMsg = $this->fallbackSendLine($customerno, $message, $totalAmount, $fileUrl, $isPdf, $originalFilename);
+                    $statusMsg = $this->fallbackSendLine($customerno, $message, $totalAmount, $fileUrl, $hasPdf, $originalFilename);
                     $sent = !empty($statusMsg);
                     if (!$sent) $statusMsg = 'ไม่พบในระบบแชท + ไม่มี LINE account';
                 } else {
@@ -151,8 +160,7 @@ class ShippopController extends Controller
                 }
             } catch (\Exception $e) {
                 Log::error('[THAI-BILL] Chat API exception', ['customerno' => $customerno, 'error' => $e->getMessage()]);
-                // Fallback ส่ง LINE โดยตรง
-                $statusMsg = $this->fallbackSendLine($customerno, $message, $totalAmount, $fileUrl, $isPdf, $originalFilename);
+                $statusMsg = $this->fallbackSendLine($customerno, $message, $totalAmount, $fileUrl, $hasPdf, $originalFilename);
                 $sent = !empty($statusMsg);
                 if (!$sent) $statusMsg = 'Chat API error + ไม่มี LINE account';
             }
@@ -194,11 +202,14 @@ class ShippopController extends Controller
             }
         }
 
+        $allFailed = $results['success'] === 0 && $results['failed'] > 0;
+
         return response()->json([
-            'success' => true,
+            'success' => !$allFailed,
             'message' => "ส่งบิลค่าส่งไทยเสร็จสิ้น: สำเร็จ {$results['success']} ราย, ไม่สำเร็จ {$results['failed']} ราย",
             'results' => $results,
             'total_amount' => $totalAmount,
+            'parse_warning' => $parseWarning,
         ]);
     }
 

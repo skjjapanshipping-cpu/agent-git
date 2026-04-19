@@ -168,6 +168,16 @@ class CustomershippingController extends Controller
             $import_costTotal = $data->sum('import_cost');
             $priceTotal = $import_costTotal + $codTotal;
             $totalRecords = count($data);
+
+            $invoiceGroupTotals = $data->filter(function($item) {
+                return $item->pay_status != 1;
+            })->groupBy(function($item) {
+                return $item->customerno . '|' . ($item->etd ?? '') . '|' . $item->pay_status;
+            })->map(function($group) {
+                return round($group->sum(function($s) {
+                    return $s->import_cost + ($s->cod * ($s->cod_rate ?? 0.25));
+                }), 2);
+            });
             $startDate = !empty($request->start_date) ? Carbon::parse($request->start_date)->format('d/m/Y') : '';
             $startDateRaw = $request->start_date;
             
@@ -195,6 +205,11 @@ class CustomershippingController extends Controller
                     return $labels[$row->thai_bill_status ?? 0] ?? '-';
                 })->addColumn('thai_bill_amount_display', function ($row) {
                     return $row->thai_bill_amount ? number_format($row->thai_bill_amount, 0) : '-';
+                })->addColumn('invoice_group_total', function ($row) use ($invoiceGroupTotals) {
+                    if ($row->pay_status == 1) return '-';
+                    $key = $row->customerno . '|' . ($row->etd ?? '') . '|' . $row->pay_status;
+                    $total = $invoiceGroupTotals[$key] ?? 0;
+                    return $total > 0 ? number_format($total, 2) : '-';
                 })
                 ->with([
                     'cod_total' => number_format($codTotal, 2, '.', ','),
@@ -205,7 +220,7 @@ class CustomershippingController extends Controller
                     'start_date' => $startDate,
                     'data_export_link' => url('customershippingsexport2/' . $startDateRaw . (!empty($request->search) ? '?customerno=' . rawurlencode(trim($request->search)) : '')),
                     'shipping_export_link' => url('customershippingsexport/' . $startDateRaw . (!empty($request->search) ? '?customerno=' . rawurlencode(trim($request->search)) : '')),
-                    'query' => $sqlQuery,
+                    'query' => config('app.debug') ? $sqlQuery : null,
                     'rq' => $request->delivery_type_id
                 ]) // แสดงผลรวมของค่า COD])
                 ->make(true);
@@ -222,7 +237,10 @@ class CustomershippingController extends Controller
         try {
             $customershippings = Customershipping::whereIn('id', $Ids)->get();
 
-            // ใช้ parameter binding `?` เพื่อป้องกัน SQL Injection และ Syntax Error
+            if ($customershippings->isEmpty()) {
+                return redirect()->route('customershippings.index')->with('error', 'ไม่พบรายการที่เลือก');
+            }
+
             $searchDate = '%' . $customershippings[0]->etd->format('d/m/Y') . '%';
             Track::WhereRaw("DATE_FORMAT(ship_date, '%d/%m/%Y') like ?", [$searchDate])
                 ->update([
@@ -443,13 +461,13 @@ class CustomershippingController extends Controller
         }
 
         $customershipping = Customershipping::create(array_merge(
-            $request->all(),
+            $request->except(['id', 'excel_status', 'pay_status', 'scanned_at', 'scanned_by', 'picked_up_at', 'picked_up_by', 'created_at', 'updated_at']),
             $saveImages,
             [
                 'excel_status' => 1, 
                 'import_cost' => $import_cost, 
                 'iswholeprice' => $isWholePrice,
-                'cod_rate' => \App\Models\Dailyrate::getCodRate() // เก็บ COD rate ณ วันที่สร้าง
+                'cod_rate' => \App\Models\Dailyrate::getCodRate()
             ]
         ));
 
@@ -590,7 +608,7 @@ class CustomershippingController extends Controller
         //        dd($request->all(),array_merge($request->all()
         //        , $saveImages,['import_cost'=>$import_cost,'iswholeprice' => $isWholePrice,'pay_status'=>$request->pay_status]));
         $customershipping->update(array_merge(
-            $request->all(),
+            $request->except(['id', 'excel_status', 'scanned_at', 'scanned_by', 'picked_up_at', 'picked_up_by', 'created_at', 'updated_at']),
             $saveImages,
             ['import_cost' => $import_cost, 'iswholeprice' => $isWholePrice]
         ));
@@ -608,7 +626,8 @@ class CustomershippingController extends Controller
      */
     public function destroy($id)
     {
-        $customershipping = Customershipping::find($id)->delete();
+        $customershipping = Customershipping::findOrFail($id);
+        $customershipping->delete();
 
         return redirect()->route('customershippings.index')
             ->with('success', 'ลบรายการสินค้าสำเร็จ');
@@ -684,8 +703,10 @@ class CustomershippingController extends Controller
                 Log::info('Status after update:', $afterUpdate);
                 Log::info('Updated records count: ' . $updated);
 
-                // ลบรายการที่มี excel_status = 0
-                $deleted = Customershipping::where('excel_status', 0)->delete();
+                // ลบรายการ draft ที่สร้างภายใน 2 ชม. (ป้องกันลบ draft ของ admin คนอื่น)
+                $deleted = Customershipping::where('excel_status', 0)
+                    ->where('created_at', '>=', now()->subHours(2))
+                    ->delete();
                 Log::info('Deleted records count: ' . $deleted);
             });
 
@@ -743,6 +764,8 @@ class CustomershippingController extends Controller
 
     public function import(Request $request)
     {
+        $request->validate(['file' => 'required|file|mimes:xlsx,xls']);
+
         $file = request()->file('file');
         $reader = new Xlsx();
         $spreadsheet = $reader->load($file);
@@ -756,8 +779,8 @@ class CustomershippingController extends Controller
         }
         //dd($imagesCell);
         $data = [];
+        $customershippingsImport = new CustomershippingsImport();
         foreach ($sheet->getRowIterator() as $row) {
-            $customershippingsImport = new CustomershippingsImport();
             $cells = [
                 'A' => 'A' . $row->getRowIndex(),
                 'B' => 'B' . $row->getRowIndex(),
@@ -815,8 +838,11 @@ class CustomershippingController extends Controller
         }
 
         //dd($data);
-        // บันทึกข้อมูลลงในฐานข้อมูลหรือทำอย่างอื่นตามต้องการ
 
+        $importErrors = $customershippingsImport->getErrors();
+        if (!empty($importErrors)) {
+            session()->flash('import_errors', $importErrors);
+        }
 
         return redirect()->route('customershippingsconfirm')
             ->with('success', 'กรุณาตรวจสอบข้อมูลก่อนยืนยัน');
@@ -925,16 +951,16 @@ class CustomershippingController extends Controller
         // --- PhpWord: Generate .docx matching A15 template ---
         $phpWord = new \PhpOffice\PhpWord\PhpWord();
         $phpWord->setDefaultFontName('TH SarabunPSK');
-        $phpWord->setDefaultFontSize(14);
+        $phpWord->setDefaultFontSize(1);
 
-        // A15 page: 175mm x 212mm, margins: top=2mm, bottom=0, left=6mm, right=6mm
+        // A15 page: 175mm x 212mm, margins: top=0, bottom=0, left=6mm, right=6mm
         // 1mm = 56.6929 twips
         $twip = function($mm) { return (int) round($mm * 56.6929); };
 
         $sectionStyle = [
             'pageSizeW' => $twip(175),
             'pageSizeH' => $twip(212),
-            'marginTop' => $twip(2),
+            'marginTop' => $twip(0),
             'marginBottom' => $twip(0),
             'marginLeft' => $twip(6),
             'marginRight' => $twip(6),
@@ -1006,6 +1032,145 @@ class CustomershippingController extends Controller
         return response()->download($tempFile, $filename, [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         ])->deleteFileAfterSend(true);
+    }
+
+    /**
+     * Export Pile Labels สำหรับ ANW-820 — แยกกองตามผู้รับ (delivery_fullname)
+     */
+    public function exportPileLabels($etd_date)
+    {
+        $shippings = Customershipping::where('excel_status', 1)
+            ->whereRaw('DATE(etd) = ?', [$etd_date])
+            ->where('customerno', 'ANW-820')
+            ->whereNotNull('box_no')->where('box_no', '!=', '')
+            ->get();
+
+        if ($shippings->isEmpty()) {
+            return redirect()->back()->with('error', 'ไม่พบข้อมูล ANW-820 ในรอบปิดตู้นี้');
+        }
+
+        $etdFormatted = Carbon::parse($etd_date)->format('d/m/Y');
+
+        $grouped = $shippings->groupBy('delivery_fullname');
+
+        // Sort: non-SB first (A-Z), then SB (A-Z)
+        $sortedKeys = $grouped->keys()->sort(function ($a, $b) {
+            $aSB = str_starts_with($a, 'SB ');
+            $bSB = str_starts_with($b, 'SB ');
+            if ($aSB && !$bSB) return 1;
+            if (!$aSB && $bSB) return -1;
+            return strcmp($a, $b);
+        })->values();
+
+        $labels = [];
+        $pileNum = 0;
+        foreach ($sortedKeys as $name) {
+            $items = $grouped[$name];
+            $pileNum++;
+            $isSB = str_starts_with($name, 'SB ');
+            $labels[] = [
+                'pile_num' => $pileNum,
+                'qty' => $items->count(),
+                'recipient' => $name,
+                'delivery_type' => $isSB ? 'รับเอง' : 'จัดส่งในไทย',
+                'etd' => $etdFormatted,
+            ];
+        }
+
+        // PhpWord: same A15 layout as exportLabels
+        $phpWord = new \PhpOffice\PhpWord\PhpWord();
+        $phpWord->setDefaultFontName('TH SarabunPSK');
+        $phpWord->setDefaultFontSize(1);
+
+        $twip = function ($mm) { return (int) round($mm * 56.6929); };
+
+        $sectionStyle = [
+            'pageSizeW' => $twip(175),
+            'pageSizeH' => $twip(212),
+            'marginTop' => $twip(0),
+            'marginBottom' => $twip(0),
+            'marginLeft' => $twip(6),
+            'marginRight' => $twip(6),
+        ];
+
+        $labelW = $twip(80);
+        $labelH = $twip(50);
+        $gapW = $twip(3);
+        $gapH = $twip(3);
+
+        $tableStyle = [
+            'borderSize' => 0,
+            'borderColor' => 'FFFFFF',
+            'cellMargin' => 0,
+            'layout' => \PhpOffice\PhpWord\Style\Table::LAYOUT_FIXED,
+        ];
+        $labelCellStyle = ['width' => $labelW, 'valign' => 'center'];
+        $gapColStyle = ['width' => $gapW, 'valign' => 'center'];
+
+        $chunks = array_chunk($labels, 8);
+        foreach ($chunks as $page) {
+            $section = $phpWord->addSection($sectionStyle);
+            $table = $section->addTable($tableStyle);
+
+            for ($row = 0; $row < 4; $row++) {
+                $tableRow = $table->addRow($labelH, ['exactHeight' => true]);
+
+                $idx = $row * 2;
+                $cell = $tableRow->addCell($labelW, $labelCellStyle);
+                if (isset($page[$idx])) {
+                    $this->writePileLabelContent($cell, $page[$idx]);
+                }
+
+                $tableRow->addCell($gapW, $gapColStyle);
+
+                $idx = $row * 2 + 1;
+                $cell = $tableRow->addCell($labelW, $labelCellStyle);
+                if (isset($page[$idx])) {
+                    $this->writePileLabelContent($cell, $page[$idx]);
+                }
+
+                if ($row < 3) {
+                    $gapRow = $table->addRow($gapH, ['exactHeight' => true]);
+                    $gapRow->addCell($labelW);
+                    $gapRow->addCell($gapW);
+                    $gapRow->addCell($labelW);
+                }
+            }
+        }
+
+        $filename = 'pile-labels-ANW820-' . Carbon::parse($etd_date)->format('d-m-Y') . '.docx';
+        $tempFile = storage_path('app/' . $filename);
+        $phpWord->save($tempFile, 'Word2007');
+
+        return response()->download($tempFile, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        ])->deleteFileAfterSend(true);
+    }
+
+    private function writePileLabelContent($cell, $label)
+    {
+        $center = ['alignment' => \PhpOffice\PhpWord\SimpleType\Jc::CENTER, 'spaceAfter' => 0, 'spaceBefore' => 0];
+
+        $cell->addText(
+            'กอง ' . $label['pile_num'],
+            ['size' => 36, 'bold' => true, 'color' => 'FF0000', 'name' => 'TH SarabunPSK'],
+            $center
+        );
+        $cell->addText(
+            'จำนวน ' . $label['qty'] . ' ชิ้น',
+            ['size' => 14, 'color' => '0099CC', 'name' => 'TH SarabunPSK'],
+            $center
+        );
+        $cell->addText(
+            $label['recipient'],
+            ['size' => 16, 'bold' => true, 'color' => '000000', 'name' => 'TH SarabunPSK'],
+            $center
+        );
+        $cell->addText(
+            $label['delivery_type'],
+            ['size' => 14, 'bold' => true, 'color' => $label['delivery_type'] === 'รับเอง' ? 'DC2626' : '059669', 'name' => 'TH SarabunPSK'],
+            $center
+        );
     }
 
     private function writeLabelContent($cell, $label)

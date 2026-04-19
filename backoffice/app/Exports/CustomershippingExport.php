@@ -23,14 +23,14 @@ class CustomershippingExport implements FromCollection, WithHeadings, WithColumn
     }
 
     /**
-     * @return Customershipping
+     * @return \Illuminate\Support\Collection
      */
     public function collection()
     {
         $query = Customershipping::select(
-//            'box_no'
-//            ,'delivery_fullname',
-        \DB::raw("concat(delivery_fullname,' (Box.',box_no,')') as delivery_fullname"),
+            'delivery_fullname as raw_name',
+            'box_no',
+            'customerno',
             \DB::raw("REPLACE(REPLACE(delivery_mobile, '-', ''), ' ', '') as delivery_mobile"),
             'delivery_address',
             'delivery_subdistrict',
@@ -41,9 +41,10 @@ class CustomershippingExport implements FromCollection, WithHeadings, WithColumn
             \DB::raw('width'),
             \DB::raw('length'),
             \DB::raw('height'),
-            \DB::raw("'' as cod")
-        ,\DB::raw("'' as coddata")
-        ,'note')
+            \DB::raw("'' as cod"),
+            \DB::raw("'' as coddata"),
+            'note'
+        )
             ->where('delivery_type_id', '!=', 1)
             ->where('excel_status', '=', '1');
 
@@ -58,9 +59,96 @@ class CustomershippingExport implements FromCollection, WithHeadings, WithColumn
             });
         }
 
-        return $query->orderByRaw('customershippings.delivery_fullname ASC, ship_date DESC')->take(2000)->get();
+        $results = $query->orderByRaw('customershippings.delivery_fullname ASC, ship_date DESC')
+            ->take(2000)->get();
+
+        $pileMap = $this->buildPileMap();
+
+        // Pre-compute group summaries: boxes per (customerno + delivery_fullname)
+        $groupBoxes = [];
+        foreach ($results as $item) {
+            $key = $item->customerno . '|||' . $item->raw_name;
+            if (!isset($groupBoxes[$key])) {
+                $groupBoxes[$key] = [];
+            }
+            if ($item->box_no) {
+                $groupBoxes[$key][] = $item->box_no;
+            }
+        }
+
+        $seenGroups = [];
+
+        return $results->map(function ($item) use ($groupBoxes, $pileMap, &$seenGroups) {
+            $key = $item->customerno . '|||' . $item->raw_name;
+            $isFirst = !isset($seenGroups[$key]);
+            $seenGroups[$key] = true;
+
+            if ($isFirst && isset($groupBoxes[$key]) && count($groupBoxes[$key]) > 0) {
+                $boxes = $groupBoxes[$key];
+                $boxList = implode('+', $boxes);
+                $summary = '(Box.' . $boxList . ' รวม ' . count($boxes) . ' กล่อง)';
+                if ($item->customerno === 'ANW-820' && isset($pileMap[$item->raw_name])) {
+                    $nameWithBox = 'กอง ' . $pileMap[$item->raw_name] . ' - ' . $item->raw_name . ' ' . $summary;
+                } else {
+                    $nameWithBox = $item->raw_name . ' ' . $summary;
+                }
+            } else {
+                if ($item->customerno === 'ANW-820' && isset($pileMap[$item->raw_name])) {
+                    $nameWithBox = 'กอง ' . $pileMap[$item->raw_name] . ' - ' . $item->raw_name . ' (Box.' . $item->box_no . ')';
+                } else {
+                    $nameWithBox = $item->raw_name . ' (Box.' . $item->box_no . ')';
+                }
+            }
+
+            return collect([
+                'delivery_fullname' => $nameWithBox,
+                'delivery_mobile' => $item->delivery_mobile,
+                'delivery_address' => $item->delivery_address,
+                'delivery_subdistrict' => $item->delivery_subdistrict,
+                'delivery_district' => $item->delivery_district,
+                'delivery_province' => $item->delivery_province,
+                'delivery_postcode' => $item->delivery_postcode,
+                'weight_in_grams' => $item->weight_in_grams,
+                'width' => $item->width,
+                'length' => $item->length,
+                'height' => $item->height,
+                'cod' => '',
+                'coddata' => '',
+                'note' => $item->note,
+            ]);
+        });
     }
 
+    /**
+     * Build pile map for ANW-820 (consistent with scanner page sort order)
+     */
+    private function buildPileMap()
+    {
+        if (empty($this->etd)) return [];
+
+        $allRecipients = Customershipping::where('excel_status', '1')
+            ->where('customerno', 'ANW-820')
+            ->whereRaw('DATE(etd)=?', [$this->etd])
+            ->whereNotNull('box_no')->where('box_no', '!=', '')
+            ->pluck('delivery_fullname')
+            ->unique()
+            ->sort(function ($a, $b) {
+                $aSB = str_starts_with($a, 'SB ');
+                $bSB = str_starts_with($b, 'SB ');
+                if ($aSB && !$bSB) return 1;
+                if (!$aSB && $bSB) return -1;
+                return strcmp($a, $b);
+            })
+            ->values();
+
+        if ($allRecipients->count() <= 1) return [];
+
+        $map = [];
+        foreach ($allRecipients as $idx => $name) {
+            $map[$name] = $idx + 1;
+        }
+        return $map;
+    }
 
     public function headings(): array
     {
@@ -85,7 +173,7 @@ class CustomershippingExport implements FromCollection, WithHeadings, WithColumn
     public function columnWidths(): array
     {
         return [
-            'A' => 18,
+            'A' => 50,
             'B' => 11,
             'C' => 15,
             'D' => 15,
@@ -110,7 +198,6 @@ class CustomershippingExport implements FromCollection, WithHeadings, WithColumn
                 $highestRow = $sheet->getHighestRow();
                 $highestCol = $sheet->getHighestColumn();
 
-                // Header: พื้นแดงเข้ม ตัวหนังสือขาว
                 $sheet->getStyle("A1:{$highestCol}1")->applyFromArray([
                     'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
                     'fill' => [
@@ -119,7 +206,6 @@ class CustomershippingExport implements FromCollection, WithHeadings, WithColumn
                     ],
                 ]);
 
-                // สลับสีแดงอ่อนตามกลุ่มชื่อผู้รับ
                 $currentName = '';
                 $colorToggle = false;
                 $redFill = [
@@ -131,7 +217,7 @@ class CustomershippingExport implements FromCollection, WithHeadings, WithColumn
 
                 for ($row = 2; $row <= $highestRow; $row++) {
                     $cellValue = $sheet->getCell('A' . $row)->getValue();
-                    $name = preg_replace('/\s*\(Box\.\d+\)$/', '', $cellValue);
+                    $name = preg_replace('/\s*\(Box\..*$/', '', $cellValue);
 
                     if ($name !== $currentName) {
                         $currentName = $name;

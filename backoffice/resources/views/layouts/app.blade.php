@@ -35,6 +35,16 @@
     @yield('extra-css')
 
     <style>
+        /* === Force scrollbar always visible to prevent layout shift === */
+        html { overflow-y: scroll !important; }
+
+        /* === Stabilize all <select> elements to prevent arrow bouncing on redraw === */
+        select {
+            contain: layout style;
+            transition: none !important;
+            animation: none !important;
+        }
+
         /* === Page Loader — กึ่งกลางจอเสมอ === */
         .page-loader {
             position: fixed !important;
@@ -133,13 +143,13 @@
             transition: width 0.3s ease;
         }
 
-        /* === Content Fade-in === */
+        /* === Content Fade-in (opacity only, no transform to prevent layout bounce) === */
         .content-fade-in {
-            animation: fadeInContent 0.4s ease forwards;
+            animation: fadeInContent 0.3s ease forwards;
         }
         @keyframes fadeInContent {
-            from { opacity: 0; transform: translateY(8px); }
-            to   { opacity: 1; transform: translateY(0); }
+            from { opacity: 0; }
+            to   { opacity: 1; }
         }
 
         /* === Button Loading === */
