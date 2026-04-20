@@ -108,8 +108,9 @@ class ShippopController extends Controller
         }
 
         // 3) ส่งผ่าน SKJ Chat API + บันทึก DB ให้ลูกค้าแต่ละราย
-        $chatApiUrl = 'https://chat.skjjapanshipping.com/api/thai-bill-send';
-        $chatApiKey = 'skjchat-invoice-2026';
+        $chatBase   = rtrim((string) config('services.skjchat.base_url'), '/');
+        $chatApiUrl = $chatBase . '/api/thai-bill-send';
+        $chatApiKey = (string) config('services.skjchat.api_key');
         $results = ['success' => 0, 'failed' => 0, 'details' => []];
 
         foreach ($customerNos as $customerno) {
@@ -408,8 +409,9 @@ class ShippopController extends Controller
         $message     = $request->input('message', '');
         $etdFormatted = Carbon::parse($etd)->format('d/m/Y');
 
-        $chatApiUrl = 'https://chat.skjjapanshipping.com/api/thai-bill-send';
-        $chatApiKey = 'skjchat-invoice-2026';
+        $chatBase   = rtrim((string) config('services.skjchat.base_url'), '/');
+        $chatApiUrl = $chatBase . '/api/thai-bill-send';
+        $chatApiKey = (string) config('services.skjchat.api_key');
         $results = ['success' => 0, 'failed' => 0, 'details' => []];
 
         foreach ($customerNos as $customerno) {

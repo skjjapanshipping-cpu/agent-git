@@ -35,8 +35,7 @@ Route::prefix('tracking')->middleware(['throttle:10,1', 'allowed.domains'])->gro
     Route::post('/submit', 'TrackingController@submitTracking')->name('api.tracking.submit');
 });
 
-// SKJ Chat → update pay_status เมื่อสลิปตรงกับบิล
+// SKJ Chat → update pay_status เมื่อสลิปตรงกับบิล (auth: X-API-Key inside controller)
 Route::post('/update-pay-status', 'API\PayStatusApiController@updateFromChat')->name('api.update-pay-status');
 
-// Check chat connection status for invoice sending
-Route::match(['get', 'post'], '/check-chat-connection', 'InvoiceController@checkChatConnection')->name('api.check-chat-connection');
+// NOTE: /check-chat-connection ถูกย้ายไปอยู่ใน routes/web.php ภายใต้ admin only เพื่อกัน abuse

@@ -232,6 +232,12 @@ class QrScanController extends Controller
      */
     public function clearScan(Request $request)
     {
+        // เฉพาะ admin เท่านั้น (scanner role ไม่อนุญาตให้ลบสถานะ)
+        $user = \Illuminate\Support\Facades\Auth::user();
+        if (!$user || !method_exists($user, 'hasRole') || !$user->hasRole('admin')) {
+            return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์'], 403);
+        }
+
         $request->validate([
             'id' => 'required|integer',
         ]);
@@ -824,7 +830,8 @@ class QrScanController extends Controller
                 CURLOPT_FOLLOWLOCATION => true,
                 CURLOPT_TIMEOUT => 5,
                 CURLOPT_USERAGENT => 'Mozilla/5.0',
-                CURLOPT_SSL_VERIFYPEER => false,
+                CURLOPT_SSL_VERIFYPEER => true,
+                CURLOPT_SSL_VERIFYHOST => 2,
             ]);
             $audio = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);

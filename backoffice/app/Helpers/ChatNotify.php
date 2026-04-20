@@ -8,8 +8,16 @@ use Illuminate\Support\Facades\Log;
 
 class ChatNotify
 {
-    const CHAT_URL = 'https://chat.skjjapanshipping.com/api/webhooks/tracking';
-    const API_KEY = 'skjchat-tracking-2026';
+    private static function chatUrl(): string
+    {
+        $base = rtrim((string) config('services.skjchat.base_url'), '/');
+        return $base . '/api/webhooks/tracking';
+    }
+
+    private static function apiKey(): string
+    {
+        return (string) config('services.skjchat.tracking_key', config('services.skjchat.api_key', ''));
+    }
 
     /**
      * แจ้งเตือนลูกค้าเมื่อสถานะพัสดุเปลี่ยน
@@ -24,8 +32,8 @@ class ChatNotify
     {
         try {
             $response = Http::timeout(10)
-                ->withHeaders(['X-API-Key' => self::API_KEY])
-                ->post(self::CHAT_URL, [
+                ->withHeaders(['X-API-Key' => self::apiKey()])
+                ->post(self::chatUrl(), [
                     'customerno' => $customerno,
                     'status' => $status,
                     'track_no' => $trackNo,

@@ -65,8 +65,16 @@ class CustomershippingsImport implements ToModel
 
             $customer = User::where('customerno', $row['customerno'])->first();
 
-            $unit_price = !empty($customer->cus_unit_price)?$customer->cus_unit_price:150; //default price [ถ้าใน excel มาเป็นค่าว่างหรือ 0]
-            $import_cost = $unit_price*$weight;
+            // ป้องกัน fatal error: ถ้าหาลูกค้าไม่เจอ → log แล้ว skip แถว
+            if (!$customer) {
+                $errMsg = "แถว {$this->rowIndex}: ไม่พบลูกค้ารหัส '{$row['customerno']}' ในระบบ — ข้ามแถวนี้";
+                Log::warning('CustomershippingsImport: customer not found', ['customerno' => $row['customerno']]);
+                $this->errors[] = $errMsg;
+                return null;
+            }
+
+            $unit_price = !empty($customer->cus_unit_price) ? $customer->cus_unit_price : 150; //default price [ถ้าใน excel มาเป็นค่าว่างหรือ 0]
+            $import_cost = $unit_price * $weight;
             
             // ตั้งค่า delivery_type_id และข้อมูลที่อยู่ตามลูกค้า
             $delivery_type_id = 1; // default = รับเอง

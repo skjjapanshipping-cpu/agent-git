@@ -36,4 +36,11 @@ return [
         'channel_token' => env('LINE_CHANNEL_ACCESS_TOKEN'),
     ],
     // Shippop API Key ไม่จำเป็นแล้ว — จองขนส่งเองใน Shippop แล้วอัพโหลดบิล
+
+    // SKJ Chat (Next.js) integration
+    'skjchat' => [
+        'api_key'      => env('SKJCHAT_API_KEY'),
+        'tracking_key' => env('SKJCHAT_TRACKING_KEY', env('SKJCHAT_API_KEY')),
+        'base_url'     => env('SKJCHAT_BASE_URL', 'https://chat.skjjapanshipping.com'),
+    ],
 ];

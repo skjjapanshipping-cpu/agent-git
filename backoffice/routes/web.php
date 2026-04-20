@@ -166,10 +166,13 @@ Route::get('/auth/line/callback', 'Auth\LoginController@handleLineCallback');
 
 
 Route::middleware('auth')->group(function () {
+    // Customer-accessible (with IDOR check inside controller)
     Route::get('/invoice/{etd}/{customerno}/{shipping_ids?}', [InvoiceController::class, 'generateInvoice'])->name('invoice.generate');
-    // เพิ่ม route สำหรับ customerorder invoice
     Route::get('invoice-order/{order_date}/{end_order_date}/{status}/{customerorderids}/{customerno}', [InvoiceController::class, 'generateOrderInvoice'])->name('invoice.order');
-    // ส่งบิลผ่าน SKJ Chat
+});
+
+// Admin-only: ส่งบิล / ทวงถามผ่าน SKJ Chat
+Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::post('/send-invoice-chat', [InvoiceController::class, 'sendInvoiceChat'])->name('send.invoice.chat');
     Route::post('/check-chat-connection', [InvoiceController::class, 'checkChatConnection'])->name('check.chat.connection');
     Route::post('/remind-payment', [InvoiceController::class, 'remindPayment'])->name('remind.payment');
@@ -214,7 +217,7 @@ Route::middleware('auth:web,scanner')->group(function () {
     Route::get('/qr-scan/api/pickup/customers', 'QrScanController@getPickupCustomers')->name('qrscan.api.pickup-customers');
     Route::get('/qr-scan/api/pickup/customer/{customerno}', 'QrScanController@getCustomerParcels')->name('qrscan.api.pickup-customer');
     Route::post('/qr-scan/api/pickup/scan', 'QrScanController@pickupScan')->name('qrscan.api.pickup-scan');
-    Route::get('/qr-scan/api/tts', 'QrScanController@ttsProxy')->name('qrscan.api.tts');
+    Route::get('/qr-scan/api/tts', 'QrScanController@ttsProxy')->middleware('throttle:60,1')->name('qrscan.api.tts');
 });
 
 // Scan History (admin)

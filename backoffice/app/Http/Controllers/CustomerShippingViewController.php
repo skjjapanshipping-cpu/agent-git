@@ -41,27 +41,43 @@ class CustomerShippingViewController extends Controller
     }
 
     public function update_StatusByIDs(Request $request){
-//Destination Date
-        $Ids = explode(',', $request->input('track_ids'));
         $authUser = Auth::user();
-//        dd($authUser);
-        try{
+        $rawIds = explode(',', (string) $request->input('track_ids'));
+        $Ids = array_filter(array_map('intval', $rawIds));
 
-            Customershipping::whereIn('id', $Ids)->update([
-                'delivery_type_id' => 2,
-                'delivery_fullname'=>$authUser->name
-                ,'delivery_mobile'=>$authUser->mobile
-                , 'delivery_address'=>$authUser->addr
-                , 'delivery_subdistrict'=>$authUser->subdistrinct
-                , 'delivery_district'=>$authUser->distrinct
-                , 'delivery_province'=>$authUser->province
-                , 'delivery_postcode'=>$authUser->postcode
+        if (empty($Ids)) {
+            return redirect()->route('shippingview.index')
+                ->with('error', 'ไม่พบรายการที่เลือก');
+        }
 
-            ]);//delivery_type_id
+        try {
+            // เฉพาะรายการของ customer คนนี้เท่านั้น (ป้องกัน IDOR)
+            $ownIds = Customershipping::whereIn('id', $Ids)
+                ->where('customerno', $authUser->customerno)
+                ->where('excel_status', 1)
+                ->pluck('id')
+                ->toArray();
+
+            if (empty($ownIds)) {
+                return redirect()->route('shippingview.index')
+                    ->with('error', 'ไม่พบรายการที่เลือก');
+            }
+
+            Customershipping::whereIn('id', $ownIds)->update([
+                'delivery_type_id'    => 2,
+                'delivery_fullname'   => $authUser->name,
+                'delivery_mobile'     => $authUser->mobile,
+                'delivery_address'    => $authUser->addr,
+                'delivery_subdistrict'=> $authUser->subdistrinct,
+                'delivery_district'   => $authUser->distrinct,
+                'delivery_province'   => $authUser->province,
+                'delivery_postcode'   => $authUser->postcode,
+            ]);
+
             return redirect()->route('shippingview.index')
                 ->with('success', 'บันทึกข้อมูลที่อยู่จัดส่งสินค้าสำเร็จ');
-
         } catch (\Exception $e) {
+            \Log::error('update_StatusByIDs error: ' . $e->getMessage());
             return redirect()->route('shippingview.index')
                 ->with('error', 'บันทึกข้อมูลที่อยู่จัดส่งสินค้า ไม่สำเร็จ');
         }
@@ -75,15 +91,45 @@ class CustomerShippingViewController extends Controller
         }
         $customershipping = Customershipping::find($id);
 
+        // ป้องกัน IDOR: ลูกค้าต้องเป็นเจ้าของรายการ (admin ดูได้ทั้งหมด)
+        if (!$customershipping) {
+            abort(404);
+        }
+        if (!$authUser->hasRole('admin') && $customershipping->customerno !== $authUser->customerno) {
+            abort(403);
+        }
+
         return view('customershippingview.edit', compact('customershipping','authUser'));
     }
 
 
     public function update(Request $request, Customershipping $customershipping)
     {
-        $customershipping->update(array_merge($request->all()
-            , ['delivery_mobile'=>str_replace([' ', '-'], '', $request->delivery_mobile)]
-        ));
+        $authUser = Auth::user();
+
+        // ป้องกัน IDOR
+        if (!$authUser->hasRole('admin') && $customershipping->customerno !== $authUser->customerno) {
+            abort(403);
+        }
+
+        // Allowlist: อนุญาตเฉพาะฟิลด์ที่เกี่ยวกับที่อยู่จัดส่ง — ป้องกัน mass assignment
+        $allowed = $request->only([
+            'delivery_type_id',
+            'delivery_fullname',
+            'delivery_mobile',
+            'delivery_address',
+            'delivery_subdistrict',
+            'delivery_district',
+            'delivery_province',
+            'delivery_postcode',
+            'note',
+        ]);
+
+        if (isset($allowed['delivery_mobile'])) {
+            $allowed['delivery_mobile'] = str_replace([' ', '-'], '', (string) $allowed['delivery_mobile']);
+        }
+
+        $customershipping->update($allowed);
 
         return redirect()->route('shippingview.index')
             ->with('success', 'บันทึกข้อมูลที่อยู่จัดส่งสินค้าสำเร็จ');
@@ -198,7 +244,7 @@ class CustomerShippingViewController extends Controller
                     ,'start_date'=>$startDate
                     ,'data_export_link'=>url('customershippingsviewexport2',['customerno'=>!empty($request->customerno)?$request->customerno:'','start_date'=>$startDateRaw]) . (!empty($request->recipient_filter) ? '?recipient_filter=' . urlencode($request->recipient_filter) : '')
 
-                    ,'query'=>$sqlQuery
+                    ,'query'=>config('app.debug') ? $sqlQuery : null
                 ])// แสดงผลรวมของค่า COD])
                 ->make(true);
 
@@ -282,6 +328,16 @@ class CustomerShippingViewController extends Controller
             $handles = [];
 
             foreach ($batch as $i => [$url, $fileName]) {
+                // กรอง URL: ต้องเป็น http/https ที่ resolve เป็น public host เท่านั้น (กัน SSRF)
+                $parsed = parse_url($url);
+                if (!$parsed || !in_array(strtolower($parsed['scheme'] ?? ''), ['http','https'], true)) {
+                    continue;
+                }
+                $host = strtolower($parsed['host'] ?? '');
+                if ($host === '' || in_array($host, ['localhost','127.0.0.1','0.0.0.0','::1'], true) || str_starts_with($host, '169.254.')) {
+                    continue;
+                }
+
                 $ch = curl_init($url);
                 curl_setopt_array($ch, [
                     CURLOPT_RETURNTRANSFER => true,
@@ -289,8 +345,11 @@ class CustomerShippingViewController extends Controller
                     CURLOPT_MAXREDIRS      => 5,
                     CURLOPT_TIMEOUT        => 20,
                     CURLOPT_CONNECTTIMEOUT => 10,
-                    CURLOPT_SSL_VERIFYPEER => false,
+                    CURLOPT_SSL_VERIFYPEER => true,
+                    CURLOPT_SSL_VERIFYHOST => 2,
                     CURLOPT_USERAGENT      => 'Mozilla/5.0',
+                    CURLOPT_PROTOCOLS      => CURLPROTO_HTTP | CURLPROTO_HTTPS,
+                    CURLOPT_REDIR_PROTOCOLS=> CURLPROTO_HTTP | CURLPROTO_HTTPS,
                 ]);
                 curl_multi_add_handle($mh, $ch);
                 $handles[$i] = ['ch' => $ch, 'fileName' => $fileName];
@@ -500,7 +559,8 @@ class CustomerShippingViewController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            return response()->json(['success' => false, 'message' => 'เกิดข้อผิดพลาด: ' . $e->getMessage()], 500);
+            \Log::error('batchUpdateRecipient error: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง'], 500);
         }
     }
 

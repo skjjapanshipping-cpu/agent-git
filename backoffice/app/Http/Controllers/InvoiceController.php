@@ -23,6 +23,12 @@ class InvoiceController extends Controller
 
     public function generateInvoice($etd, $customerno, $shipping_ids = null)
     {
+        // ป้องกัน IDOR: customer ดูได้เฉพาะของตัวเอง, admin ดูได้ทั้งหมด
+        $authUser = \Illuminate\Support\Facades\Auth::user();
+        if ($authUser && !$authUser->hasRole('admin') && strtolower((string) $authUser->customerno) !== strtolower((string) $customerno)) {
+            abort(403);
+        }
+
         // ถ้ามี shipping_ids ให้ใช้รายการที่เลือก
         if ($shipping_ids && $shipping_ids !== 'null') {
             $ids = explode(',', $shipping_ids);
@@ -121,6 +127,12 @@ class InvoiceController extends Controller
 
     public function generateOrderInvoice($order_date, $end_order_date, $status,$customerorderids,$customerno)
     {
+        // ป้องกัน IDOR: customer ดูได้เฉพาะของตัวเอง, admin ดูได้ทั้งหมด
+        $authUser = \Illuminate\Support\Facades\Auth::user();
+        if ($authUser && !$authUser->hasRole('admin') && strtolower((string) $authUser->customerno) !== strtolower((string) $customerno)) {
+            abort(403);
+        }
+
         // เพิ่มเวลาในการประมวลผล PHP และหน่วยความจำ
         set_time_limit(600); // 10 นาที
         ini_set('memory_limit', '1G'); // เพิ่มหน่วยความจำเป็น 1GB
@@ -343,10 +355,11 @@ class InvoiceController extends Controller
                 return response()->json(['success' => false, 'error' => 'No customers']);
             }
             try {
+                $chatBase = rtrim((string) config('services.skjchat.base_url'), '/');
                 $response = \Illuminate\Support\Facades\Http::withHeaders([
-                    'X-API-Key' => 'skjchat-invoice-2026',
+                    'X-API-Key' => (string) config('services.skjchat.api_key'),
                     'Content-Type' => 'application/json',
-                ])->timeout(15)->post('https://chat.skjjapanshipping.com/api/invoice-check', [
+                ])->timeout(15)->post($chatBase . '/api/invoice-check', [
                     'customer_nos' => $customerNos,
                 ]);
                 return response()->json($response->json(), $response->status());
@@ -371,8 +384,9 @@ class InvoiceController extends Controller
         $qrImageUrl = $request->input('qr_image_url', '');
         $messengerFee = (float) $request->input('messenger_fee', 0);
 
-        $chatApiUrl = 'https://chat.skjjapanshipping.com/api/invoice-send';
-        $chatApiKey = 'skjchat-invoice-2026';
+        $chatBase   = rtrim((string) config('services.skjchat.base_url'), '/');
+        $chatApiUrl = $chatBase . '/api/invoice-send';
+        $chatApiKey = (string) config('services.skjchat.api_key');
 
         $results = ['success' => 0, 'failed' => 0, 'not_found' => 0, 'details' => []];
 
@@ -603,8 +617,9 @@ class InvoiceController extends Controller
             'customer_nos' => 'required|array|min:1',
         ]);
 
-        $chatApiKey = 'skjchat-invoice-2026';
-        $chatApiUrl = 'https://chat.skjjapanshipping.com/api/invoice-check';
+        $chatBase   = rtrim((string) config('services.skjchat.base_url'), '/');
+        $chatApiKey = (string) config('services.skjchat.api_key');
+        $chatApiUrl = $chatBase . '/api/invoice-check';
 
         try {
             $response = \Illuminate\Support\Facades\Http::withHeaders([
@@ -630,8 +645,9 @@ class InvoiceController extends Controller
             'customer_nos' => 'required|array|min:1',
         ]);
 
-        $chatApiKey = 'skjchat-invoice-2026';
-        $chatApiUrl = 'https://chat.skjjapanshipping.com/api/invoice-remind';
+        $chatBase   = rtrim((string) config('services.skjchat.base_url'), '/');
+        $chatApiKey = (string) config('services.skjchat.api_key');
+        $chatApiUrl = $chatBase . '/api/invoice-remind';
         $customerNos = $request->input('customer_nos');
         $results = [];
 

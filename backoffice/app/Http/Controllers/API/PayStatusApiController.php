@@ -16,9 +16,9 @@ class PayStatusApiController extends Controller
      */
     public function updateFromChat(Request $request)
     {
-        // API Key auth
-        $apiKey = $request->header('X-API-Key');
-        if ($apiKey !== 'skjchat-invoice-2026') {
+        $expected = (string) config('services.skjchat.api_key');
+        $provided = (string) $request->header('X-API-Key', '');
+        if ($expected === '' || !hash_equals($expected, $provided)) {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
@@ -78,6 +78,7 @@ class PayStatusApiController extends Controller
                 $matchedEtd = null;
                 $matchedTotal = 0;
                 $tolerance = 1.0;
+                $matchCandidates = [];
 
                 foreach ($etdGroups as $etdKey => $group) {
                     $total = $group->sum(function ($s) {
@@ -86,10 +87,25 @@ class PayStatusApiController extends Controller
                     });
 
                     if (abs($total - $slipAmount) <= $tolerance) {
-                        $matchedEtd = $etdKey;
-                        $matchedTotal = $total;
-                        break;
+                        $matchCandidates[] = ['etd' => $etdKey, 'total' => $total];
                     }
+                }
+
+                // ถ้ามียอดตรงหลายกลุ่ม → ไม่อัพเดท ป้องกัน mark ผิด (ขอ etd เพิ่มจาก chat)
+                if (count($matchCandidates) === 1) {
+                    $matchedEtd = $matchCandidates[0]['etd'];
+                    $matchedTotal = $matchCandidates[0]['total'];
+                } elseif (count($matchCandidates) > 1) {
+                    Log::warning("[CHAT-PAY] Ambiguous match for {$customerno} amount={$slipAmount}: " . count($matchCandidates) . " ETD groups matched");
+                    $matchedImport = false;
+                    $importResponse = [
+                        'success' => false,
+                        'ambiguous' => true,
+                        'message' => "พบยอดที่ตรงกับ ฿" . number_format($slipAmount, 2) . " มากกว่า 1 รอบ — กรุณาส่ง etd มาด้วย",
+                        'customerno' => $customerno,
+                        'matches' => array_map(fn($c) => ['etd' => $c['etd'], 'total' => $c['total']], $matchCandidates),
+                    ];
+                    return;
                 }
 
                 if ($matchedEtd) {
@@ -118,6 +134,11 @@ class PayStatusApiController extends Controller
 
         if ($matchedImport) {
             return response()->json($importResponse);
+        }
+
+        // ambiguous match → return early (ห้าม fallthrough ไป MODE 3)
+        if ($importResponse && !empty($importResponse['ambiguous'])) {
+            return response()->json($importResponse, 409);
         }
 
         // === MODE 3: Match by thai_bill_amount (ค่าส่งไทย — บิลแยก) ===

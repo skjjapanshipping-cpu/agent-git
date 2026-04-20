@@ -241,11 +241,14 @@ class CustomershippingController extends Controller
                 return redirect()->route('customershippings.index')->with('error', 'ไม่พบรายการที่เลือก');
             }
 
-            $searchDate = '%' . $customershippings[0]->etd->format('d/m/Y') . '%';
-            Track::WhereRaw("DATE_FORMAT(ship_date, '%d/%m/%Y') like ?", [$searchDate])
-                ->update([
-                    'destination_date' =>  Carbon::now()->format('Y-m-d'),
-                ]);
+            // ป้องกัน null pointer: บางรายการอาจไม่มี etd
+            if ($customershippings[0]->etd) {
+                $searchDate = '%' . $customershippings[0]->etd->format('d/m/Y') . '%';
+                Track::WhereRaw("DATE_FORMAT(ship_date, '%d/%m/%Y') like ?", [$searchDate])
+                    ->update([
+                        'destination_date' =>  Carbon::now()->format('Y-m-d'),
+                    ]);
+            }
             foreach ($customershippings as $shipping) {
                 try {
                     Customerorder::where('customerno', $shipping->customerno)
@@ -298,10 +301,11 @@ class CustomershippingController extends Controller
                     if (in_array($key, $synced)) continue;
                     $synced[] = $key;
                     try {
+                        $chatBase = rtrim((string) config('services.skjchat.base_url'), '/');
                         \Illuminate\Support\Facades\Http::withHeaders([
-                            'X-API-Key' => 'skjchat-invoice-2026',
+                            'X-API-Key' => (string) config('services.skjchat.api_key'),
                             'Content-Type' => 'application/json',
-                        ])->timeout(10)->post('https://chat.skjjapanshipping.com/api/invoice-update-status', [
+                        ])->timeout(10)->post($chatBase . '/api/invoice-update-status', [
                             'customerno' => $cn,
                             'etd' => $etdFormatted,
                             'status' => 'paid',
@@ -742,15 +746,16 @@ class CustomershippingController extends Controller
 
     public function del_confirmimport(Request $request)
     {
-
-
         try {
-            // ทำสิ่งที่คุณต้องการกับข้อมูลที่ได้รับ
-            // ตัวอย่าง: อัปเดต status ของ tracks ในฐานข้อมูล
-            Customershipping::where('excel_status', 0)->delete();
+            // ลบเฉพาะ draft ที่สร้างภายใน 2 ชม.ล่าสุด
+            // เพื่อกัน admin คนหนึ่งกดเคลียร์แล้วไปลบ draft ของ admin คนอื่นที่กำลัง import อยู่
+            Customershipping::where('excel_status', 0)
+                ->where('created_at', '>=', now()->subHours(2))
+                ->delete();
             return redirect()->route('customershippings.index')
                 ->with('success', 'เคลียร์ข้อมูลสำเร็จ');
         } catch (\Exception $e) {
+            Log::error('del_confirmimport error: ' . $e->getMessage());
             return redirect()->route('customershippings.index')
                 ->with('error', 'เคลียร์ข้อมูลไม่สำเร็จ');
         }
