@@ -45,6 +45,31 @@ class ShippopController extends Controller
             $customerMap = json_decode($request->input('customer_map'), true) ?: [];
         }
 
+        // รับ parsed_items (JSON) — รายการ shipment ต่อ Box ที่ admin review/แก้แล้ว
+        // schema: [{ refNo, courier, destination, totalPrice, boxes: [int] }, ...]
+        $parsedItems = [];
+        if ($request->has('parsed_items')) {
+            $raw = $request->input('parsed_items');
+            $decoded = is_array($raw) ? $raw : (json_decode((string) $raw, true) ?: []);
+            foreach ($decoded as $row) {
+                if (!is_array($row)) continue;
+                $boxes = $row['boxes'] ?? [];
+                if (is_string($boxes)) {
+                    $boxes = preg_split('/[\s,+]+/u', $boxes);
+                }
+                $boxes = array_values(array_filter(array_map('intval', (array) $boxes), function($x){ return $x > 0; }));
+                $refNo = trim((string) ($row['refNo'] ?? ''));
+                if ($refNo === '' && empty($boxes)) continue;
+                $parsedItems[] = [
+                    'refNo'       => $refNo,
+                    'courier'     => trim((string) ($row['courier'] ?? '')),
+                    'destination' => trim((string) ($row['destination'] ?? '')),
+                    'totalPrice'  => (float) ($row['totalPrice'] ?? 0),
+                    'boxes'       => $boxes,
+                ];
+            }
+        }
+
         // 1) อัพโหลดไฟล์บิล (รองรับหลายไฟล์)
         $webRoot = '/var/www/vhosts/skjjapanshipping.com/httpdocs/skjtrack/shippop-invoices';
         $uploadedFiles = []; // [{url, path, originalName, isPdf}]
@@ -242,6 +267,38 @@ class ShippopController extends Controller
                         $query->whereDate('etd', $etd);
                     }
                     $query->update($updateData);
+                }
+
+                // อัพเดทข้อมูล per-box (เลขอ้างอิง/ราคา/courier) ตามที่ admin review
+                $now = Carbon::now();
+                foreach ($parsedItems as $pItem) {
+                    if (empty($pItem['boxes'])) continue;
+                    $perBox = [
+                        'thai_tracking_no'    => $pItem['refNo'] !== '' ? $pItem['refNo'] : null,
+                        'thai_courier'        => $pItem['courier'] !== '' ? $pItem['courier'] : null,
+                        'thai_shipping_price' => $pItem['totalPrice'] > 0 ? round($pItem['totalPrice'], 2) : null,
+                        'shippop_booked_at'   => $now,
+                    ];
+                    $perBox = array_filter($perBox, function($v){ return $v !== null; });
+                    if (empty($perBox)) continue;
+
+                    // รองรับ box_no ทั้ง int และ string (กรณีมี zero-pad/prefix) — match แบบยืดหยุ่น
+                    $boxValues = [];
+                    foreach ($pItem['boxes'] as $b) {
+                        $b = (int) $b;
+                        $boxValues[] = (string) $b;
+                        $boxValues[] = str_pad((string) $b, 3, '0', STR_PAD_LEFT);
+                    }
+                    $boxValues = array_values(array_unique($boxValues));
+
+                    Customershipping::where('customerno', $customerno)
+                        ->where(function($q) use ($boxValues) {
+                            $q->whereIn('box_no', $boxValues)
+                              ->orWhereRaw('CAST(box_no AS UNSIGNED) IN (' . implode(',', array_fill(0, count($boxValues), '?')) . ')',
+                                  array_map('intval', $boxValues));
+                        })
+                        ->where('excel_status', '1')
+                        ->update($perBox);
                 }
 
                 $results['success']++;
@@ -597,6 +654,186 @@ class ShippopController extends Controller
 
         $sent = $lineService->pushMessage($authProvider->providerid, $messages);
         return $sent ? 'ส่ง LINE โดยตรงสำเร็จ' : '';
+    }
+
+    /**
+     * Parse-Preview: รับ PDF/รูปจาก admin → คืนรายการ shipment (เลขอ้างอิง/Box/ราคา/courier)
+     * ใช้สำหรับ Admin Review UI ก่อนกดส่งจริง
+     */
+    public function parsePreview(Request $request)
+    {
+        $request->validate([
+            'invoice_files'   => 'required|array|min:1',
+            'invoice_files.*' => 'file|max:10240|mimes:pdf,jpg,jpeg,png',
+        ]);
+
+        $items = [];
+        $totalAmount = 0;
+        $warnings = [];
+        $fileSummaries = [];
+
+        foreach ($request->file('invoice_files') as $file) {
+            $origName = $file->getClientOriginalName();
+            $ext = strtolower($file->getClientOriginalExtension());
+            $isPdf = $ext === 'pdf';
+
+            if (!$isPdf) {
+                $warnings[] = 'ไฟล์ ' . $origName . ' เป็นรูปภาพ — ระบบไม่สามารถ auto-parse ได้ กรุณากรอกข้อมูลด้วยตนเอง';
+                $fileSummaries[] = ['file' => $origName, 'isPdf' => false, 'itemCount' => 0, 'sum' => 0];
+                continue;
+            }
+
+            try {
+                $parser = new \Smalot\PdfParser\Parser();
+                $pdf = $parser->parseFile($file->getRealPath());
+                $text = $pdf->getText();
+
+                $parsed = $this->extractShippopItems($text);
+                $fileSum = 0;
+                foreach ($parsed as $p) {
+                    $p['sourceFile'] = $origName;
+                    $items[] = $p;
+                    $fileSum += (float) ($p['totalPrice'] ?? 0);
+                }
+                $totalAmount += $fileSum;
+                $fileSummaries[] = ['file' => $origName, 'isPdf' => true, 'itemCount' => count($parsed), 'sum' => $fileSum];
+
+                if (count($parsed) === 0) {
+                    $warnings[] = 'ไฟล์ ' . $origName . ' ไม่พบรายการ shipment ที่ parse ได้ — โปรดตรวจรูปแบบ PDF';
+                }
+            } catch (\Exception $e) {
+                Log::warning('[THAI-BILL-PREVIEW] PDF parse failed', ['file' => $origName, 'error' => $e->getMessage()]);
+                $warnings[] = 'ไฟล์ ' . $origName . ' parse ไม่สำเร็จ: ' . $e->getMessage();
+                $fileSummaries[] = ['file' => $origName, 'isPdf' => true, 'itemCount' => 0, 'sum' => 0, 'error' => $e->getMessage()];
+            }
+        }
+
+        return response()->json([
+            'success'      => true,
+            'items'        => $items,
+            'totalAmount'  => round($totalAmount, 2),
+            'fileSummaries'=> $fileSummaries,
+            'warnings'     => $warnings,
+        ]);
+    }
+
+    /**
+     * Extract Shippop items จาก raw text (ของ PDF บิล Shippop)
+     *
+     * รูปแบบหนึ่ง item:
+     *   1.) 1 DHL Express เมืองมหาสารคาม 44000
+     *   เลขอ้างอิง 7227056829598426
+     *   - ขนาดพัสดุ ( 23.00x32.00x3.00 ซม. )
+     *   - น้ำหนัก 50 กรัม                       25.00
+     *   - Additional Fuel                        3.00
+     *   ผู้รับ: กอง 1 - Chanidapa Saengsit (Box.66 รวม 1 กล่อง)+E
+     */
+    protected function extractShippopItems(string $text): array
+    {
+        $items = [];
+        $lines = preg_split('/\r\n|\r|\n/u', $text);
+        if (!$lines) return $items;
+
+        $itemStartRe = '/^\s*(\d+)\s*\.\s*\)\s+\d+\s+(.+?)$/u';
+
+        $buckets = [];
+        $current = null;
+        foreach ($lines as $line) {
+            if (preg_match($itemStartRe, $line, $m)) {
+                if ($current !== null) {
+                    $buckets[] = $current;
+                }
+                $current = [
+                    'idx'        => (int) $m[1],
+                    'header'     => trim($m[2]),
+                    'lines'      => [trim($line)],
+                ];
+            } elseif ($current !== null) {
+                $current['lines'][] = trim($line);
+                if (count($current['lines']) > 30) {
+                    $buckets[] = $current;
+                    $current = null;
+                }
+            }
+        }
+        if ($current !== null) {
+            $buckets[] = $current;
+        }
+
+        foreach ($buckets as $bucket) {
+            $item = $this->parseShippopBucket($bucket);
+            if ($item !== null) {
+                $items[] = $item;
+            }
+        }
+
+        return $items;
+    }
+
+    /**
+     * Parse 1 bucket (item) → schema { idx, refNo, courier, destination, totalPrice, boxes, recipient, rawText }
+     */
+    protected function parseShippopBucket(array $bucket): ?array
+    {
+        $rawText = implode("\n", $bucket['lines']);
+
+        $header = $bucket['header'];
+        $courier = '';
+        $destination = '';
+        if (preg_match('/^([A-Za-z][A-Za-z0-9&\.\s\-]+?)\s+(.+)$/u', $header, $hm)) {
+            $courier = trim($hm[1]);
+            $destination = trim($hm[2]);
+        } else {
+            $destination = $header;
+        }
+
+        $refNo = '';
+        if (preg_match('/เลขอ้างอิง\s*[:：]?\s*([0-9A-Z\-]{8,30})/u', $rawText, $rm)) {
+            $refNo = trim($rm[1]);
+        }
+
+        $boxes = [];
+        if (preg_match_all('/Box\.?\s*(\d+)(?:\s*\+\s*\d+)*/u', $rawText, $bxAll)) {
+            foreach ($bxAll[0] as $boxBlock) {
+                if (preg_match_all('/(\d+)/u', $boxBlock, $nums)) {
+                    foreach ($nums[1] as $n) {
+                        $boxes[] = (int) $n;
+                    }
+                }
+            }
+            $boxes = array_values(array_unique($boxes));
+        }
+
+        $recipient = '';
+        if (preg_match('/ผู้รับ\s*[:：]\s*(.+?)(?:\(Box|$)/u', $rawText, $recM)) {
+            $recipient = trim($recM[1]);
+        }
+
+        $totalPrice = 0.0;
+        foreach ($bucket['lines'] as $line) {
+            if (preg_match('/^\s*-\s*(?:น้ำหนัก|Additional\s*Fuel|ค่า|Fuel|COD|ประกัน|insurance)/iu', $line)) {
+                if (preg_match_all('/([\d,]+\.\d{2})/u', $line, $pm)) {
+                    foreach ($pm[1] as $price) {
+                        $totalPrice += (float) str_replace(',', '', $price);
+                    }
+                }
+            }
+        }
+
+        if ($refNo === '' && empty($boxes) && $totalPrice == 0.0) {
+            return null;
+        }
+
+        return [
+            'idx'         => $bucket['idx'] ?? null,
+            'refNo'       => $refNo,
+            'courier'     => $courier,
+            'destination' => $destination,
+            'totalPrice'  => round($totalPrice, 2),
+            'boxes'       => $boxes,
+            'recipient'   => $recipient,
+            'rawText'     => $rawText,
+        ];
     }
 
 }

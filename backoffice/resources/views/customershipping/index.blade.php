@@ -2260,7 +2260,160 @@
                 } else {
                     $('#tsInvoicePreview').hide();
                 }
+
+                tsParsePreview(files);
             });
+
+            function tsRenderPreviewRow(item, idx, allBoxesSet) {
+                var refNo = (item.refNo || '').replace(/"/g, '&quot;');
+                var courier = (item.courier || '').replace(/"/g, '&quot;');
+                var dest = (item.destination || '').replace(/"/g, '&quot;');
+                var boxes = Array.isArray(item.boxes) ? item.boxes : [];
+                var boxStr = boxes.join('+');
+                var price = item.totalPrice ? Number(item.totalPrice).toFixed(2) : '';
+
+                var matched = 0;
+                boxes.forEach(function(b){ if (allBoxesSet.has(String(b))) matched++; });
+                var badge = '';
+                if (boxes.length === 0) {
+                    badge = '<span title="ไม่พบ Box" style="color:#94a3b8;">—</span>';
+                } else if (matched === boxes.length) {
+                    badge = '<span title="match กับ Box ที่เลือกทุกอัน" style="color:#15803d;">✅</span>';
+                } else if (matched > 0) {
+                    badge = '<span title="' + matched + '/' + boxes.length + ' Box match" style="color:#d97706;">⚠️</span>';
+                } else {
+                    badge = '<span title="ไม่มี Box ที่ match กับลูกค้าที่เลือก" style="color:#b91c1c;">❌</span>';
+                }
+
+                return '<tr class="ts-parse-row" data-idx="' + idx + '">'
+                    + '<td style="padding:4px 8px; font-weight:700; color:#475569;">' + (idx + 1) + ' ' + badge + '</td>'
+                    + '<td style="padding:4px 6px;"><input type="text" class="form-control form-control-sm ts-p-ref" value="' + refNo + '" style="font-size:11px; padding:3px 6px; font-family:monospace;"></td>'
+                    + '<td style="padding:4px 6px;"><input type="text" class="form-control form-control-sm ts-p-courier" value="' + courier + '" style="font-size:11px; padding:3px 6px;"></td>'
+                    + '<td style="padding:4px 6px;"><input type="text" class="form-control form-control-sm ts-p-dest" value="' + dest + '" style="font-size:11px; padding:3px 6px;"></td>'
+                    + '<td style="padding:4px 6px;"><input type="text" class="form-control form-control-sm ts-p-boxes" value="' + boxStr + '" placeholder="66+88+..." style="font-size:11px; padding:3px 6px; font-family:monospace;"></td>'
+                    + '<td style="padding:4px 6px;"><input type="number" step="0.01" min="0" class="form-control form-control-sm ts-p-price" value="' + price + '" style="font-size:11px; padding:3px 6px; text-align:right;"></td>'
+                    + '<td style="padding:4px 6px; text-align:center;"><button type="button" class="btn btn-link p-0 ts-p-del" style="color:#dc2626;" title="ลบ"><i class="fa fa-trash"></i></button></td>'
+                    + '</tr>';
+            }
+
+            function tsCollectSelectedBoxes() {
+                var boxesSet = new Set();
+                var customerMap = $('#thaiShippingModal').data('customerMap') || {};
+                var ids = [];
+                Object.keys(customerMap).forEach(function(cn){ ids = ids.concat(customerMap[cn] || []); });
+                var idSet = new Set(ids.map(String));
+                try {
+                    var t = $.fn.DataTable.isDataTable('#dt-mant-table-1') ? $('#dt-mant-table-1').DataTable() : null;
+                    if (t) {
+                        t.rows().every(function(){
+                            var d = this.data();
+                            if (d && idSet.has(String(d.id)) && d.box_no) {
+                                String(d.box_no).split(/[\s,+]+/).forEach(function(b){
+                                    var n = String(parseInt(b, 10));
+                                    if (n && n !== 'NaN') boxesSet.add(n);
+                                });
+                            }
+                        });
+                    }
+                } catch(e) {}
+                return boxesSet;
+            }
+
+            function tsParsePreview(files) {
+                if (!files || files.length === 0) {
+                    $('#tsParseCard').hide();
+                    return;
+                }
+                var hasPdf = false;
+                for (var i = 0; i < files.length; i++) {
+                    if ((files[i].type || '').toLowerCase().indexOf('pdf') !== -1 || /\.pdf$/i.test(files[i].name)) {
+                        hasPdf = true; break;
+                    }
+                }
+                if (!hasPdf) {
+                    $('#tsParseCard').show();
+                    $('#tsParseCount').text('(ไม่มี PDF — กรอกข้อมูลเองได้ด้วยปุ่ม "เพิ่มรายการ")');
+                    $('#tsParseSum').text('');
+                    $('#tsParseBody').html('');
+                    $('#tsParseStatus').hide().html('');
+                    return;
+                }
+
+                $('#tsParseCard').show();
+                $('#tsParseStatus').html('<div class="alert alert-info" style="padding:6px 10px; font-size:12px; margin:0;"><i class="fa fa-spinner fa-spin"></i> กำลังอ่านบิล PDF...</div>').show();
+                $('#tsParseBody').html('');
+                $('#tsParseCount').text('');
+                $('#tsParseSum').text('');
+
+                var fd = new FormData();
+                fd.append('_token', '{{ csrf_token() }}');
+                for (var k = 0; k < files.length; k++) {
+                    fd.append('invoice_files[]', files[k]);
+                }
+
+                $.ajax({
+                    url: "{{ route('shippop.parse-preview') }}",
+                    type: 'POST',
+                    data: fd,
+                    processData: false,
+                    contentType: false,
+                    success: function(resp) {
+                        var items = (resp && resp.items) || [];
+                        var warnings = (resp && resp.warnings) || [];
+                        var allBoxes = tsCollectSelectedBoxes();
+                        var bodyHtml = '';
+                        items.forEach(function(it, i){ bodyHtml += tsRenderPreviewRow(it, i, allBoxes); });
+                        $('#tsParseBody').html(bodyHtml);
+                        $('#tsParseCount').text('(' + items.length + ' รายการ)');
+                        var sum = (resp.totalAmount || 0).toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2});
+                        $('#tsParseSum').html('<i class="fa fa-money"></i> รวม ฿ <b>' + sum + '</b>');
+                        if (warnings.length > 0) {
+                            var wHtml = '<div class="alert alert-warning" style="padding:6px 10px; font-size:11px; margin:0;"><b>⚠️ ' + warnings.length + ' คำเตือน:</b><br>' + warnings.map(function(w){ return '• ' + w; }).join('<br>') + '</div>';
+                            $('#tsParseStatus').html(wHtml).show();
+                        } else if (items.length > 0) {
+                            $('#tsParseStatus').html('<div class="alert alert-success" style="padding:6px 10px; font-size:11px; margin:0;"><i class="fa fa-check"></i> อ่านบิลสำเร็จ ' + items.length + ' รายการ — สามารถแก้ไขในตารางก่อนกดส่ง</div>').show();
+                        } else {
+                            $('#tsParseStatus').html('<div class="alert alert-warning" style="padding:6px 10px; font-size:11px; margin:0;"><i class="fa fa-info-circle"></i> ไม่พบรายการที่ parse ได้ — กรุณากรอกเองหรือเช็ครูปแบบ PDF</div>').show();
+                        }
+                    },
+                    error: function(xhr) {
+                        var msg = (xhr.responseJSON && xhr.responseJSON.message) || 'เกิดข้อผิดพลาด';
+                        $('#tsParseStatus').html('<div class="alert alert-danger" style="padding:6px 10px; font-size:11px; margin:0;"><i class="fa fa-exclamation-circle"></i> parse ไม่สำเร็จ: ' + msg + '</div>').show();
+                    }
+                });
+            }
+
+            $(document).on('click', '#tsAddRow', function() {
+                var idx = $('#tsParseBody tr').length;
+                $('#tsParseBody').append(tsRenderPreviewRow({refNo:'',courier:'',destination:'',boxes:[],totalPrice:0}, idx, tsCollectSelectedBoxes()));
+                $('#tsParseCard').show();
+            });
+
+            $(document).on('click', '.ts-p-del', function() {
+                $(this).closest('tr').remove();
+                $('#tsParseBody tr').each(function(i){
+                    var $first = $(this).find('td:first-child');
+                    var badgeHtml = $first.find('span').prop('outerHTML') || '';
+                    $first.html((i+1) + ' ' + badgeHtml);
+                });
+            });
+
+            function tsCollectParsedItems() {
+                var items = [];
+                $('#tsParseBody tr').each(function(){
+                    var $r = $(this);
+                    var refNo = ($r.find('.ts-p-ref').val() || '').trim();
+                    var courier = ($r.find('.ts-p-courier').val() || '').trim();
+                    var dest = ($r.find('.ts-p-dest').val() || '').trim();
+                    var boxesStr = ($r.find('.ts-p-boxes').val() || '').trim();
+                    var priceVal = parseFloat($r.find('.ts-p-price').val()) || 0;
+                    var boxes = boxesStr ? boxesStr.split(/[\s,+]+/).map(function(b){ return parseInt(b,10); }).filter(function(n){ return n>0; }) : [];
+                    if (!refNo && boxes.length === 0) return;
+                    items.push({ refNo:refNo, courier:courier, destination:dest, totalPrice:priceVal, boxes:boxes });
+                });
+                return items;
+            }
+            window.tsCollectParsedItems = tsCollectParsedItems;
 
             // เปิด modal แจ้งค่าส่งไทย
             $('#btn-thai-shipping-notify').on('click', function() {
@@ -2321,6 +2474,11 @@
                 $('#tsMessage').val('');
                 $('#tsResult').html('').hide();
                 $('#tsSearch').val('');
+                $('#tsParseCard').hide();
+                $('#tsParseBody').html('');
+                $('#tsParseStatus').hide().html('');
+                $('#tsParseCount').text('');
+                $('#tsParseSum').text('');
                 $('#tsSendBtn').prop('disabled', false).html('<i class="fa fa-truck"></i> ส่งแจ้งค่าส่งไทย');
 
                 $('#thaiShippingModal').modal('show');
@@ -2574,6 +2732,12 @@
                     formData.append('customer_nos[]', cn);
                 });
                 formData.append('customer_map', JSON.stringify(customerMap));
+
+                // แนบรายการ shipment ต่อ Box (จาก preview ที่ admin review/แก้แล้ว)
+                try {
+                    var parsedItems = (typeof tsCollectParsedItems === 'function') ? tsCollectParsedItems() : [];
+                    formData.append('parsed_items', JSON.stringify(parsedItems));
+                } catch(e) { formData.append('parsed_items', '[]'); }
 
                 // Helper: badge icon-only พร้อม tooltip
                 var pi = function(bg, color, icon, tip){
@@ -2901,10 +3065,39 @@
                             <label for="tsInvoiceFile" id="tsDropZone" style="display:block; cursor:pointer; border:2px dashed #93c5fd; background:#f0f9ff; border-radius:10px; padding:18px; text-align:center; color:#0369a1; font-weight:600; transition:.15s;">
                                 <i class="fa fa-cloud-upload" style="font-size:24px; color:#0ea5e9;"></i>
                                 <div style="margin-top:6px; font-size:13px;">คลิกเพื่อเลือกไฟล์ — หรือลากไฟล์มาวาง</div>
-                                <small class="text-muted d-block" style="font-weight:400; font-size:11px;">รองรับหลายไฟล์พร้อมกัน</small>
+                                <small class="text-muted d-block" style="font-weight:400; font-size:11px;">รองรับหลายไฟล์พร้อมกัน · PDF จะ auto-parse ให้</small>
                             </label>
                             <input type="file" id="tsInvoiceFile" accept="image/*,.pdf" multiple style="display:none;">
                             <div id="tsInvoicePreview" style="display:none; margin-top:10px;"></div>
+                        </div>
+
+                        <!-- Parse Preview card — แสดงรายการ shipment ที่ parse ได้จาก PDF -->
+                        <div id="tsParseCard" style="display:none; background:#fff; border-radius:12px; box-shadow:0 1px 4px rgba(0,0,0,.04); padding:14px 16px; margin-bottom:12px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px; flex-wrap:wrap;">
+                                <span style="color:#0369a1; font-weight:700; font-size:14px;"><i class="fa fa-list-alt"></i> พรีวิวรายการในบิล <small id="tsParseCount" class="text-muted" style="font-weight:400;"></small></span>
+                                <div style="display:flex; gap:6px; align-items:center;">
+                                    <span id="tsParseSum" style="font-size:11px; color:#475569;"></span>
+                                    <button type="button" id="tsAddRow" class="btn btn-sm" style="background:#e0f2fe; color:#0369a1; border:0; font-size:11px; font-weight:600; padding:4px 10px; border-radius:8px;"><i class="fa fa-plus"></i> เพิ่มรายการ</button>
+                                </div>
+                            </div>
+                            <div id="tsParseStatus" style="display:none; margin-bottom:8px;"></div>
+                            <div style="max-height:300px; overflow-y:auto; border:1px solid #e2e8f0; border-radius:8px;">
+                                <table id="tsParseTable" class="table table-sm mb-0" style="font-size:12px;">
+                                    <thead style="background:#f1f5f9; position:sticky; top:0; z-index:1;">
+                                        <tr>
+                                            <th style="font-size:11px; padding:6px 8px;">#</th>
+                                            <th style="font-size:11px; padding:6px 8px; min-width:130px;">เลขอ้างอิง <span class="text-danger">*</span></th>
+                                            <th style="font-size:11px; padding:6px 8px; min-width:100px;">Courier</th>
+                                            <th style="font-size:11px; padding:6px 8px; min-width:130px;">ปลายทาง</th>
+                                            <th style="font-size:11px; padding:6px 8px; min-width:90px;">Box <span class="text-danger">*</span></th>
+                                            <th style="font-size:11px; padding:6px 8px; min-width:80px;">ราคา (฿)</th>
+                                            <th style="font-size:11px; padding:6px 8px; width:40px;"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tsParseBody"></tbody>
+                                </table>
+                            </div>
+                            <small class="text-muted d-block mt-2" style="font-size:11px;">💡 แก้ไขได้ — ✅ = Box match กับลูกค้าที่เลือก, ⚠️ = ไม่ match (ปล่อยว่างได้)</small>
                         </div>
 
                         <!-- Message card -->

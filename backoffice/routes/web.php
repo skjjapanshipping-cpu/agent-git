@@ -207,6 +207,7 @@ Route::middleware('auth')->get('/get-customer-delivery-type', 'CustomershippingC
 Route::middleware('auth')->post('/shippop/notify-shipping', 'ShippopController@notifyThaiShipping')->name('shippop.notify.shipping');
 Route::middleware('auth')->get('/shippop/unpaid-customers', 'ShippopController@getUnpaidCustomers')->name('shippop.unpaid.customers');
 Route::middleware('auth')->post('/shippop/send-reminder', 'ShippopController@sendReminder')->name('shippop.send.reminder');
+Route::middleware('auth')->post('/shippop/parse-preview', 'ShippopController@parsePreview')->name('shippop.parse-preview');
 
 // Price Calculator (public)
 Route::get('/calc', 'PriceCalculatorController@index')->name('price.calculator');

@@ -1896,6 +1896,40 @@
                             <div class="sc-value"><span id="sc-price-total">-</span> <small>฿</small></div>
                         </div>
                     </div>
+                    <div class="summary-card" id="thaiBillSummaryCard" style="display:none; cursor:pointer;" onclick="openThaiBillSummaryModal()" title="คลิกเพื่อดูทั้งหมด">
+                        <div class="summary-card-icon" style="background:linear-gradient(135deg,#0ea5e9,#06b6d4);"><i class="fa fa-truck"></i></div>
+                        <div class="summary-card-info">
+                            <div class="sc-label">ค่าส่งในไทย <small style="color:#94a3b8;">(<span id="sc-thai-shipments">0</span> shipment / <span id="sc-thai-boxes">0</span> กล่อง)</small></div>
+                            <div class="sc-value"><span id="sc-thai-total">-</span> <small>฿</small></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Thai Bill Summary Modal -->
+                <div class="qv-overlay" id="thaiBillOverlay">
+                    <div class="qv-modal" style="max-width:680px;">
+                        <div class="qv-header">
+                            <h3><i class="fa fa-truck" style="color:#0ea5e9;margin-right:8px;"></i>สรุปบิลค่าส่งในไทย</h3>
+                            <button class="qv-close" onclick="closeThaiBillSummaryModal()"><i class="fa fa-times"></i></button>
+                        </div>
+                        <div class="qv-body">
+                            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:10px 14px;background:linear-gradient(135deg,#f0f9ff,#ecfeff);border:1px solid #bae6fd;border-radius:10px;margin-bottom:14px;">
+                                <div style="font-size:12px;color:#475569;"><i class="fa fa-calendar"></i> <span id="tb-round-label">รอบปิดตู้</span></div>
+                                <div style="display:flex;gap:14px;font-size:12px;color:#0c5e8e;font-weight:700;">
+                                    <span><i class="fa fa-truck"></i> <span id="tb-shipment-count">0</span> shipment</span>
+                                    <span><i class="fa fa-cube"></i> <span id="tb-box-count">0</span> กล่อง</span>
+                                    <span><i class="fa fa-money"></i> ฿ <span id="tb-total">0.00</span></span>
+                                </div>
+                            </div>
+                            <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
+                                <button type="button" class="btn btn-sm" onclick="copyAllThaiShipments()" style="background:#0ea5e9;color:#fff;border:0;padding:5px 14px;border-radius:8px;font-size:12px;font-weight:600;"><i class="fa fa-clone"></i> คัดลอกทั้งหมด (ส่งต่อลูกค้า)</button>
+                            </div>
+                            <div id="tb-list" style="max-height:400px;overflow-y:auto;"></div>
+                        </div>
+                        <div class="qv-footer">
+                            <button class="btn-qv btn-qv-close" onclick="closeThaiBillSummaryModal()">ปิด</button>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Quick View Modal -->
@@ -2118,6 +2152,8 @@
                                         <th>ค่านำเข้า</th>
                                         <th>รูปสินค้า</th>
                                         <th>เลขกล่อง</th>
+                                        <th title="เลขอ้างอิงค่าส่งในไทย (Shippop)">อ้างอิงส่งไทย</th>
+                                        <th title="ราคาค่าส่งในไทย (Shippop)">ค่าส่งไทย</th>
                                         <th>วันที่ใส่ตู้</th>
                                         <th>ประเภท</th>
                                         <th>สถานะ</th>
@@ -2629,10 +2665,12 @@
                     { "data": "import_cost" }, // 9
                     { "data": "product_image", "orderable": false }, // 10
                     { "data": "box_no" }, // 11
-                    { "data": "etd" }, // 12
-                    { "data": "shipping_method_label", "orderable": false }, // 13
-                    { "data": "status", "orderable": false }, // 14
-                    { "data": null, "orderable": false }, // 15
+                    { "data": "thai_tracking_no", "orderable": false }, // 12
+                    { "data": "thai_shipping_price", "orderable": false }, // 13
+                    { "data": "etd" }, // 14
+                    { "data": "shipping_method_label", "orderable": false }, // 15
+                    { "data": "status", "orderable": false }, // 16
+                    { "data": null, "orderable": false }, // 17
                 ],
                 "columnDefs": [
                     {
@@ -2685,7 +2723,26 @@
                         }
                     },
                     {
-                        "targets": 13,
+                        "targets": 12, // เลขอ้างอิงค่าส่งไทย
+                        "render": function (data) {
+                            if (!data) return '<span style="color:#cbd5e1;">—</span>';
+                            var safe = String(data).replace(/'/g, "\\'");
+                            return '<span class="thai-ref-cell" style="display:inline-flex;align-items:center;gap:4px;">'
+                                + '<code style="font-size:11px;background:#f1f5f9;color:#0c5e8e;padding:2px 6px;border-radius:4px;">' + data + '</code>'
+                                + '<button type="button" class="thai-ref-copy" data-ref="' + safe + '" title="คัดลอก" style="border:0;background:transparent;color:#64748b;padding:0 4px;cursor:pointer;"><i class="fa fa-clone"></i></button>'
+                                + '</span>';
+                        }
+                    },
+                    {
+                        "targets": 13, // ค่าส่งไทย
+                        "render": function (data) {
+                            var n = parseFloat(data || 0);
+                            if (!n || n <= 0) return '<span style="color:#cbd5e1;">—</span>';
+                            return '<span style="color:#0c5e8e;font-weight:700;white-space:nowrap;">฿ ' + n.toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2}) + '</span>';
+                        }
+                    },
+                    {
+                        "targets": 15,
                         "render": function (data, type, full) {
                             var method = full.shipping_method || 1;
                             if (method == 2) {
@@ -2695,7 +2752,7 @@
                         }
                     },
                     {
-                        "targets": 14,
+                        "targets": 16,
                         "render": function (data) {
                             let displayText = data || 'อยู่ระหว่างขนส่ง';
                             let badgeClass = 'shipping';
@@ -2705,7 +2762,7 @@
                         }
                     },
                     {
-                        "targets": 15,
+                        "targets": 17,
                         "render": function (data, type, full) {
                             return `<a class="btn-table-action btn-edit" href="${full.edit_url}" title="แก้ไข"><i class="fa fa-pencil"></i></a>`;
                         }
@@ -2752,6 +2809,20 @@
                 $('#sc-import-cost').text(json.import_cost_total || '0');
                 $('#sc-weight').text(json.weight_total || '0');
                 $('#sc-price-total').text(json.price_total || '0');
+
+                // Thai bill summary card
+                var ts = json.thai_shipping_summary || {};
+                if (ts.shipment_count && ts.shipment_count > 0) {
+                    $('#sc-thai-shipments').text(ts.shipment_count);
+                    $('#sc-thai-boxes').text(ts.box_count || 0);
+                    $('#sc-thai-total').text(Number(ts.total_price || 0).toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2}));
+                    $('#thaiBillSummaryCard').show();
+                    window._thaiBillData = { roundLabel: etdLabel, summary: ts };
+                } else {
+                    $('#thaiBillSummaryCard').hide();
+                    window._thaiBillData = { roundLabel: etdLabel, summary: { shipments: [], shipment_count: 0, box_count: 0, total_price: 0 } };
+                }
+
                 // Update invoice data
                 if (typeof updateInvoiceData === 'function') updateInvoiceData(json);
             });
@@ -2759,13 +2830,25 @@
             // === Quick View: click on row (not checkbox, image, or action) ===
             $('#dt-mant-table-1 tbody').on('click', 'td', function(e) {
                 // Skip if clicked on checkbox, image, link, or button
-                if ($(e.target).closest('input, a, button, img, .btn-table-action, .custom-checkbox').length) return;
+                if ($(e.target).closest('input, a, button, img, .btn-table-action, .custom-checkbox, .thai-ref-copy').length) return;
                 var colIdx = dataTable.cell(this).index();
                 if (!colIdx) return;
-                // Skip columns: 0 (checkbox), 4 (box_image), 10 (product_image), 15 (action)
-                if ([0, 4, 10, 15].indexOf(colIdx.column) !== -1) return;
+                // Skip columns: 0 (checkbox), 4 (box_image), 10 (product_image), 17 (action)
+                if ([0, 4, 10, 17].indexOf(colIdx.column) !== -1) return;
                 var rowData = dataTable.row($(this).closest('tr')).data();
                 if (rowData) openQuickView(rowData);
+            });
+
+            // === Copy เลขอ้างอิงค่าส่งไทย (ในตาราง) ===
+            $(document).on('click', '.thai-ref-copy', function(e) {
+                e.preventDefault(); e.stopPropagation();
+                var ref = $(this).data('ref');
+                if (!ref) return;
+                copyTextToClipboard(String(ref));
+                var $btn = $(this);
+                var html = $btn.html();
+                $btn.html('<i class="fa fa-check" style="color:#16a34a;"></i>');
+                setTimeout(function(){ $btn.html(html); }, 1200);
             });
 
             // Gallery: openColumnGallery อยู่ใน standalone script (content section)
@@ -2774,6 +2857,32 @@
 
         // Move modal to body so position:fixed works correctly
         $(function() { $('#qvOverlay').appendTo('body'); });
+
+        // Helper: Copy text to clipboard (รองรับ fallback สำหรับ HTTP/iOS)
+        function copyTextToClipboard(text) {
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(text).catch(function(){ _copyFallback(text); });
+            } else {
+                _copyFallback(text);
+            }
+        }
+        function _copyFallback(text) {
+            var ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.focus(); ta.select();
+            try { document.execCommand('copy'); } catch(e){}
+            document.body.removeChild(ta);
+        }
+        function _toast(msg, type) {
+            type = type || 'success';
+            var bg = type === 'success' ? '#16a34a' : (type === 'error' ? '#dc2626' : '#0c5e8e');
+            var $t = $('<div style="position:fixed;top:20px;right:20px;background:' + bg + ';color:#fff;padding:10px 18px;border-radius:10px;font-weight:600;z-index:99999;box-shadow:0 6px 24px rgba(0,0,0,.18);font-size:13px;">' + msg + '</div>');
+            $('body').append($t);
+            setTimeout(function(){ $t.fadeOut(300, function(){ $t.remove(); }); }, 1800);
+        }
 
         // === Quick View Modal Functions ===
         function openQuickView(d) {
@@ -2821,6 +2930,31 @@
                 html += '</div></div>';
             }
 
+            // === บิลค่าส่งไทย (Shippop) ===
+            if (d.thai_tracking_no || (parseFloat(d.thai_shipping_price)||0) > 0) {
+                var courier = d.thai_courier || '';
+                var refNo = d.thai_tracking_no || '';
+                var price = parseFloat(d.thai_shipping_price) || 0;
+                var priceTxt = price > 0 ? ('฿ ' + price.toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2})) : '—';
+                var forwardLines = [];
+                if (courier) forwardLines.push(courier + (refNo ? ' เลขพัสดุ: ' + refNo : ''));
+                else if (refNo) forwardLines.push('เลขพัสดุ: ' + refNo);
+                if (price > 0) forwardLines.push('ค่าจัดส่ง: ' + price.toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' บาท');
+                var forwardText = forwardLines.join('\n');
+
+                html += '<div style="margin-top:14px;padding:12px 14px;background:linear-gradient(135deg,#f0f9ff,#ecfeff);border:1px solid #bae6fd;border-radius:10px;">';
+                html += '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;">';
+                html += '<span style="color:#0c5e8e;font-weight:700;font-size:0.9rem;"><i class="fa fa-truck"></i> บิลค่าส่งในไทย</span>';
+                if (forwardText) {
+                    html += '<button type="button" class="btn-qv-copy-ref" data-text="' + forwardText.replace(/"/g,'&quot;') + '" style="border:0;background:#0c5e8e;color:#fff;padding:4px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;"><i class="fa fa-clone"></i> คัดลอกส่งต่อลูกค้า</button>';
+                }
+                html += '</div>';
+                if (courier) html += '<div class="qv-row" style="border:0;padding:3px 0;"><span class="qv-label">ผู้ขนส่ง</span><span class="qv-value">' + courier + '</span></div>';
+                if (refNo) html += '<div class="qv-row" style="border:0;padding:3px 0;"><span class="qv-label">เลขอ้างอิง</span><span class="qv-value" style="font-family:monospace;color:#0c5e8e;font-weight:700;">' + refNo + '</span></div>';
+                if (price > 0) html += '<div class="qv-row" style="border:0;padding:3px 0;"><span class="qv-label">ค่าส่งไทย</span><span class="qv-value" style="color:#0c5e8e;font-weight:800;">' + priceTxt + '</span></div>';
+                html += '</div>';
+            }
+
             // Note
             if (d.note) {
                 html += '<div style="margin-top:12px;"><span class="qv-label">หมายเหตุ</span>';
@@ -2850,6 +2984,103 @@
         $('#qvOverlay').on('click', function(e) {
             if (e.target === this) closeQuickView();
         });
+
+        // Copy ข้อความ "ส่งต่อลูกค้า" ใน Quick View
+        $(document).on('click', '.btn-qv-copy-ref', function(e) {
+            e.preventDefault(); e.stopPropagation();
+            var txt = $(this).data('text') || '';
+            if (!txt) return;
+            copyTextToClipboard(String(txt));
+            _toast('คัดลอกข้อความแล้ว — พร้อมส่งต่อลูกค้า');
+        });
+
+        // === Thai Bill Summary Modal ===
+        $(function(){ $('#thaiBillOverlay').appendTo('body'); });
+
+        function openThaiBillSummaryModal() {
+            var d = window._thaiBillData || { roundLabel:'-', summary:{shipments:[],shipment_count:0,box_count:0,total_price:0} };
+            var s = d.summary || {};
+            $('#tb-round-label').text(d.roundLabel || '-');
+            $('#tb-shipment-count').text(s.shipment_count || 0);
+            $('#tb-box-count').text(s.box_count || 0);
+            $('#tb-total').text(Number(s.total_price || 0).toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2}));
+
+            var html = '';
+            var ships = s.shipments || [];
+            if (ships.length === 0) {
+                html = '<div style="padding:24px;text-align:center;color:#94a3b8;"><i class="fa fa-inbox" style="font-size:32px;"></i><br><br>ยังไม่มีข้อมูลค่าส่งในไทยในรอบนี้</div>';
+            } else {
+                html = '<table style="width:100%;border-collapse:collapse;font-size:13px;">';
+                html += '<thead style="background:#f1f5f9;"><tr>';
+                html += '<th style="padding:8px;text-align:left;border-bottom:1px solid #e2e8f0;font-size:11px;color:#475569;">#</th>';
+                html += '<th style="padding:8px;text-align:left;border-bottom:1px solid #e2e8f0;font-size:11px;color:#475569;">Courier / เลขอ้างอิง</th>';
+                html += '<th style="padding:8px;text-align:left;border-bottom:1px solid #e2e8f0;font-size:11px;color:#475569;">Box</th>';
+                html += '<th style="padding:8px;text-align:right;border-bottom:1px solid #e2e8f0;font-size:11px;color:#475569;">ราคา</th>';
+                html += '<th style="padding:8px;text-align:center;border-bottom:1px solid #e2e8f0;font-size:11px;color:#475569;">Copy</th>';
+                html += '</tr></thead><tbody>';
+                ships.forEach(function(sh, i){
+                    var courier = sh.courier || '-';
+                    var ref = sh.refNo || '';
+                    var boxesStr = (sh.boxes || []).join(', ');
+                    var price = parseFloat(sh.price) || 0;
+                    var priceTxt = price > 0 ? ('฿ ' + price.toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2})) : '—';
+                    var fwd = [];
+                    if (courier && courier !== '-') fwd.push(courier + (ref ? ' เลขพัสดุ: ' + ref : ''));
+                    else if (ref) fwd.push('เลขพัสดุ: ' + ref);
+                    if (price > 0) fwd.push('ค่าจัดส่ง: ' + price.toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' บาท');
+                    var fwdText = fwd.join('\n').replace(/"/g, '&quot;');
+                    html += '<tr style="border-bottom:1px solid #f1f5f9;">';
+                    html += '<td style="padding:8px;color:#64748b;font-weight:600;">' + (i+1) + '</td>';
+                    html += '<td style="padding:8px;"><div style="font-weight:700;color:#0c5e8e;">' + courier + '</div><div style="font-family:monospace;font-size:11px;color:#475569;">' + ref + '</div></td>';
+                    html += '<td style="padding:8px;font-family:monospace;font-size:11px;color:#475569;">' + (boxesStr || '—') + '</td>';
+                    html += '<td style="padding:8px;text-align:right;color:#0c5e8e;font-weight:700;white-space:nowrap;">' + priceTxt + '</td>';
+                    html += '<td style="padding:8px;text-align:center;"><button type="button" class="tb-row-copy" data-text="' + fwdText + '" style="border:0;background:#f1f5f9;color:#0c5e8e;padding:4px 8px;border-radius:6px;cursor:pointer;" title="คัดลอก"><i class="fa fa-clone"></i></button></td>';
+                    html += '</tr>';
+                });
+                html += '</tbody></table>';
+            }
+            $('#tb-list').html(html);
+
+            $('#thaiBillOverlay').addClass('active');
+            $('body').css('overflow', 'hidden');
+        }
+        function closeThaiBillSummaryModal() {
+            $('#thaiBillOverlay').removeClass('active');
+            $('body').css('overflow', '');
+        }
+        $('#thaiBillOverlay').on('click', function(e) {
+            if (e.target === this) closeThaiBillSummaryModal();
+        });
+        $(document).on('click', '.tb-row-copy', function(e){
+            e.preventDefault(); e.stopPropagation();
+            var t = $(this).data('text') || '';
+            if (!t) return;
+            copyTextToClipboard(String(t));
+            _toast('คัดลอก shipment นี้แล้ว');
+        });
+
+        function copyAllThaiShipments() {
+            var d = window._thaiBillData || {};
+            var s = d.summary || {};
+            var ships = s.shipments || [];
+            if (ships.length === 0) { _toast('ไม่มีข้อมูลให้คัดลอก', 'error'); return; }
+            var lines = ['📦 บิลค่าส่งในไทย — ' + (d.roundLabel || ''), ''];
+            ships.forEach(function(sh, i){
+                var courier = sh.courier || '-';
+                var ref = sh.refNo || '';
+                var price = parseFloat(sh.price) || 0;
+                var boxesStr = (sh.boxes || []).join(', ');
+                lines.push((i+1) + ') ' + courier + (ref ? ' เลขพัสดุ: ' + ref : ''));
+                if (boxesStr) lines.push('   Box: ' + boxesStr);
+                if (price > 0) lines.push('   ค่าจัดส่ง: ' + price.toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' บาท');
+                lines.push('');
+            });
+            if ((s.total_price || 0) > 0) {
+                lines.push('รวมทั้งหมด: ' + Number(s.total_price).toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' บาท');
+            }
+            copyTextToClipboard(lines.join('\n'));
+            _toast('คัดลอกทั้งหมด ' + ships.length + ' รายการ พร้อมส่งต่อ');
+        }
 
         // === Invoice Summary + QR PromptPay ===
         var _invData = { total: 0, importCost: '0', codCost: '0', priceTotal: '0', roundLabel: '', priceTotalRaw: 0 };

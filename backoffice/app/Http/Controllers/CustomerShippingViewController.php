@@ -225,6 +225,33 @@ class CustomerShippingViewController extends Controller
             $totalRecords= count($data);
             $startDate= !empty($request->start_date)?Carbon::parse($request->start_date)->format('d/m/Y'):'';
             $startDateRaw = $request->start_date;
+
+            // สร้าง summary บิลค่าส่งไทย (group by thai_tracking_no — 1 ref = 1 shipment)
+            $thaiShipments = [];
+            $thaiShippingTotal = 0.0;
+            $thaiBoxCount = 0;
+            $rowsWithRef = $data->filter(function($r){ return !empty($r->thai_tracking_no); });
+            $grouped = $rowsWithRef->groupBy('thai_tracking_no');
+            foreach ($grouped as $refNo => $rows) {
+                $first = $rows->first();
+                $boxes = $rows->pluck('box_no')->filter()->unique()->values()->all();
+                $price = (float) ($first->thai_shipping_price ?? 0);
+                $thaiShippingTotal += $price;
+                $thaiBoxCount += count($boxes);
+                $thaiShipments[] = [
+                    'refNo'       => $refNo,
+                    'courier'     => $first->thai_courier,
+                    'price'       => $price,
+                    'boxes'       => $boxes,
+                    'billed_at'   => $first->thai_billed_at ? Carbon::parse($first->thai_billed_at)->format('d/m/Y') : null,
+                ];
+            }
+            $thaiShippingSummary = [
+                'shipment_count' => count($thaiShipments),
+                'box_count'      => $thaiBoxCount,
+                'total_price'    => round($thaiShippingTotal, 2),
+                'shipments'      => $thaiShipments,
+            ];
 //            dd($data);
             return Datatables::of($data)
 
@@ -244,6 +271,7 @@ class CustomerShippingViewController extends Controller
                     ,'total_records'=>$totalRecords
                     ,'start_date'=>$startDate
                     ,'data_export_link'=>url('customershippingsviewexport2',['customerno'=>!empty($request->customerno)?$request->customerno:'','start_date'=>$startDateRaw]) . (!empty($request->recipient_filter) ? '?recipient_filter=' . urlencode($request->recipient_filter) : '')
+                    ,'thai_shipping_summary'=>$thaiShippingSummary
 
                     ,'query'=>config('app.debug') ? $sqlQuery : null
                 ])// แสดงผลรวมของค่า COD])
