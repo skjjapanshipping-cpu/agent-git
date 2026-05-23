@@ -577,8 +577,8 @@ class QrScanController extends Controller
             ]);
         }
 
-        // ป้องกันจ่ายผิดคน
-        if ($parcel->customerno !== $customerno) {
+        // ป้องกันจ่ายผิดคน (case-insensitive)
+        if (strcasecmp((string) $parcel->customerno, (string) $customerno) !== 0) {
             return response()->json([
                 'success' => false,
                 'type' => 'wrong_customer',
@@ -594,11 +594,28 @@ class QrScanController extends Controller
             $l = $request->input('length');
             $h = $request->input('height');
             if ($w && $l && $h) {
+                $wNum = round((float) $w, 2);
+                $lNum = round((float) $l, 2);
+                $hNum = round((float) $h, 2);
+
+                // Format dimension string: integers shown without decimals (e.g. 38*53*28cm)
+                $fmt = function ($v) {
+                    $v = $v + 0;
+                    return is_int($v) ? (string) $v : rtrim(rtrim(number_format($v, 2, '.', ''), '0'), '.');
+                };
+                $dimNote = $fmt($wNum) . '*' . $fmt($lNum) . '*' . $fmt($hNum) . 'cm';
+
+                // Preserve existing customer note if it is not auto-dimension, append dimension
+                $existingNote = trim((string) $parcel->note);
+                $isAutoDim = $existingNote === '' || (bool) preg_match('/^\d+(?:\.\d+)?\*\d+(?:\.\d+)?\*\d+(?:\.\d+)?cm$/u', $existingNote);
+                $newNote = $isAutoDim ? $dimNote : ($existingNote . ' | ' . $dimNote);
+
                 $dimensionData = [
-                    'width' => round((float)$w, 2),
-                    'length' => round((float)$l, 2),
-                    'height' => round((float)$h, 2),
-                    'import_cost' => round((float)$w * (float)$l * (float)$h * 0.01, 2),
+                    'width' => $wNum,
+                    'length' => $lNum,
+                    'height' => $hNum,
+                    'import_cost' => round($wNum * $lNum * $hNum * 0.01, 2),
+                    'note' => $newNote,
                 ];
             }
         }
@@ -615,6 +632,7 @@ class QrScanController extends Controller
 
         if ($affected === 0) {
             $parcel->refresh();
+            $pileProgress = $this->computePileProgress($customerno, $etdDates, $parcel->delivery_fullname);
             return response()->json([
                 'success' => true,
                 'type' => 'duplicate',
@@ -625,6 +643,7 @@ class QrScanController extends Controller
                     'weight' => $parcel->weight,
                     'delivery_fullname' => $parcel->delivery_fullname,
                 ],
+                'pile_progress' => $pileProgress,
             ]);
         }
 
@@ -653,6 +672,8 @@ class QrScanController extends Controller
             $importCostMsg = " (ค่านำเข้า: {$dimensionData['import_cost']} บาท)";
         }
 
+        $pileProgress = $this->computePileProgress($customerno, $etdDates, $parcel->delivery_fullname);
+
         return response()->json([
             'success' => true,
             'type' => 'ok',
@@ -670,7 +691,49 @@ class QrScanController extends Controller
                 'total' => $total,
                 'complete' => $pickedUp >= $total,
             ],
+            'pile_progress' => $pileProgress,
         ]);
+    }
+
+    /**
+     * Compute per-pile (delivery_fullname group) progress.
+     * Source-of-truth for cross-device sync — clients should NOT rely on
+     * locally computed pile counts because they don't know about scans
+     * happening on other scanner devices in real time.
+     *
+     * @param string         $customerno
+     * @param array|string|null $etdDates
+     * @param string|null    $deliveryName  (null/empty => unspecified recipient group)
+     * @return array { picked_up, total, complete, name }
+     */
+    protected function computePileProgress($customerno, $etdDates, $deliveryName)
+    {
+        $name = $deliveryName === null ? '' : (string) $deliveryName;
+        $q = Customershipping::where('excel_status', '1')
+            ->where('customerno', $customerno)
+            ->whereNotNull('box_no')->where('box_no', '!=', '');
+        if ($etdDates) {
+            $this->applyEtdFilter($q, $etdDates);
+        }
+        // Group key: empty string OR matching name
+        if ($name === '') {
+            $q->where(function ($w) {
+                $w->whereNull('delivery_fullname')
+                  ->orWhere('delivery_fullname', '');
+            });
+        } else {
+            $q->where('delivery_fullname', $name);
+        }
+
+        $total    = (clone $q)->count();
+        $pickedUp = (clone $q)->whereNotNull('picked_up_at')->count();
+
+        return [
+            'name'      => $name,
+            'total'     => $total,
+            'picked_up' => $pickedUp,
+            'complete'  => $total > 0 && $pickedUp >= $total,
+        ];
     }
 
     /**
@@ -807,20 +870,41 @@ class QrScanController extends Controller
 
     /**
      * TTS Proxy: ส่งข้อความไปให้ Google Translate อ่านเป็นเสียงภาษาไทย แล้ว stream กลับ
+     *
+     * - Disk cache: storage/app/tts-cache/{md5}.mp3 (≈400 phrases ≈ 4MB max)
+     * - First hit: fetch Google → save → serve (≈300ms)
+     * - Subsequent: serve from disk (≈5ms) — เสียงเหมือนเดิมทุกเครื่อง
      */
     public function ttsProxy(Request $request)
     {
         $text = $request->query('q', '');
+        $text = trim((string) $text);
         if (!$text || mb_strlen($text) > 200) {
             return response('', 400);
         }
 
+        $cacheDir  = storage_path('app/tts-cache');
+        if (!is_dir($cacheDir)) {
+            @mkdir($cacheDir, 0775, true);
+        }
+        $cacheKey  = md5('th|' . $text);
+        $cacheFile = $cacheDir . DIRECTORY_SEPARATOR . $cacheKey . '.mp3';
+
+        // Serve from disk cache if available and non-empty
+        if (is_file($cacheFile) && filesize($cacheFile) > 256) {
+            return response()->file($cacheFile, [
+                'Content-Type'  => 'audio/mpeg',
+                'Cache-Control' => 'public, max-age=2592000, immutable', // 30 days client-side
+                'X-Tts-Cache'   => 'HIT',
+            ]);
+        }
+
         $url = 'https://translate.google.com/translate_tts?'
             . http_build_query([
-                'ie' => 'UTF-8',
-                'tl' => 'th',
+                'ie'     => 'UTF-8',
+                'tl'     => 'th',
                 'client' => 'tw-ob',
-                'q' => $text,
+                'q'      => $text,
             ]);
 
         try {
@@ -828,24 +912,153 @@ class QrScanController extends Controller
             curl_setopt_array($ch, [
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_FOLLOWLOCATION => true,
-                CURLOPT_TIMEOUT => 5,
-                CURLOPT_USERAGENT => 'Mozilla/5.0',
+                CURLOPT_TIMEOUT        => 6,
+                CURLOPT_USERAGENT      => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+                CURLOPT_HTTPHEADER     => [
+                    'Accept: audio/mpeg, audio/*;q=0.9, */*;q=0.8',
+                    'Accept-Language: th-TH,th;q=0.9,en;q=0.8',
+                    'Referer: https://translate.google.com/',
+                ],
                 CURLOPT_SSL_VERIFYPEER => true,
                 CURLOPT_SSL_VERIFYHOST => 2,
             ]);
-            $audio = curl_exec($ch);
+            $audio    = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $ctype    = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
             curl_close($ch);
 
-            if ($httpCode !== 200 || !$audio) {
+            // Validate: must be 200, must be audio/mpeg, and at least ~256 bytes (silence is ~1KB)
+            $isAudio = $audio && (stripos((string) $ctype, 'audio') !== false || (strlen($audio) > 256 && substr($audio, 0, 3) !== '<!D'));
+            if ($httpCode !== 200 || !$isAudio || strlen($audio) < 256) {
+                \Log::warning('[TTS] upstream bad response', [
+                    'http'  => $httpCode,
+                    'ctype' => $ctype,
+                    'len'   => $audio ? strlen($audio) : 0,
+                    'q'     => $text,
+                ]);
                 return response('', 502);
+            }
+
+            // Atomic write to disk cache
+            $tmp = $cacheFile . '.tmp.' . getmypid();
+            if (file_put_contents($tmp, $audio) !== false) {
+                @rename($tmp, $cacheFile);
+                @chmod($cacheFile, 0664);
             }
 
             return response($audio)
                 ->header('Content-Type', 'audio/mpeg')
-                ->header('Cache-Control', 'public, max-age=86400');
+                ->header('Cache-Control', 'public, max-age=2592000, immutable')
+                ->header('X-Tts-Cache', 'MISS');
         } catch (\Exception $e) {
+            \Log::error('[TTS] exception: ' . $e->getMessage());
             return response('', 502);
         }
+    }
+
+    /**
+     * TTS Health Check (admin only)
+     *
+     * Returns:
+     *  - cache stats (file count, total size, oldest/newest mtime)
+     *  - recent TTS errors from laravel.log (last 50 lines tagged [TTS])
+     */
+    public function ttsHealth(Request $request)
+    {
+        $cacheDir = storage_path('app/tts-cache');
+        $files    = is_dir($cacheDir) ? (glob($cacheDir . DIRECTORY_SEPARATOR . '*.mp3') ?: []) : [];
+
+        $count = 0;
+        $bytes = 0;
+        $oldest = null;
+        $newest = null;
+        foreach ($files as $f) {
+            $sz = @filesize($f);
+            $mt = @filemtime($f);
+            if ($sz === false || $mt === false) {
+                continue;
+            }
+            $count++;
+            $bytes += $sz;
+            if ($oldest === null || $mt < $oldest) $oldest = $mt;
+            if ($newest === null || $mt > $newest) $newest = $mt;
+        }
+
+        // Scan recent laravel.log for [TTS] lines (best-effort, capped at 2MB tail)
+        $logFile = storage_path('logs/laravel.log');
+        $ttsLines = [];
+        if (is_file($logFile)) {
+            $fh = @fopen($logFile, 'rb');
+            if ($fh) {
+                $sz = filesize($logFile);
+                $tail = 2 * 1024 * 1024; // last 2MB
+                if ($sz > $tail) {
+                    fseek($fh, -$tail, SEEK_END);
+                    fgets($fh); // skip partial line
+                }
+                while (!feof($fh)) {
+                    $line = fgets($fh);
+                    if ($line === false) break;
+                    if (stripos($line, '[TTS]') !== false) {
+                        $ttsLines[] = rtrim($line);
+                        if (count($ttsLines) > 100) {
+                            array_shift($ttsLines);
+                        }
+                    }
+                }
+                fclose($fh);
+            }
+        }
+
+        // Test live upstream (small probe, with very short timeout)
+        $upstreamOk = null;
+        $upstreamMs = null;
+        if ($request->query('probe') === '1') {
+            $probeUrl = 'https://translate.google.com/translate_tts?ie=UTF-8&tl=th&client=tw-ob&q='
+                . urlencode('ทดสอบ');
+            $t0 = microtime(true);
+            $ch = curl_init($probeUrl);
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_TIMEOUT        => 4,
+                CURLOPT_USERAGENT      => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+                CURLOPT_HTTPHEADER     => [
+                    'Referer: https://translate.google.com/',
+                ],
+            ]);
+            $body = curl_exec($ch);
+            $http = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+            $upstreamMs = (int) ((microtime(true) - $t0) * 1000);
+            $upstreamOk = ($http === 200 && $body && strlen($body) > 256);
+        }
+
+        return response()->json([
+            'cache' => [
+                'count'         => $count,
+                'bytes'         => $bytes,
+                'size_human'    => $this->formatBytes($bytes),
+                'oldest'        => $oldest ? date('Y-m-d H:i:s', $oldest) : null,
+                'newest'        => $newest ? date('Y-m-d H:i:s', $newest) : null,
+                'directory'     => $cacheDir,
+            ],
+            'recent_errors' => array_slice($ttsLines, -20), // last 20 only
+            'error_count'   => count($ttsLines),
+            'upstream' => [
+                'probed' => $request->query('probe') === '1',
+                'ok'     => $upstreamOk,
+                'ms'     => $upstreamMs,
+            ],
+            'now' => now()->toIso8601String(),
+        ]);
+    }
+
+    private function formatBytes($bytes)
+    {
+        if ($bytes < 1024) return $bytes . ' B';
+        if ($bytes < 1024 * 1024) return round($bytes / 1024, 1) . ' KB';
+        if ($bytes < 1024 * 1024 * 1024) return round($bytes / 1024 / 1024, 2) . ' MB';
+        return round($bytes / 1024 / 1024 / 1024, 2) . ' GB';
     }
 }

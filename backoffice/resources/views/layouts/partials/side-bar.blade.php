@@ -236,9 +236,33 @@
 
 
       <li class="{{ Route::is('customers.*') ? 'active' : '' }}">
-        <a href="{{ route('customers.index') }}">
+        <a data-toggle="collapse" href="#customers-menu" aria-expanded="false" class="collapsed">
           <i class="fa fa-address-book"></i>
           <span>Customers</span>
+          <b class="caret"></b>
+        </a>
+        <div class="collapse {{ Route::is('customers.*') ? 'show' : '' }}" id="customers-menu">
+          <ul class="nav">
+            <li class="{{ Route::is('customers.index') ? 'active' : '' }}">
+              <a href="{{ route('customers.index') }}">
+                <i class="fa fa-list"></i>
+                <span>รายการลูกค้า</span>
+              </a>
+            </li>
+            <li class="{{ Route::is('customers.create') ? 'active' : '' }}">
+              <a href="{{ route('customers.create') }}">
+                <i class="fa fa-user-plus"></i>
+                <span>เพิ่มสมาชิกใหม่</span>
+              </a>
+            </li>
+          </ul>
+        </div>
+      </li>
+
+      <li class="{{ Route::is('admin.settings.warehouse') ? 'active' : '' }}">
+        <a href="{{ route('admin.settings.warehouse') }}">
+          <i class="fa fa-building"></i>
+          <span>ตั้งค่าโกดังญี่ปุ่น</span>
         </a>
       </li>
 

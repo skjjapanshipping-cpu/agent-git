@@ -976,23 +976,45 @@
             }
             .modern-header-actions {
                 width: 100%;
-                flex-direction: column;
-                gap: 10px;
                 display: none !important;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 8px;
                 margin-top: 0;
             }
             .modern-header-actions.mobile-open {
-                display: flex !important;
+                display: grid !important;
                 margin-top: 10px;
             }
-            
-            /* Full width buttons */
-            .modern-header-actions .btn {
+
+            /* 2-column grid buttons (horizontal layout) */
+            .modern-header-actions .btn,
+            .modern-header-actions .btn-invoice-trigger,
+            .modern-header-actions .btn-ab-trigger {
                 width: 100%;
                 justify-content: center;
+                align-items: center;
                 margin: 0;
-                padding: 12px;
-                font-size: 1rem;
+                padding: 11px 8px;
+                font-size: 0.82rem;
+                line-height: 1.2;
+                min-height: 44px;
+                white-space: normal;
+                word-break: break-word;
+                text-align: center;
+            }
+            .modern-header-actions .btn i,
+            .modern-header-actions .btn-invoice-trigger i,
+            .modern-header-actions .btn-ab-trigger i {
+                margin-right: 4px;
+                font-size: 0.9rem;
+            }
+            /* Long-text buttons span full width for readability */
+            .modern-header-actions #updateSelected {
+                grid-column: 1 / -1;
+            }
+            /* Hide form (keeps grid clean) */
+            .modern-header-actions form#updateForm {
+                display: none !important;
             }
 
             /* Controls Layout - MOBILE ONE LINE */

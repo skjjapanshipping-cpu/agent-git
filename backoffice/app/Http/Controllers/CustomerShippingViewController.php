@@ -95,7 +95,8 @@ class CustomerShippingViewController extends Controller
         if (!$customershipping) {
             abort(404);
         }
-        if (!$authUser->hasRole('admin') && $customershipping->customerno !== $authUser->customerno) {
+        // เปรียบเทียบ customerno แบบ case-insensitive (DB เก็บ ANW-xxxx ส่วน users เก็บ anw-xxxx)
+        if (!$authUser->hasRole('admin') && strcasecmp((string) $customershipping->customerno, (string) $authUser->customerno) !== 0) {
             abort(403);
         }
 
@@ -107,8 +108,8 @@ class CustomerShippingViewController extends Controller
     {
         $authUser = Auth::user();
 
-        // ป้องกัน IDOR
-        if (!$authUser->hasRole('admin') && $customershipping->customerno !== $authUser->customerno) {
+        // ป้องกัน IDOR (case-insensitive)
+        if (!$authUser->hasRole('admin') && strcasecmp((string) $customershipping->customerno, (string) $authUser->customerno) !== 0) {
             abort(403);
         }
 
@@ -265,7 +266,7 @@ class CustomerShippingViewController extends Controller
         set_time_limit(300);
 
         $user = Auth::user();
-        if (!$user->hasRole('admin') && $user->customerno !== $customerno) {
+        if (!$user->hasRole('admin') && strcasecmp((string) $user->customerno, (string) $customerno) !== 0) {
             abort(403);
         }
 
@@ -630,13 +631,15 @@ class CustomerShippingViewController extends Controller
 
     public static function getEtd3Month($customerno)
     {
-        $etdDates = Customershipping::selectRaw('DISTINCT DATE(etd) as etd, 
-            CASE 
+        $etdDates = Customershipping::selectRaw('DISTINCT DATE(etd) as etd,
+            CASE
                 WHEN COUNT(CASE WHEN status = 2 THEN 1 END) > 0 AND COUNT(CASE WHEN status = 3 THEN 1 END) = 0 THEN 2
                 WHEN COUNT(CASE WHEN status = 3 THEN 1 END) > 0 AND COUNT(CASE WHEN status = 2 THEN 1 END) = 0 THEN 3
                 WHEN COUNT(CASE WHEN status = 2 THEN 1 END) > 0 AND COUNT(CASE WHEN status = 3 THEN 1 END) > 0 THEN 2
                 ELSE MAX(status)
-            END as status')
+            END as status,
+            SUM(CASE WHEN shipping_method = 2 THEN 1 ELSE 0 END) as air_count,
+            SUM(CASE WHEN shipping_method = 1 OR shipping_method IS NULL THEN 1 ELSE 0 END) as sea_count')
             ->where('customerno', $customerno)
             //เพิ่มเป็น 6 เดือน
             ->where('etd', '>=', Carbon::now()->subMonths(6)->format('Y-m-d'))
@@ -646,17 +649,23 @@ class CustomerShippingViewController extends Controller
             ->mapWithKeys(function ($item) {
                 $formattedDate = Carbon::parse($item->etd)->format('d/m/Y'); // วันที่ที่จะแสดงใน dropdown
                 $valueDate = Carbon::parse($item->etd)->format('Y-m-d'); // ค่า value ใน format Y-m-d
-                
+
                 // กำหนดสัญลักษณ์สีตามสถานะ
                 $statusIndicator = '';
                 if ($item->status == 2) {
-                    $statusIndicator = '🔴 '; // สีแดง - อยู่ระหว่างขนส่ง
+                    $statusIndicator = '🔴'; // สีแดง - อยู่ระหว่างขนส่ง
                 } elseif ($item->status == 3 || $item->status == 4) {
-                    $statusIndicator = '🟢 '; // สีเขียว - สินค้าถึงไทยแล้ว หรือ สำเร็จ
+                    $statusIndicator = '🟢'; // สีเขียว - สินค้าถึงไทยแล้ว หรือ สำเร็จ
                 }
-                // ไม่แสดง icon สำหรับสถานะอื่นๆ
-                
-                return [$valueDate => $statusIndicator . $formattedDate];
+
+                // ไอคอนประเภทขนส่ง: เครื่องบิน (✈️) ถ้ามีของทางอากาศมากกว่า, ไม่งั้นเรือ (🚢)
+                $airCount = (int) ($item->air_count ?? 0);
+                $seaCount = (int) ($item->sea_count ?? 0);
+                $methodIcon = $airCount > $seaCount ? '✈️' : '🚢';
+
+                // รูปแบบ: [status] [icon] วันที่   เช่น  🔴 🚢 11/05/2026
+                $parts = array_filter([$statusIndicator, $methodIcon, $formattedDate]);
+                return [$valueDate => implode(' ', $parts)];
             });
 
         return $etdDates;

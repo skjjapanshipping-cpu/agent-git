@@ -400,6 +400,21 @@
                         </div>
                     @endif
 
+                    @if ($importSkipped = Session::get('import_skipped'))
+                        <div class="alert alert-warning" style="margin:12px 20px; border-radius:10px; background:#fff3cd; border-color:#ffc107; color:#856404;">
+                            <h5 style="margin:0 0 8px; font-weight:700; font-size:14px;">
+                                <i class="fa fa-exclamation-circle"></i>
+                                ⚠️ ข้ามแถวที่ข้อมูลไม่ครบ {{ count($importSkipped) }} แถว
+                            </h5>
+                            <p style="font-size:12px; margin-bottom:8px;">แถวต่อไปนี้ <strong>ถูกข้าม</strong> เนื่องจากขาดข้อมูลสำคัญ — กรุณาเช็คไฟล์ Excel และ import ใหม่หากจำเป็น:</p>
+                            <ul style="font-size:12px; margin:0; padding-left:20px;">
+                                @foreach ($importSkipped as $msg)
+                                    <li style="margin-bottom:3px;">{{ $msg }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+
                     <div class="card-body">
                         <div class="table-responsive">
                             <table class="table table-striped table-hover" id="dt-mant-table-1">

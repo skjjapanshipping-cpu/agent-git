@@ -373,6 +373,86 @@
             color: #cbd5e1;
         }
 
+        /* --- Address Note Banner --- */
+        .address-note {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            background: linear-gradient(135deg, #eff6ff, #dbeafe);
+            border: 1px solid #93c5fd;
+            border-left: 4px solid #1D8AC9;
+            border-radius: 12px;
+            padding: 14px 18px;
+            color: #1e3a8a;
+        }
+        .address-note-icon {
+            font-size: 22px;
+            line-height: 1;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+        .address-note-title {
+            font-weight: 700;
+            font-size: 14px;
+            color: #0c5e8e;
+            margin-bottom: 4px;
+        }
+        .address-note-text {
+            font-size: 13px;
+            line-height: 1.55;
+            color: #1e3a8a;
+        }
+
+        /* --- Address Quick Search --- */
+        .address-quick-wrap { position: relative; display: flex; gap: 8px; align-items: stretch; }
+        .address-quick-wrap .input-group-modern { flex: 1; }
+        .address-quick-clear {
+            width: 44px; flex-shrink: 0;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            color: #64748b;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+        .address-quick-clear:hover { background: #fee2e2; color: #dc2626; border-color: #fca5a5; }
+        .address-quick-results {
+            position: absolute; z-index: 1050;
+            left: 0; right: 52px; top: calc(100% + 4px);
+            background: #fff;
+            border: 1px solid #cbd5e1;
+            border-radius: 12px;
+            box-shadow: 0 12px 32px rgba(0,0,0,.14);
+            max-height: 340px; overflow-y: auto;
+        }
+        .address-quick-results .aq-item {
+            padding: 10px 14px; cursor: pointer;
+            border-bottom: 1px solid #f1f5f9;
+            display: flex; align-items: center; gap: 10px; font-size: 14px;
+        }
+        .address-quick-results .aq-item:last-child { border-bottom: 0; }
+        .address-quick-results .aq-item:hover,
+        .address-quick-results .aq-item.active { background: #eff6ff; }
+        .address-quick-results .aq-zip {
+            background: #1D8AC9; color: #fff; font-weight: 600;
+            font-family: 'SF Mono', Menlo, monospace; padding: 3px 8px;
+            border-radius: 6px; font-size: 12px; min-width: 54px; text-align: center;
+        }
+        .address-quick-results .aq-text { flex: 1; line-height: 1.35; color: #0f172a; }
+        .address-quick-results .aq-text small { color: #64748b; }
+        .address-quick-results .aq-empty,
+        .address-quick-results .aq-loading {
+            padding: 14px; text-align: center; color: #94a3b8; font-size: 13px;
+        }
+        .address-quick-results mark {
+            background: #fef08a; color: inherit; padding: 0 2px; border-radius: 2px;
+        }
+        .address-quick-status {
+            display: block; min-height: 16px; margin-top: 4px;
+            color: #64748b; font-size: 12px;
+        }
+
         /* --- Save Button --- */
         .form-actions-modern {
             margin-top: 28px;
@@ -594,8 +674,83 @@
                 </div>
             </div>
 
-            <!-- ===== RIGHT: EDIT FORM ===== -->
+            <!-- ===== RIGHT: WAREHOUSE + EDIT FORM ===== -->
             <div class="profile-main">
+
+                @php
+                    $myCustomerCode = strtoupper(Auth::user()->customerno ?? '');
+                    $warehouses = \App\Models\SystemSetting::warehouses($myCustomerCode);
+                @endphp
+                @if(!empty($warehouses['sea']['address_jp']) || !empty($warehouses['air']['address_jp']))
+                <div class="card-profile" style="margin-bottom:24px;">
+                    <div class="card-header-edit">
+                        <div class="header-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706);"><i class="fa fa-building"></i></div>
+                        <div>
+                            <h3>ที่อยู่โกดังในญี่ปุ่น</h3>
+                            <p class="header-sub">เลือกที่อยู่ตามประเภทขนส่ง — แจ้งให้ร้านค้าในญี่ปุ่นส่งของมา</p>
+                        </div>
+                    </div>
+                    <div class="card-body-edit">
+                        <div class="row">
+                            @foreach(['sea','air'] as $t)
+                                @php
+                                    $w = $warehouses[$t] ?? null;
+                                    $bg = $t === 'sea' ? '#fffbeb' : '#dbeafe';
+                                    $border = $t === 'sea' ? '#fde68a' : '#93c5fd';
+                                    $titleColor = $t === 'sea' ? '#92400e' : '#1e40af';
+                                @endphp
+                                @if($w && (!empty($w['address_jp']) || !empty($w['address_en'])))
+                                <div class="col-md-6 mb-3">
+                                    <div style="background:{{ $bg }}; border:1px solid {{ $border }}; border-radius:12px; padding:16px 20px; line-height:1.6; height:100%;">
+                                        <div style="font-weight:700; font-size:14px; color:{{ $titleColor }}; margin-bottom:8px;">{{ $w['icon'] }} {{ $w['label'] }}</div>
+
+                                        {{-- ENGLISH ADDRESS (PRIMARY) --}}
+                                        <div id="prof-wh-{{ $t }}-text" style="font-size:15px; color:#0f172a;">
+                                            @if(!empty($w['address_en']))
+                                                <strong style="color:{{ $titleColor }}; font-size:16px; letter-spacing:.2px;">{{ $w['name_en'] ?? $w['name_jp'] }}</strong><br>
+                                                <span style="font-weight:600;">{{ $w['postcode'] }}</span><br>
+                                                <span>{{ $w['address_en'] }}</span>
+                                                @if(!empty($w['phone']))<br><i class="fa fa-phone" style="margin-right:4px; color:{{ $titleColor }};"></i><span style="font-weight:600; font-family:'SF Mono','Menlo',monospace;">{{ $w['phone'] }}</span>@endif
+                                            @else
+                                                {{-- ถ้าไม่มีภาษาอังกฤษ ให้แสดงญี่ปุ่นเด่นแทน --}}
+                                                <strong style="color:{{ $titleColor }}; font-size:16px;">{{ $w['name_jp'] }}</strong><br>
+                                                〒{{ $w['postcode'] }}<br>
+                                                {{ $w['address_jp'] }}
+                                                @if(!empty($w['phone']))<br><i class="fa fa-phone" style="margin-right:4px; color:{{ $titleColor }};"></i><span style="font-weight:600; font-family:'SF Mono','Menlo',monospace;">{{ $w['phone'] }}</span>@endif
+                                            @endif
+                                        </div>
+
+                                        {{-- JAPANESE ADDRESS (SECONDARY) --}}
+                                        @if(!empty($w['address_jp']) && !empty($w['address_en']))
+                                            <div style="margin-top:10px; padding-top:10px; border-top:1px dashed {{ $border }}; font-size:12px; color:#6b7280; line-height:1.55;">
+                                                <em style="color:#475569;">{{ $w['name_jp'] }}</em><br>
+                                                〒{{ $w['postcode'] }}<br>
+                                                {{ $w['address_jp'] }}
+                                            </div>
+                                        @endif
+
+                                        <div style="margin-top:12px; text-align:right;">
+                                            <button type="button" onclick="_profCopy('prof-wh-{{ $t }}-text', event)" style="background:#fff; border:1px solid {{ $border }}; color:{{ $titleColor }}; padding:6px 12px; border-radius:8px; cursor:pointer; font-size:12px; font-weight:600;">
+                                                📋 คัดลอก
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                @endif
+                            @endforeach
+                        </div>
+                        @if($myCustomerCode)
+                        <div style="margin-top:8px; padding:12px 16px; background:#dbeafe; border-left:4px solid #1D8AC9; border-radius:10px; color:#1e3a8a; font-size:14px;">
+                            <i class="fa fa-info-circle"></i> <strong>สำคัญ:</strong> เขียน <span style="display:inline-block; font-family:'SF Mono','Menlo',monospace; font-weight:700; background:#fff; color:#1D8AC9; padding:2px 10px; border-radius:6px; border:1px solid #93c5fd;">รหัสลูกค้า {{ $myCustomerCode }}</span> ลงบนกล่องพัสดุทุกครั้ง เพื่อให้โกดังจัดส่งให้คุณได้ถูกต้อง
+                        </div>
+                        @endif
+                    </div>
+                </div>
+                <script>
+                    function _profCopy(id, ev){var el=document.getElementById(id);if(!el)return;navigator.clipboard.writeText(el.innerText).then(function(){var b=ev.target;var old=b.innerText;b.innerText='✓ คัดลอกแล้ว';setTimeout(function(){b.innerText=old;},1500);});}
+                </script>
+                @endif
+
                 <div class="card-profile">
                     <div class="card-header-edit">
                         <div class="header-icon"><i class="fa fa-pencil"></i></div>
@@ -660,6 +815,41 @@
                                 <!-- Section: Address -->
                                 <div class="form-section-title">
                                     <i class="fa fa-map-marker"></i> Address Information
+                                </div>
+
+                                {{-- หมายเหตุ: บอกลูกค้าว่าใช้ที่อยู่นี้สำหรับจัดส่งที่ไทย --}}
+                                <div class="form-group-modern full-width">
+                                    <div class="address-note">
+                                        <div class="address-note-icon">📍</div>
+                                        <div>
+                                            <div class="address-note-title">หมายเหตุ — ที่อยู่ปัจจุบันสำหรับจัดส่งที่ไทย</div>
+                                            <div class="address-note-text">
+                                                หากลูกค้าเลือก My Shipping เป็นที่อยู่ปัจจุบัน
+                                                ระบบจะจัดส่งเป็นที่อยู่ตามนี้ในการจัดส่งพัสดุให้ที่ไทย 🙏
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {{-- ✨ Quick Address Search: พิมพ์ จังหวัด/อำเภอ/ตำบล/รหัสไปรษณีย์ → กรอกฟิลด์ที่เหลือให้อัตโนมัติ --}}
+                                <div class="form-group-modern full-width">
+                                    <label>
+                                        <i class="fa fa-search" style="margin-right:4px; color:#1D8AC9;"></i>
+                                        ค้นหาที่อยู่ด่วน
+                                        <span style="font-weight:400; color:#94a3b8; font-size:0.8rem;">— พิมพ์ จังหวัด / อำเภอ / ตำบล / รหัสไปรษณีย์ อย่างใดอย่างหนึ่ง</span>
+                                    </label>
+                                    <div class="address-quick-wrap">
+                                        <div class="input-group-modern">
+                                            <i class="fa fa-search"></i>
+                                            <input type="text" id="address_quick_search" class="form-control-modern" autocomplete="off"
+                                                   placeholder="เช่น บางรัก, ห้วยขวาง, กรุงเทพ, 10110 ...">
+                                        </div>
+                                        <button type="button" id="address_quick_clear" class="address-quick-clear" title="ล้าง">
+                                            <i class="fa fa-times"></i>
+                                        </button>
+                                        <div id="address_quick_results" class="address-quick-results" style="display:none;"></div>
+                                    </div>
+                                    <small id="address_quick_status" class="address-quick-status"></small>
                                 </div>
 
                                 <div class="form-group-modern full-width">
@@ -789,6 +979,155 @@
                 });
             });
         }
+
+        // ===== Quick Address Search =====
+        (function() {
+            const searchUrl = "{{ url('/api/tambons/search') }}";
+            const amphoesUrl = "{{ url('/api/amphoes') }}";
+            const tambonsUrl = "{{ url('/api/tambons') }}";
+            const inp = document.getElementById('address_quick_search');
+            const box = document.getElementById('address_quick_results');
+            const status = document.getElementById('address_quick_status');
+            const clearBtn = document.getElementById('address_quick_clear');
+            if (!inp || !box) return;
+
+            let debounceTimer = null;
+            let activeIdx = -1;
+            let lastResults = [];
+            let currentReq = 0;
+
+            function escapeHtml(s) {
+                return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+            }
+            function highlight(text, q) {
+                if (!q) return escapeHtml(text);
+                const esc = escapeHtml(text);
+                try {
+                    const re = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+                    return esc.replace(re, '<mark>$1</mark>');
+                } catch { return esc; }
+            }
+            function hide() { box.style.display = 'none'; box.innerHTML = ''; activeIdx = -1; }
+            function show() { box.style.display = 'block'; }
+            function setStatus(msg) { status.textContent = msg || ''; }
+
+            function render(results, q) {
+                lastResults = results || [];
+                if (!results.length) {
+                    box.innerHTML = '<div class="aq-empty">😕 ไม่พบที่อยู่ที่ตรงกับ "' + escapeHtml(q) + '"</div>';
+                    show(); return;
+                }
+                box.innerHTML = results.map((r, i) => `
+                    <div class="aq-item${i===0?' active':''}" data-idx="${i}">
+                        <span class="aq-zip">${escapeHtml(r.zipcode || '-')}</span>
+                        <div class="aq-text">
+                            <strong>${highlight('ตำบล' + r.tambon, q)}</strong>
+                            <small> · อำเภอ${highlight(r.amphoe, q)} · จังหวัด${highlight(r.province, q)}</small>
+                        </div>
+                    </div>`).join('');
+                activeIdx = 0;
+                show();
+            }
+
+            function ensureOption(sel, value) {
+                if (!sel || !value) return;
+                if (!Array.from(sel.options).some(o => o.value === value)) {
+                    const opt = document.createElement('option');
+                    opt.value = value; opt.text = value;
+                    sel.appendChild(opt);
+                }
+            }
+            function loadAmphoesPromise(provSel, distSel) {
+                return fetch(amphoesUrl + '?province=' + encodeURIComponent(provSel.value))
+                    .then(r => r.json())
+                    .then(items => {
+                        distSel.innerHTML = '<option value="">Select District</option>';
+                        items.forEach(it => {
+                            const o = document.createElement('option');
+                            o.value = it.amphoe; o.text = it.amphoe;
+                            distSel.appendChild(o);
+                        });
+                    });
+            }
+            function loadTambonsPromise(provSel, distSel, subSel) {
+                const url = tambonsUrl + '?province=' + encodeURIComponent(provSel.value)
+                          + '&amphoe=' + encodeURIComponent(distSel.value);
+                return fetch(url).then(r => r.json()).then(items => {
+                    subSel.innerHTML = '<option value="">Select Sub-district</option>';
+                    items.forEach(it => {
+                        const o = document.createElement('option');
+                        o.value = it.tambon; o.text = it.tambon;
+                        subSel.appendChild(o);
+                    });
+                });
+            }
+            function pick(r) {
+                if (!r) return;
+                const provSel = document.getElementById('province');
+                const distSel = document.getElementById('distrinct');
+                const subSel  = document.getElementById('subdistrinct');
+                const post    = document.getElementById('postcode');
+                ensureOption(provSel, r.province);
+                provSel.value = r.province;
+                loadAmphoesPromise(provSel, distSel).then(() => {
+                    ensureOption(distSel, r.amphoe);
+                    distSel.value = r.amphoe;
+                    return loadTambonsPromise(provSel, distSel, subSel);
+                }).then(() => {
+                    ensureOption(subSel, r.tambon);
+                    subSel.value = r.tambon;
+                    post.value = r.zipcode || '';
+                    inp.value = `${r.tambon} · ${r.amphoe} · ${r.province} (${r.zipcode || '-'})`;
+                    hide();
+                    setStatus('✓ กรอกที่อยู่ให้แล้ว — ยังแก้ไขเพิ่มเติมจากเมนูด้านล่างได้');
+                    inp.blur();
+                });
+            }
+            function search(q) {
+                if (!q || q.trim().length < 1) { hide(); setStatus(''); return; }
+                const reqId = ++currentReq;
+                box.innerHTML = '<div class="aq-loading"><i class="fa fa-spinner fa-spin"></i> กำลังค้นหา...</div>';
+                show();
+                fetch(searchUrl + '?q=' + encodeURIComponent(q) + '&limit=30')
+                    .then(r => r.json())
+                    .then(data => {
+                        if (reqId !== currentReq) return;
+                        render(data, q.trim());
+                        setStatus(data.length ? `พบ ${data.length} รายการ — ใช้ลูกศร ↑↓ + Enter` : '');
+                    })
+                    .catch(err => { console.error(err); setStatus('เกิดข้อผิดพลาด ลองใหม่อีกครั้ง'); hide(); });
+            }
+            inp.addEventListener('input', e => {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => search(e.target.value), 220);
+            });
+            inp.addEventListener('focus', () => {
+                if (lastResults.length && inp.value.trim()) show();
+            });
+            inp.addEventListener('keydown', e => {
+                const items = box.querySelectorAll('.aq-item');
+                if (!items.length) return;
+                if (e.key === 'ArrowDown')      { e.preventDefault(); activeIdx = Math.min(activeIdx+1, items.length-1); }
+                else if (e.key === 'ArrowUp')   { e.preventDefault(); activeIdx = Math.max(activeIdx-1, 0); }
+                else if (e.key === 'Enter')     { e.preventDefault(); if (activeIdx >= 0) pick(lastResults[activeIdx]); return; }
+                else if (e.key === 'Escape')    { hide(); return; }
+                else return;
+                items.forEach((el, i) => el.classList.toggle('active', i === activeIdx));
+                items[activeIdx]?.scrollIntoView({ block: 'nearest' });
+            });
+            box.addEventListener('mousedown', e => {
+                const item = e.target.closest('.aq-item');
+                if (!item) return;
+                e.preventDefault();
+                pick(lastResults[parseInt(item.dataset.idx, 10)]);
+            });
+            document.addEventListener('click', e => {
+                if (!e.target.closest('.address-quick-wrap')) hide();
+            });
+            clearBtn?.addEventListener('click', () => {
+                inp.value = ''; setStatus(''); hide(); lastResults = []; inp.focus();
+            });
+        })();
 
         function showZipcode(province = "#province", distrinct = "#distrinct", subdistrinct = "#subdistrinct", postcode = "#postcode") {
             let input_province = document.querySelector(province);

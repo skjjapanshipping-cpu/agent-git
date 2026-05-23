@@ -523,6 +523,72 @@
             </div>
         </div>
 
+        <!-- ===== JAPAN WAREHOUSE ADDRESS CARDS (Sea + Air) ===== -->
+        @php
+            $myCustomerCode = strtoupper(Auth::user()->customerno ?? '');
+            $warehouses = \App\Models\SystemSetting::warehouses($myCustomerCode);
+        @endphp
+        @if(!empty($warehouses['sea']['address_jp']) || !empty($warehouses['air']['address_jp']))
+        <div style="margin:18px 0;">
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+                <i class="fa fa-building" style="font-size:22px; color:#1D8AC9;"></i>
+                <h3 style="margin:0; font-size:16px; color:#0c5e8e; font-weight:700;">ที่อยู่โกดังในญี่ปุ่น</h3>
+                <span style="font-size:13px; color:#64748b;">— เลือกที่อยู่ตามประเภทขนส่งของออเดอร์</span>
+            </div>
+            <div class="row">
+                @foreach(['sea','air'] as $t)
+                    @php
+                        $w = $warehouses[$t] ?? null;
+                        $bg = $t === 'sea' ? '#fffbeb' : '#dbeafe';
+                        $border = $t === 'sea' ? '#fde68a' : '#93c5fd';
+                        $titleColor = $t === 'sea' ? '#92400e' : '#1e40af';
+                    @endphp
+                    @if($w && !empty($w['address_jp']))
+                    <div class="col-md-6 mb-3">
+                        <div style="background:#fff; border-radius:14px; padding:16px 20px; box-shadow:0 2px 12px rgba(0,0,0,.05); height:100%;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:8px;">
+                                <div style="font-weight:700; font-size:15px; color:{{ $titleColor }};">{{ $w['icon'] }} {{ $w['label'] }}</div>
+                                <button type="button" onclick="copyWh{{ $t }}(event)" style="background:#f1f5f9; border:0; color:#475569; padding:5px 11px; border-radius:8px; cursor:pointer; font-size:12px;">📋 Copy</button>
+                            </div>
+                            <div id="wh-{{ $t }}-text" style="background:{{ $bg }}; border:1px solid {{ $border }}; border-radius:10px; padding:14px 16px; line-height:1.6;">
+                                {{-- ENGLISH ADDRESS (PRIMARY) --}}
+                                @if(!empty($w['address_en']))
+                                    <div style="font-size:15px; color:#0f172a;">
+                                        <strong style="color:{{ $titleColor }}; font-size:16px; letter-spacing:.2px;">{{ $w['name_en'] ?? $w['name_jp'] }}</strong><br>
+                                        <span style="font-weight:600;">{{ $w['postcode'] }}</span><br>
+                                        <span>{{ $w['address_en'] }}</span>
+                                        @if(!empty($w['phone']))<br><i class="fa fa-phone" style="margin-right:4px; color:{{ $titleColor }};"></i><span style="font-weight:600; font-family:'SF Mono','Menlo',monospace;">{{ $w['phone'] }}</span>@endif
+                                    </div>
+                                @endif
+                                {{-- JAPANESE ADDRESS (SECONDARY) --}}
+                                @if(!empty($w['address_jp']))
+                                    <div style="margin-top:10px; padding-top:10px; border-top:1px dashed {{ $border }}; font-size:12px; color:#6b7280; line-height:1.55;">
+                                        <em style="color:#475569;">{{ $w['name_jp'] }}</em><br>
+                                        〒{{ $w['postcode'] }}<br>
+                                        {{ $w['address_jp'] }}
+                                    </div>
+                                @elseif(empty($w['address_en']))
+                                    {{-- fallback: ถ้าไม่มีทั้งคู่ก็ไม่แสดง (ป้องกัน edge case) --}}
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                    @endif
+                @endforeach
+            </div>
+            @if($myCustomerCode)
+            <div style="padding:10px 14px; background:#dbeafe; border-left:4px solid #1D8AC9; border-radius:8px; font-size:13px; color:#1e3a8a;">
+                <i class="fa fa-info-circle"></i> <strong>สำคัญ:</strong> เขียน <span style="display:inline-block; font-family:'SF Mono','Menlo',monospace; font-weight:700; background:#fff; color:#1D8AC9; padding:2px 10px; border-radius:6px; border:1px solid #93c5fd;">รหัสลูกค้า {{ $myCustomerCode }}</span> ลงบนกล่องพัสดุทุกครั้ง เพื่อให้โกดังจัดส่งให้คุณได้ถูกต้อง
+            </div>
+            @endif
+        </div>
+        <script>
+            function _whCopy(id, ev){var el=document.getElementById(id);if(!el)return;navigator.clipboard.writeText(el.innerText).then(function(){var b=ev.target;var old=b.innerText;b.innerText='✓ Copied';setTimeout(function(){b.innerText=old;},1500);});}
+            function copyWhsea(ev){_whCopy('wh-sea-text',ev);}
+            function copyWhair(ev){_whCopy('wh-air-text',ev);}
+        </script>
+        @endif
+
         <!-- ===== SUMMARY CARDS ===== -->
         <div class="summary-grid">
             <div class="summary-card">

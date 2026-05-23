@@ -15,11 +15,17 @@ use Illuminate\Support\Facades\Log;
 class CustomershippingsImport implements ToModel
 {
     protected $errors = [];
+    protected $skipped = [];
     protected $rowIndex = 0;
 
     public function getErrors(): array
     {
         return $this->errors;
+    }
+
+    public function getSkipped(): array
+    {
+        return $this->skipped;
     }
 
     /**
@@ -31,7 +37,23 @@ class CustomershippingsImport implements ToModel
     {
         $this->rowIndex++;
 
-        if ($row['ship_date'] == 'วันที่่' || empty($row['customerno'])) {
+        // Header row — silently ignore (no warning).
+        if (isset($row['ship_date']) && $row['ship_date'] === 'วันที่่') {
+            return null;
+        }
+
+        // True empty row — silently ignore.
+        $hasAnyData = !empty($row['customerno']) || !empty($row['track_no'])
+            || !empty($row['box_no']) || !empty($row['box_image']);
+        if (!$hasAnyData) {
+            return null;
+        }
+
+        // Partial data (admin probably forgot a field) — log so admin can fix.
+        if (empty($row['customerno'])) {
+            $this->skipped[] = "แถว {$this->rowIndex}: ขาด 'รหัสลูกค้า' "
+                . "(track_no=" . ($row['track_no'] ?? '-') . ", "
+                . "box_no=" . ($row['box_no'] ?? '-') . ")";
             return null;
         }
 //        dd($row);
@@ -191,19 +213,33 @@ class CustomershippingsImport implements ToModel
         return $msg;
     }
 
+    /**
+     * Convert any Google Drive share URL into a directly-viewable image URL.
+     * Supports all common Drive URL formats:
+     *   - https://drive.google.com/file/d/FILE_ID/view?usp=sharing   (new)
+     *   - https://drive.google.com/open?id=FILE_ID                   (old)
+     *   - https://drive.google.com/uc?id=FILE_ID                     (download)
+     *   - https://drive.google.com/d/FILE_ID/                        (short)
+     *   - bare FILE_ID
+     */
     protected function getGoogleDriveFileId($url)
     {
+        if (empty($url)) return $url;
 
-        // if (preg_match('/[-\w]{25,}/', $url, $matches)) {
-        //     return $matches[0];
-        // }
+        $patterns = [
+            '/\/file\/d\/([a-zA-Z0-9_-]{25,})/',   // /file/d/ID/view
+            '/\/d\/([a-zA-Z0-9_-]{25,})/',         // /d/ID/...
+            '/[?&]id=([a-zA-Z0-9_-]{25,})/',       // ?id=ID or &id=ID
+            '/^([a-zA-Z0-9_-]{25,})$/',            // bare ID
+        ];
 
-        preg_match('/id=([^&]+)/', $url, $matches);
-      
-        if (!isset($matches[1])) {
-            return $url;
+        foreach ($patterns as $pattern) {
+            if (preg_match($pattern, $url, $matches)) {
+                return 'https://lh3.googleusercontent.com/d/' . $matches[1] . '=w500';
+            }
         }
-        return 'https://lh3.googleusercontent.com/d/' . $matches[1] . '=w500';
+
+        return $url;
     }
 
 

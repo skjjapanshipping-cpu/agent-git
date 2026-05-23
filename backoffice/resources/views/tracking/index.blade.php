@@ -141,11 +141,38 @@
         /* Title */
         .tracking-title {
             text-align: center;
-            margin-bottom: 32px;
+            margin-bottom: 22px;
+        }
+
+        .tracking-title .badge-track {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(29, 138, 201, 0.14);
+            border: 1px solid rgba(29, 138, 201, 0.32);
+            color: #38bdf8;
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            padding: 5px 12px;
+            border-radius: 999px;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+        }
+
+        .tracking-title .badge-track .dot {
+            width: 6px; height: 6px; border-radius: 50%;
+            background: #4ade80;
+            box-shadow: 0 0 8px rgba(74, 222, 128, 0.7);
+            animation: dotPulse 1.6s ease-in-out infinite;
+        }
+        @keyframes dotPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
         }
 
         .tracking-title h1 {
-            font-size: 1.5rem;
+            font-size: 1.7rem;
             font-weight: 700;
             color: #ffffff;
             margin: 0 0 8px;
@@ -153,17 +180,60 @@
         }
 
         .tracking-title p {
-            font-size: 0.88rem;
-            color: rgba(255, 255, 255, 0.45);
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.55);
             margin: 0;
             font-weight: 400;
+        }
+
+        /* Service Highlights */
+        .service-chips {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 22px;
+        }
+        .service-chip {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 10px 8px;
+            text-align: center;
+            transition: all 0.25s ease;
+        }
+        .service-chip:hover {
+            background: rgba(29, 138, 201, 0.1);
+            border-color: rgba(29, 138, 201, 0.3);
+            transform: translateY(-2px);
+        }
+        .service-chip .ico { font-size: 1.15rem; line-height: 1; margin-bottom: 4px; }
+        .service-chip .title {
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.88);
+        }
+        .service-chip .sub {
+            font-size: 0.65rem;
+            color: rgba(255, 255, 255, 0.4);
+            margin-top: 2px;
         }
 
         /* Search Box */
         .search-box {
             position: relative;
-            margin-bottom: 24px;
+            margin-bottom: 10px;
         }
+        .search-hint {
+            font-size: 0.74rem;
+            color: rgba(255, 255, 255, 0.32);
+            margin: 0 0 22px;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        .search-hint i { color: rgba(56, 189, 248, 0.6); }
 
         .search-box input {
             width: 100%;
@@ -218,33 +288,34 @@
 
         /* Action Buttons */
         .action-buttons {
-            display: flex;
+            display: grid;
+            grid-template-columns: 1fr 1.2fr 1fr;
             gap: 10px;
-            justify-content: center;
             margin-bottom: 0;
-            flex-wrap: wrap;
         }
 
         .action-buttons a,
         .action-buttons button {
-            padding: 10px 20px;
+            padding: 12px 14px;
             border-radius: 12px;
             font-size: 0.85rem;
-            font-weight: 500;
+            font-weight: 600;
             font-family: inherit;
             text-decoration: none;
-            transition: all 0.25s ease;
-            border: none;
+            transition: all 0.25s cubic-bezier(.4,0,.2,1);
+            border: 1.5px solid transparent;
             cursor: pointer;
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            justify-content: center;
+            gap: 7px;
+            white-space: nowrap;
         }
 
         .btn-outline {
             background: rgba(255, 255, 255, 0.05);
-            border: 1.5px solid rgba(255, 255, 255, 0.12) !important;
-            color: rgba(255, 255, 255, 0.6);
+            border-color: rgba(255, 255, 255, 0.12) !important;
+            color: rgba(255, 255, 255, 0.78);
         }
 
         .btn-outline:hover {
@@ -252,17 +323,77 @@
             border-color: rgba(29, 138, 201, 0.4) !important;
             color: #38bdf8;
             text-decoration: none;
+            transform: translateY(-1px);
+        }
+
+        .btn-contact {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            color: #ffffff !important;
+            border: none !important;
+            box-shadow: 0 4px 16px rgba(34, 197, 94, 0.35);
+        }
+        .btn-contact:hover {
+            background: linear-gradient(135deg, #16a34a, #15803d);
+            box-shadow: 0 8px 22px rgba(34, 197, 94, 0.5);
+            transform: translateY(-1px);
+            color: #ffffff !important;
+            text-decoration: none;
         }
 
         .btn-reset {
             background: rgba(255, 255, 255, 0.06);
-            color: rgba(255, 255, 255, 0.5);
+            color: rgba(255, 255, 255, 0.6);
+            border-color: rgba(255, 255, 255, 0.08) !important;
         }
-
         .btn-reset:hover {
             background: rgba(255, 255, 255, 0.1);
-            color: rgba(255, 255, 255, 0.8);
+            color: rgba(255, 255, 255, 0.9);
+            transform: translateY(-1px);
         }
+
+        /* Contact Modal channels (SweetAlert custom content) */
+        .contact-channels {
+            display: grid;
+            gap: 10px;
+            margin-top: 4px;
+        }
+        .contact-channel {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 16px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 14px;
+            color: #ffffff;
+            text-decoration: none;
+            transition: all 0.25s ease;
+            text-align: left;
+        }
+        .contact-channel:hover {
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateY(-2px);
+            text-decoration: none;
+        }
+        .contact-channel .cc-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            color: #fff;
+            flex-shrink: 0;
+        }
+        .cc-icon.line     { background: #06C755; box-shadow: 0 4px 12px rgba(6, 199, 85, 0.4); }
+        .cc-icon.phone    { background: linear-gradient(135deg, #1D8AC9, #0ea5e9); box-shadow: 0 4px 12px rgba(29, 138, 201, 0.4); }
+        .cc-icon.web      { background: linear-gradient(135deg, #8b5cf6, #6d28d9); box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4); }
+        .contact-channel .cc-text { flex: 1; }
+        .contact-channel .cc-title { font-size: 0.92rem; font-weight: 600; color: #ffffff; }
+        .contact-channel .cc-sub { font-size: 0.78rem; color: rgba(255, 255, 255, 0.5); margin-top: 2px; font-family: 'SF Mono','Menlo',monospace; }
+        .contact-channel .cc-arrow { color: rgba(255, 255, 255, 0.3); font-size: 1rem; transition: all 0.25s ease; }
+        .contact-channel:hover .cc-arrow { color: #38bdf8; transform: translateX(3px); }
 
         /* Tracking Results */
         .tracking-results {
@@ -421,19 +552,40 @@
         /* Footer Text */
         .tracking-footer {
             text-align: center;
-            margin-top: 28px;
+            margin-top: 24px;
             font-size: 0.78rem;
-            color: rgba(255, 255, 255, 0.2);
+            color: rgba(255, 255, 255, 0.32);
+        }
+
+        .footer-divider {
+            width: 80px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+            margin: 0 auto 10px;
         }
 
         .tracking-footer a {
-            color: rgba(255, 255, 255, 0.3);
+            color: rgba(255, 255, 255, 0.45);
             text-decoration: none;
             transition: color 0.2s;
         }
 
         .tracking-footer a:hover {
             color: #38bdf8;
+        }
+
+        .footer-contact {
+            display: flex;
+            justify-content: center;
+            gap: 14px;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+        }
+        .footer-contact a {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.78rem;
         }
 
         /* SweetAlert Override - Dark Modern Theme */
@@ -515,6 +667,13 @@
             background: rgba(29, 138, 201, 0.5) !important;
         }
 
+        .swal2-close {
+            color: rgba(255, 255, 255, 0.5) !important;
+            font-size: 1.75rem !important;
+            transition: all 0.2s ease;
+        }
+        .swal2-close:hover { color: #ffffff !important; transform: rotate(90deg); }
+
         /* Responsive */
         @media (max-width: 576px) {
             .tracking-container {
@@ -522,7 +681,7 @@
             }
 
             .tracking-card {
-                padding: 32px 24px;
+                padding: 32px 22px;
                 border-radius: 22px;
             }
 
@@ -531,8 +690,16 @@
             }
 
             .tracking-title h1 {
-                font-size: 1.25rem;
+                font-size: 1.4rem;
             }
+
+            .service-chips {
+                grid-template-columns: 1fr 1fr 1fr;
+                gap: 6px;
+            }
+            .service-chip { padding: 9px 6px; }
+            .service-chip .title { font-size: 0.66rem; }
+            .service-chip .sub { font-size: 0.6rem; }
 
             .search-box input {
                 padding: 16px 58px 16px 18px;
@@ -544,10 +711,15 @@
                 height: 42px;
             }
 
+            .action-buttons {
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+
             .action-buttons a,
             .action-buttons button {
-                padding: 9px 16px;
-                font-size: 0.8rem;
+                padding: 11px 16px;
+                font-size: 0.85rem;
             }
 
             .timeline-icon {
@@ -669,6 +841,65 @@
                 $('#trackno').val('');
                 $('#orderdata').html('');
             });
+
+            // ===== ติดต่อเรา (Contact Us) Modal =====
+            $('#btnContactUs').on('click', function () {
+                var lineUrl  = @json($support['line_url'] ?? '');
+                var lineId   = @json($support['line_id']  ?? '');
+                var phone    = @json($support['phone']    ?? '');
+
+                var channels = '';
+                if (lineUrl) {
+                    channels += `
+                        <a class="contact-channel" href="${lineUrl}" target="_blank" rel="noopener">
+                            <div class="cc-icon line"><i class="fa fa-commenting"></i></div>
+                            <div class="cc-text">
+                                <div class="cc-title">LINE Official</div>
+                                <div class="cc-sub">${lineId || 'แชทกับเราใน LINE'}</div>
+                            </div>
+                            <i class="fa fa-angle-right cc-arrow"></i>
+                        </a>`;
+                }
+                if (phone) {
+                    var phoneClean = phone.replace(/[^\d+]/g, '');
+                    channels += `
+                        <a class="contact-channel" href="tel:${phoneClean}">
+                            <div class="cc-icon phone"><i class="fa fa-phone"></i></div>
+                            <div class="cc-text">
+                                <div class="cc-title">โทรศัพท์</div>
+                                <div class="cc-sub">${phone}</div>
+                            </div>
+                            <i class="fa fa-angle-right cc-arrow"></i>
+                        </a>`;
+                }
+                channels += `
+                    <a class="contact-channel" href="https://skjjapanshipping.com/" target="_blank" rel="noopener">
+                        <div class="cc-icon web"><i class="fa fa-globe"></i></div>
+                        <div class="cc-text">
+                            <div class="cc-title">เว็บไซต์</div>
+                            <div class="cc-sub">skjjapanshipping.com</div>
+                        </div>
+                        <i class="fa fa-angle-right cc-arrow"></i>
+                    </a>`;
+
+                if (!channels) {
+                    Swal.fire({ title: 'ยังไม่ตั้งค่าช่องทางติดต่อ', icon: 'info' });
+                    return;
+                }
+
+                Swal.fire({
+                    title: '<span style="font-size:1.5rem;">💬 ติดต่อเรา</span>',
+                    html: `
+                        <p style="color:rgba(255,255,255,0.55); font-size:0.88rem; margin-bottom:18px;">
+                            เลือกช่องทางที่สะดวก — เราพร้อมตอบกลับโดยเร็ว
+                        </p>
+                        <div class="contact-channels">${channels}</div>
+                    `,
+                    showConfirmButton: false,
+                    showCloseButton: true,
+                    width: 460,
+                });
+            });
         });
 
         function hideAll() {
@@ -707,30 +938,56 @@
         </div>
 
         <div class="tracking-card">
+            @php $support = \App\Models\SystemSetting::support(); @endphp
+
             <!-- Title -->
             <div class="tracking-title">
+                <div class="badge-track"><span class="dot"></span> Live Tracking</div>
                 <h1>เช็คเลขพัสดุ</h1>
-                <p>ติดตามสถานะการขนส่งสินค้าจากญี่ปุ่น</p>
+                <p>ติดตามสถานะการขนส่งสินค้าจากญี่ปุ่นมาไทยแบบเรียลไทม์</p>
+            </div>
+
+            <!-- Service Highlights -->
+            <div class="service-chips">
+                <div class="service-chip">
+                    <div class="ico">🚢</div>
+                    <div class="title">ขนส่งทางเรือ</div>
+                    <div class="sub">20–25 วัน</div>
+                </div>
+                <div class="service-chip">
+                    <div class="ico">✈️</div>
+                    <div class="title">ขนส่งทางอากาศ</div>
+                    <div class="sub">3–7 วัน</div>
+                </div>
+                <div class="service-chip">
+                    <div class="ico">📦</div>
+                    <div class="title">สินค้าถึงไทย</div>
+                    <div class="sub">แมส · รับเอง · จัดส่ง</div>
+                </div>
             </div>
 
             <!-- Search Box -->
             <div class="search-box">
-                <input type="text" id="trackno" placeholder="กรอกเลขพัสดุของคุณ..." autofocus>
-                <button class="search-btn" type="button" id="submitForm">
+                <input type="text" id="trackno" placeholder="กรอกเลขพัสดุ เช่น 1234567890" autofocus>
+                <button class="search-btn" type="button" id="submitForm" title="ค้นหา">
                     <i class="fa fa-search"></i>
                 </button>
             </div>
+            <p class="search-hint">
+                <i class="fa fa-info-circle"></i>
+                เลขพัสดุที่ลูกค้าได้รับหลังสินค้าออกจากร้านค้าในญี่ปุ่น
+            </p>
 
             <!-- Action Buttons -->
             <div class="action-buttons">
                 <a href="{{ route('login') }}" class="btn-outline">
-                    <i class="fa fa-sign-in"></i> เข้าสู่ระบบ
+                    <i class="fa fa-sign-in"></i> <span>เข้าสู่ระบบ</span>
                 </a>
-                <a href="{{ route('register') }}" class="btn-outline">
-                    <i class="fa fa-user-plus"></i> สมัครสมาชิก
-                </a>
-                <button class="btn-reset" id="reset">
-                    <i class="fa fa-refresh"></i> รีเซ็ต
+                <button type="button" class="btn-contact" id="btnContactUs">
+                    <i class="fa fa-commenting"></i> <span>ติดต่อเรา</span>
+                </button>
+                <button class="btn-reset" type="button" id="reset">
+                    <i class="fa fa-refresh"></i> <span>รีเซ็ต</span>
                 </button>
             </div>
 
@@ -782,6 +1039,15 @@
 
         <!-- Footer -->
         <div class="tracking-footer">
+            <div class="footer-contact">
+                @if(!empty($support['phone']))
+                    <a href="tel:{{ preg_replace('/[^\d+]/', '', $support['phone']) }}"><i class="fa fa-phone"></i> {{ $support['phone'] }}</a>
+                @endif
+                @if(!empty($support['line_url']))
+                    <a href="{{ $support['line_url'] }}" target="_blank" rel="noopener"><i class="fa fa-commenting"></i> {{ $support['line_id'] ?? 'LINE' }}</a>
+                @endif
+            </div>
+            <div class="footer-divider"></div>
             &copy; {{ date('Y') }} SKJ Japan Shipping Company
         </div>
     </div>

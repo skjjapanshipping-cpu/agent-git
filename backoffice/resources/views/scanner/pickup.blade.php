@@ -161,7 +161,18 @@
             background: #1e293b; border-radius: 10px; padding: 10px 14px; margin-bottom: 6px;
             display: flex; align-items: center; justify-content: space-between;
             border-left: 4px solid #334155;
+            transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+            cursor: pointer;
         }
+        @media (hover: hover) {
+            .parcel-item:hover {
+                background: #334155;
+                box-shadow: 0 2px 8px rgba(148, 163, 184, 0.15);
+            }
+            .parcel-item.done:hover { background: #2a3a4f; opacity: 0.9; }
+            .parcel-item.rc-verified:hover { background: #2a4a6f !important; }
+        }
+        .parcel-item:active { transform: scale(0.995); }
         .parcel-item.done { border-left-color: #10b981; opacity: 0.7; }
         .parcel-item .box { font-size: 14px; font-weight: 700; }
         .parcel-item .track { font-size: 11px; color: #94a3b8; }
@@ -170,6 +181,7 @@
         .parcel-item.just-scanned { border-left-color: #a78bfa; background: #2d1b69; animation: flashScan 0.5s; }
         .parcel-item.wholeprice { border-right: 3px solid #f59e0b; }
         .badge-wp { display:inline-block; background:#92400e; color:#fbbf24; font-size:9px; font-weight:700; padding:1px 6px; border-radius:6px; margin-left:4px; }
+        .badge-received { display:inline-block; background:#065f46; color:#6ee7b7; font-size:9px; font-weight:700; padding:1px 6px; border-radius:6px; margin-left:4px; }
         @keyframes flashScan { from { background: #7c3aed; } to { background: #2d1b69; } }
 
         /* Re-check mode */
@@ -265,25 +277,45 @@
         /* Image Preview Modal */
         .img-overlay {
             display:none; position:fixed; top:0; left:0; right:0; bottom:0;
-            background:rgba(0,0,0,0.85); z-index:10001;
+            background:rgba(0,0,0,0.92); z-index:10001;
             align-items:center; justify-content:center; padding:16px;
             flex-direction:column;
         }
         .img-overlay.show { display:flex; }
-        .img-overlay .img-title {
-            font-size:16px; font-weight:800; color:#fff; margin-bottom:12px; text-align:center;
+        .img-overlay .img-round {
+            font-size:22px; font-weight:800; color:#fbbf24; margin-bottom:14px; text-align:center;
+            background:rgba(251,191,36,0.12); padding:8px 20px; border-radius:14px;
+            border:2px solid rgba(251,191,36,0.4);
+            text-shadow:0 2px 6px rgba(0,0,0,0.5);
+            letter-spacing:0.5px;
         }
         .img-overlay img {
-            max-width:90vw; max-height:70vh; border-radius:12px;
+            max-width:92vw; max-height:62vh; border-radius:12px;
             object-fit:contain; background:#1e293b;
+            box-shadow:0 8px 32px rgba(0,0,0,0.6);
+        }
+        .img-overlay .img-box {
+            font-size:38px; font-weight:900; color:#fff; margin-top:18px; text-align:center;
+            background:linear-gradient(135deg,#7c3aed,#9333ea);
+            padding:14px 32px; border-radius:18px;
+            box-shadow:0 6px 24px rgba(124,58,237,0.5);
+            text-shadow:0 2px 4px rgba(0,0,0,0.4);
+            letter-spacing:1px;
+            line-height:1.1;
         }
         .img-overlay .img-no {
-            color:#94a3b8; font-size:14px; margin-top:16px; text-align:center;
+            color:#94a3b8; font-size:16px; margin-top:16px; text-align:center;
         }
         .img-overlay .img-close {
             position:absolute; top:16px; right:16px; background:rgba(255,255,255,0.15);
-            border:none; color:#fff; font-size:24px; width:40px; height:40px;
+            border:none; color:#fff; font-size:24px; width:44px; height:44px;
             border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center;
+            z-index:2;
+        }
+        @media (max-width: 640px) {
+            .img-overlay .img-round { font-size:18px; padding:6px 14px; margin-bottom:10px; }
+            .img-overlay .img-box { font-size:30px; padding:12px 24px; margin-top:14px; }
+            .img-overlay img { max-height:58vh; }
         }
 
         /* Btn change customer */
@@ -292,8 +324,30 @@
             border-radius: 12px; border: 2px solid #475569; background: transparent;
             color: #94a3b8; font-size: 14px; font-weight: 600;
             font-family: 'Prompt', sans-serif; cursor: pointer; text-align: center;
+            transition: background 0.15s ease, transform 0.1s ease;
         }
         .btn-change:active { background: #1e293b; }
+        @media (hover: hover) {
+            .btn-change:hover { background: #1e293b; }
+        }
+        /* Danger variant — high-visibility red for risky actions (เปลี่ยนลูกค้า) */
+        .btn-change.btn-change-danger {
+            background: linear-gradient(135deg, #dc2626, #b91c1c);
+            border-color: #ef4444;
+            color: #fff;
+            font-weight: 700;
+            box-shadow: 0 2px 8px rgba(220, 38, 38, 0.35);
+        }
+        @media (hover: hover) {
+            .btn-change.btn-change-danger:hover {
+                background: linear-gradient(135deg, #ef4444, #dc2626);
+                box-shadow: 0 4px 14px rgba(220, 38, 38, 0.5);
+            }
+        }
+        .btn-change.btn-change-danger:active {
+            background: linear-gradient(135deg, #b91c1c, #991b1b);
+            transform: scale(0.98);
+        }
 
         /* Toast */
         .toast {
@@ -306,10 +360,19 @@
         .toast.error { background: #dc2626; color: #fff; }
         .toast.warning { background: #d97706; color: #fff; }
 
-        /* Scrollbar */
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        /* Scrollbar — ใหญ่ขึ้นเพื่อให้พนักงานเลื่อนหารายการง่าย */
+        ::-webkit-scrollbar { width: 14px; height: 14px; }
+        ::-webkit-scrollbar-track { background: #1e293b; border-radius: 7px; }
+        ::-webkit-scrollbar-thumb {
+            background: #7c3aed;
+            border-radius: 7px;
+            border: 2px solid #1e293b;
+            min-height: 60px;
+        }
+        ::-webkit-scrollbar-thumb:hover { background: #8b5cf6; }
+        ::-webkit-scrollbar-thumb:active { background: #6d28d9; }
+        /* Firefox */
+        html { scrollbar-width: auto; scrollbar-color: #7c3aed #1e293b; }
     </style>
 </head>
 <body>
@@ -375,7 +438,7 @@
     </div>
 
     <!-- Change Customer (top) -->
-    <button class="btn-change" onclick="goToStep1()" style="margin-bottom:8px;"><i class="fa fa-exchange"></i> เปลี่ยนลูกค้า</button>
+    <button class="btn-change btn-change-danger" onclick="goToStep1()" style="margin-bottom:8px;"><i class="fa fa-exchange"></i> เปลี่ยนลูกค้า</button>
     <button class="btn-recheck" id="btnRecheck" onclick="toggleRecheckMode()"><i class="fa fa-refresh"></i> เช็คอีกรอบ</button>
 
     <!-- Re-check Banner -->
@@ -455,9 +518,10 @@
 <!-- Image Preview -->
 <div class="img-overlay" id="imgOverlay" onclick="closeImgPreview(event)">
     <button class="img-close" onclick="closeImgPreview(event)">✕</button>
-    <div class="img-title" id="imgTitle"></div>
+    <div class="img-round" id="imgRound"></div>
     <img id="imgPreview" src="" alt="">
     <div class="img-no" id="imgNoImage" style="display:none;">📷 ไม่มีรูปพัสดุ</div>
+    <div class="img-box" id="imgBox"></div>
 </div>
 
 <!-- Toast -->
@@ -478,7 +542,18 @@ var recheckMode = false;
 var recheckSet = {};    // { box_no: true } — boxes verified in re-check
 
 function isSB(name) { return name && name.indexOf('SB ') === 0; }
+function isUnknown(name) { return !name || String(name).trim() === ''; }
+// Treat both SB names and empty/unknown names as "self-pickup" (รับเอง).
+function isSelfPickup(name) { return isSB(name) || isUnknown(name); }
+
+// Sort order (must match CustomershippingExport::buildPileMap):
+//   1. Normal recipients (binary strcmp ascending)
+//   2. SB-prefixed names (รับเอง — known)
+//   3. Empty / unknown names (รับเอง — ไม่ระบุผู้รับ) → very last
 function sortSBLast(a, b) {
+    var aU = isUnknown(a), bU = isUnknown(b);
+    if (aU && !bU) return 1;
+    if (!aU && bU) return -1;
     var aSB = isSB(a), bSB = isSB(b);
     if (aSB && !bSB) return 1;
     if (!aSB && bSB) return -1;
@@ -765,10 +840,12 @@ function buildPileMap(customerno, parcels) {
     pileByBox = {};
     hasPiles = false;
 
+    // Collect every unique recipient — including empty strings — so pile
+    // numbering matches the Excel exporter (CustomershippingExport).
     var names = {};
     parcels.forEach(function(p) {
-        var name = p.delivery_fullname || '';
-        if (name) names[name] = true;
+        var name = (p.delivery_fullname == null) ? '' : String(p.delivery_fullname);
+        names[name] = true;
     });
     var uniqueNames = Object.keys(names).sort(sortSBLast);
 
@@ -778,7 +855,7 @@ function buildPileMap(customerno, parcels) {
             pileMap[name] = { pileNum: idx + 1, count: 0, picked: 0, color: PILE_COLORS[idx % PILE_COLORS.length] };
         });
         parcels.forEach(function(p) {
-            var name = p.delivery_fullname || '';
+            var name = (p.delivery_fullname == null) ? '' : String(p.delivery_fullname);
             if (pileMap[name]) {
                 pileMap[name].count++;
                 if (p.picked_up_at) pileMap[name].picked++;
@@ -791,10 +868,21 @@ function buildPileMap(customerno, parcels) {
 function renderParcels(justScannedBox) {
     var html = '';
 
+    // จัดเรียงให้ "รายการที่ยังไม่จ่ายของ" อยู่บนสุด — พนักงานหาของหน้างานง่ายขึ้น
+    // ภายในกลุ่มเดียวกัน ให้คงลำดับเดิม (stable sort เพื่อไม่กระทบเลขกอง)
+    function sortByPickedStatus(list) {
+        return list.slice().sort(function(a, b) {
+            var aDone = a.picked_up_at ? 1 : 0;
+            var bDone = b.picked_up_at ? 1 : 0;
+            return aDone - bDone; // 0 (ยังไม่จ่าย) มาก่อน 1 (จ่ายแล้ว)
+        });
+    }
+
     if (hasPiles) {
+        // Use the SAME empty-string key as buildPileMap so pile numbers line up.
         var grouped = {};
         parcelsData.forEach(function(p) {
-            var name = p.delivery_fullname || 'ไม่ระบุ';
+            var name = (p.delivery_fullname == null) ? '' : String(p.delivery_fullname);
             if (!grouped[name]) grouped[name] = [];
             grouped[name].push(p);
         });
@@ -806,20 +894,23 @@ function renderParcels(justScannedBox) {
             grouped[name].forEach(function(p) { if (p.picked_up_at) picked++; });
             var allDone = picked >= grouped[name].length;
             var countClass = allDone ? ' pile-done' : '';
-            var isSelfPickup = isSB(name);
-            var selfBadge = isSelfPickup ? '<span class="badge-self">รับเอง</span> ' : '';
+            var isSelf = isSelfPickup(name);
+            var selfBadge = isSelf ? '<span class="badge-self">รับเอง</span> ' : '';
+            var displayName = isUnknown(name) ? '<em style="opacity:0.7;">(ไม่ระบุผู้รับ)</em>' : name;
 
             html += '<div class="pile-header" style="--pile-color:' + pile.color + ';">' +
                 '<div><span class="pile-label" style="color:' + pile.color + ';">' + selfBadge + 'กอง ' + pile.pileNum + '</span>' +
-                '<span class="pile-name">' + name + '</span></div>' +
+                '<span class="pile-name">' + displayName + '</span></div>' +
                 '<span class="pile-count' + countClass + '">' + (allDone ? '✅ ครบ' : picked + '/' + grouped[name].length) + '</span></div>';
 
-            grouped[name].forEach(function(p) {
+            // sort within each pile — un-picked first
+            sortByPickedStatus(grouped[name]).forEach(function(p) {
                 html += renderParcelItem(p, justScannedBox, pile.color, pile.pileNum);
             });
         });
     } else {
-        parcelsData.forEach(function(p) {
+        // no piles — sort entire list, un-picked first
+        sortByPickedStatus(parcelsData).forEach(function(p) {
             html += renderParcelItem(p, justScannedBox, null, null);
         });
     }
@@ -836,16 +927,16 @@ function renderParcelItem(p, justScannedBox, pileColor, pileNum) {
     var boxNum = p.box_no.replace(/^BOX-\d{8}-0*/, '');
     var wpBadge = p.iswholeprice === 1 ? '<span class="badge-wp">ราคาเหมา</span>' : '';
     var pileBadge = (hasPiles && pileNum) ? '<span class="badge-pile" style="background:' + pileColor + ';">กอง' + pileNum + '</span>' : '';
+    var receivedBadge = p.scanned_at ? '<span class="badge-received" title="รับเข้าสินค้าเมื่อ ' + p.scanned_at + '">✓ รับเข้าสินค้าแล้ว</span>' : '';
+    // ราคา (ค่านำเข้า) ถูกซ่อนตามคำขอ — แสดงเฉพาะ "ยังไม่ได้วัดขนาด" เพื่อเตือน admin
     var dimInfo = '';
-    if (p.iswholeprice === 1 && p.import_cost && parseFloat(p.import_cost) > 0) {
-        dimInfo = ' · ค่านำเข้า ' + parseFloat(p.import_cost).toFixed(2) + '฿';
-    } else if (p.iswholeprice === 1 && isDone && (!p.import_cost || parseFloat(p.import_cost) === 0)) {
+    if (p.iswholeprice === 1 && isDone && (!p.import_cost || parseFloat(p.import_cost) === 0)) {
         dimInfo = ' · <span style="color:#fbbf24;">ยังไม่ได้วัดขนาด</span>';
     }
 
     var pileStyle = pileColor ? ' style="--pile-color:' + pileColor + ';cursor:pointer;"' : ' style="cursor:pointer;"';
     return '<div class="parcel-item' + extraClass + '"' + pileStyle + ' onclick="showParcelImage(\'' + p.box_no.replace(/'/g, "\\'") + '\')">' +
-        '<div><div class="box">📦 Box.' + boxNum + wpBadge + pileBadge + (selectedRounds.length > 1 ? ' <span style="font-size:10px;color:#94a3b8;">(' + (p.etd || '') + ')</span>' : '') + '</div>' +
+        '<div><div class="box">📦 Box.' + boxNum + wpBadge + pileBadge + receivedBadge + (selectedRounds.length > 1 ? ' <span style="font-size:10px;color:#94a3b8;">(' + (p.etd || '') + ')</span>' : '') + '</div>' +
         '<div class="track">' + (p.track_no || '-') + (p.weight ? ' · ' + p.weight + 'kg' : '') + dimInfo + '</div></div>' +
         (isDone ? '<span class="check">✅</span>' : '<span class="pending-dot"></span>') +
         '</div>';
@@ -1075,15 +1166,37 @@ function doPickupScan(boxNo, dims) {
         if (data.type === 'duplicate') {
             playWarningSound();
             var dupPileInfo = '';
-            if (hasPiles && data.parcel && data.parcel.delivery_fullname && pileMap[data.parcel.delivery_fullname]) {
-                var dp = pileMap[data.parcel.delivery_fullname];
+            // Normalize null/undefined → '' so the (ไม่ระบุผู้รับ) pile is handled too.
+            var dupName = (data.parcel && data.parcel.delivery_fullname != null)
+                ? String(data.parcel.delivery_fullname) : '';
+            if (hasPiles && data.parcel && pileMap.hasOwnProperty(dupName)) {
+                var dp = pileMap[dupName];
                 dupPileInfo = ' [กอง' + dp.pileNum + ']';
+                // Server-authoritative pile progress (handles cross-device scanning).
+                // Fall back to local computation only if server didn't send it.
+                if (data.pile_progress && typeof data.pile_progress.picked_up === 'number') {
+                    dp.picked = data.pile_progress.picked_up;
+                    dp.count  = data.pile_progress.total;
+                } else {
+                    var dupPickedActual = 0, dupCountActual = 0;
+                    parcelsData.forEach(function(p) {
+                        var pn = (p.delivery_fullname == null) ? '' : String(p.delivery_fullname);
+                        if (pn === dupName) {
+                            dupCountActual++;
+                            if (p.picked_up_at) dupPickedActual++;
+                        }
+                    });
+                    if (dupCountActual > 0) {
+                        dp.picked = dupPickedActual;
+                        dp.count = dupCountActual;
+                    }
+                }
                 var pileIsComplete = dp.picked >= dp.count;
                 if (pileIsComplete) {
                     dupPileInfo += ' ✅ ครบแล้ว!';
                 }
                 setTimeout(function() {
-                    announcePile(dp.pileNum, dp.count, data.parcel.delivery_fullname, dp.color, dp.picked);
+                    announcePile(dp.pileNum, dp.count, dupName, dp.color, dp.picked);
                 }, 500);
             }
             setStatus('warning', '⚠️ ' + data.message + dupPileInfo);
@@ -1108,30 +1221,54 @@ function doPickupScan(boxNo, dims) {
         });
 
         // Update pile picked count
-        var pileName = (scannedParcel && scannedParcel.delivery_fullname) || data.parcel.delivery_fullname || '';
-        if (hasPiles && pileName && pileMap[pileName]) {
+        // Normalize null/undefined → '' so the (ไม่ระบุผู้รับ) pile (key '')
+        // is treated the same as named piles.
+        var rawName = (scannedParcel && scannedParcel.delivery_fullname != null)
+            ? scannedParcel.delivery_fullname
+            : data.parcel.delivery_fullname;
+        var pileName = (rawName == null) ? '' : String(rawName);
+        if (hasPiles && pileMap.hasOwnProperty(pileName)) {
             pileMap[pileName].picked++;
         }
 
         renderParcels(data.parcel.box_no);
 
         // Pile announcement (TTS + visual) — delay 500ms so success sound finishes first
-        if (hasPiles) {
-            var dName = (scannedParcel && scannedParcel.delivery_fullname) || data.parcel.delivery_fullname || '';
-            if (dName && pileMap[dName]) {
-                (function(dn) {
-                    setTimeout(function() {
-                        announcePile(pileMap[dn].pileNum, pileMap[dn].count, dn, pileMap[dn].color, pileMap[dn].picked);
-                    }, 500);
-                })(dName);
+        if (hasPiles && pileMap.hasOwnProperty(pileName)) {
+            var dName = pileName;
+            // SERVER is the source of truth for cross-device sync.
+            // Local parcelsData only knows about THIS device's scans;
+            // multiple scanners on the same pile would otherwise undercount.
+            if (data.pile_progress && typeof data.pile_progress.picked_up === 'number') {
+                pileMap[dName].picked = data.pile_progress.picked_up;
+                pileMap[dName].count  = data.pile_progress.total;
+            } else {
+                // Fallback: locally compute (older server build / no pile_progress)
+                var actualPicked = 0, actualCount = 0;
+                parcelsData.forEach(function(p) {
+                    var pn = (p.delivery_fullname == null) ? '' : String(p.delivery_fullname);
+                    if (pn === dName) {
+                        actualCount++;
+                        if (p.picked_up_at) actualPicked++;
+                    }
+                });
+                if (actualCount > 0) {
+                    pileMap[dName].picked = actualPicked;
+                    pileMap[dName].count = actualCount;
+                }
             }
+            (function(dn) {
+                setTimeout(function() {
+                    announcePile(pileMap[dn].pileNum, pileMap[dn].count, dn, pileMap[dn].color, pileMap[dn].picked);
+                }, 500);
+            })(dName);
         }
 
         if (prog.complete) {
             setStatus('success', '🎉 ครบแล้ว! จ่าย ' + prog.picked_up + '/' + prog.total + ' ชิ้น');
             showToast('🎉 ครบแล้ว!', 'success');
         } else {
-            var extra = data.parcel.import_cost ? ' (ค่านำเข้า ' + parseFloat(data.parcel.import_cost).toFixed(2) + '฿)' : '';
+            var extra = ''; // ราคา (ค่านำเข้า) ถูกซ่อนตามคำขอ
             var pileInfo = '';
             if (hasPiles) {
                 var dN = (scannedParcel && scannedParcel.delivery_fullname) || data.parcel.delivery_fullname || '';
@@ -1262,10 +1399,34 @@ function playSuccessSound() { if (!bufSuccess && audioCtx) buildSoundBuffers(); 
 function playErrorSound() { if (!bufError && audioCtx) buildSoundBuffers(); if (bufError) playBuffer(bufError); }
 function playWarningSound() { if (!bufWarning && audioCtx) buildSoundBuffers(); if (bufWarning) playBuffer(bufWarning); }
 
-// Warm audio
+// Warm audio (AudioContext + a persistent <audio> element so mobile browsers
+// allow subsequent programmatic play() without user-gesture each time).
+var _ttsAudioEl = null;
+function _getTtsAudioEl() {
+    if (!_ttsAudioEl) {
+        _ttsAudioEl = new Audio();
+        _ttsAudioEl.preload = 'auto';
+        _ttsAudioEl.volume = 1.0;
+        try { document.body.appendChild(_ttsAudioEl); } catch(_) {}
+    }
+    return _ttsAudioEl;
+}
 function warmAudio() {
     var ctx = getAudioCtx();
     if (ctx.state === 'suspended') ctx.resume();
+    // Prime the <audio> element with a 1-byte silent src so iOS/Android grant
+    // it autoplay permission for the rest of the session.
+    try {
+        var a = _getTtsAudioEl();
+        // 0.1s silent WAV (44 bytes header + tiny PCM)
+        a.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
+        a.muted = true;
+        var p = a.play();
+        if (p && p.then) {
+            p.then(function() { a.pause(); a.muted = false; a.src = ''; })
+             .catch(function() { a.muted = false; });
+        }
+    } catch (_) {}
     document.removeEventListener('click', warmAudio);
     document.removeEventListener('keydown', warmAudio);
 }
@@ -1277,7 +1438,7 @@ var _pileAnnounceTimer = null;
 
 function announcePile(pileNum, totalBoxes, recipientName, color, pickedCount) {
     var el = document.getElementById('pileAnnounce');
-    var selfPickup = isSB(recipientName);
+    var selfPickup = isSelfPickup(recipientName);
     var pileComplete = pickedCount >= totalBoxes;
     el.style.setProperty('--pile-color', color || '#a78bfa');
 
@@ -1298,35 +1459,359 @@ function announcePile(pileNum, totalBoxes, recipientName, color, pickedCount) {
     speakPile(pileNum, totalBoxes, selfPickup, pileComplete);
 }
 
-function speakPile(pileNum, totalBoxes, selfPickup, pileComplete) {
-    var text;
-    if (pileComplete) {
-        text = (selfPickup ? 'รับเอง ' : '') + 'กอง ' + pileNum + ' เท่ากับ ' + totalBoxes + ' กล่อง ครบแล้วค่ะ';
-    } else {
-        text = (selfPickup ? 'รับเอง ' : '') + 'กอง ' + pileNum;
-    }
-    console.log('[TTS] speakPile:', text, 'pileComplete:', pileComplete);
-    var url = apiBase + '/qr-scan/api/tts?q=' + encodeURIComponent(text);
+// ===== TTS WITH PRIORITY QUEUE (hardened against stuck-state) =====
+// "กอง N ครบแล้วค่ะ" = important → must NOT be interrupted by subsequent scans.
+// "กอง N"            = normal    → can be replaced when a newer scan arrives.
+//
+// Hardening:
+// • watchdog: if current audio has been "playing" > MAX_AUDIO_MS (auto-clear)
+// • handlers: onended / onerror / pause registered BEFORE play() to prevent
+//   missed events; safety setTimeout always clears state (prevents permanent
+//   lockout if onended never fires — mobile audio interrupt, tab background,
+//   network stall, decoded-blob silently failing, etc.)
+// • queue: cap size + dedupe consecutive identical messages
+var _currentTtsAudio = null;
+var _currentTtsBlobUrl = null;
+var _currentTtsImportant = false;
+var _currentTtsStartedAt = 0;
+var _currentTtsWatchdog = null;
+var _ttsQueue = [];
+var TTS_MAX_AUDIO_MS = 8000;   // pile-complete phrase ≈ 1.8s; 8s is generous safety
+var TTS_QUEUE_MAX = 8;          // hard cap to avoid runaway
 
-    fetch(url, { credentials: 'same-origin' })
+function speakPile(pileNum, totalBoxes, selfPickup, pileComplete) {
+    var prefix = selfPickup ? 'รับเอง ' : '';
+    if (pileComplete) {
+        var txt1 = prefix + 'กอง ' + pileNum + ' ครบแล้วค่ะ';
+        console.log('[TTS] speakPile COMPLETE:', txt1);
+        playTts(txt1, true);
+    } else {
+        var txt = prefix + 'กอง ' + pileNum;
+        console.log('[TTS] speakPile:', txt);
+        playTts(txt, false);
+    }
+}
+
+function playTts(text, important) {
+    important = !!important;
+
+    // Watchdog: if "current" audio has been around suspiciously long it's
+    // almost certainly stuck (mobile interrupt, tab switch, decode failure,
+    // missed onended). Force-clear so the next message can play.
+    if (_currentTtsAudio && (Date.now() - _currentTtsStartedAt) > TTS_MAX_AUDIO_MS) {
+        console.warn('[TTS] watchdog: clearing stale audio (>' + TTS_MAX_AUDIO_MS + 'ms)');
+        _stopCurrentTts();
+    }
+
+    if (_currentTtsAudio && _currentTtsImportant) {
+        if (important) {
+            // dedupe: skip if identical to last queued or currently playing
+            var last = _ttsQueue.length > 0 ? _ttsQueue[_ttsQueue.length - 1] : null;
+            if (last && last.text === text) {
+                console.log('[TTS] queue dedupe (skip identical):', text);
+                return;
+            }
+            if (_ttsQueue.length >= TTS_QUEUE_MAX) {
+                console.warn('[TTS] queue full, dropping oldest');
+                _ttsQueue.shift();
+            }
+            _ttsQueue.push({ text: text, important: true });
+        } else {
+            console.log('[TTS] dropped non-important while important playing:', text);
+        }
+        return;
+    }
+
+    _stopCurrentTts();
+    _playTtsNow(text, important);
+}
+
+function _stopCurrentTts() {
+    try { if (_currentTtsWatchdog) clearTimeout(_currentTtsWatchdog); } catch (_) {}
+    try {
+        if (_currentTtsAudio) {
+            _currentTtsAudio.onended = null;
+            _currentTtsAudio.onerror = null;
+            _currentTtsAudio.onpause = null;
+            _currentTtsAudio.pause();
+            _currentTtsAudio.src = '';
+        }
+    } catch (_) {}
+    try { if (_currentTtsBlobUrl) URL.revokeObjectURL(_currentTtsBlobUrl); } catch (_) {}
+    _currentTtsAudio = null;
+    _currentTtsBlobUrl = null;
+    _currentTtsImportant = false;
+    _currentTtsStartedAt = 0;
+    _currentTtsWatchdog = null;
+}
+
+function _playNextInQueue() {
+    if (_ttsQueue.length === 0) return;
+    var next = _ttsQueue.shift();
+    _playTtsNow(next.text, next.important);
+}
+
+// แคชรายชื่อ Thai voices ที่ browser มี (เรียก getVoices() ใช้เวลา → cache ไว้)
+var _cachedThaiVoice = null;
+var _voicesLoaded = false;
+function _findThaiVoice() {
+    if (!window.speechSynthesis) return null;
+    if (_cachedThaiVoice) return _cachedThaiVoice;
+    var voices = window.speechSynthesis.getVoices() || [];
+    for (var i = 0; i < voices.length; i++) {
+        var v = voices[i];
+        var lang = (v.lang || '').toLowerCase();
+        if (lang.indexOf('th') === 0) { _cachedThaiVoice = v; return v; }
+    }
+    return null;
+}
+// บางเบราว์เซอร์ load voices แบบ async — รอ event ก่อน
+if (window.speechSynthesis && typeof window.speechSynthesis.onvoiceschanged !== 'undefined') {
+    window.speechSynthesis.onvoiceschanged = function() {
+        _voicesLoaded = true;
+        _cachedThaiVoice = null;
+        _findThaiVoice();
+    };
+}
+
+// แปลงเลขไทย → คำอ่าน เพื่อให้ browser ที่ไม่มีเสียงไทยพอเข้าใจได้
+// ตัวอย่าง: "กอง 1" → ใช้ Thai voice ถ้ามี | ถ้าไม่มี ส่งเป็น text เดิมเพราะเครื่องอ่านได้แค่เลข
+function _speakNative(text) {
+    try {
+        if (!window.speechSynthesis) return false;
+        var thaiVoice = _findThaiVoice();
+        window.speechSynthesis.cancel();
+        var u = new SpeechSynthesisUtterance(text);
+        if (thaiVoice) {
+            u.voice = thaiVoice;
+            u.lang = thaiVoice.lang || 'th-TH';
+            console.log('[TTS] native fallback (Thai voice="' + thaiVoice.name + '"):', text);
+        } else {
+            // ไม่มีเสียงไทยบนเครื่อง — ยังคงพูด ดีกว่าเงียบ จะออกเสียงตามภาษา default
+            u.lang = 'th-TH';
+            console.warn('[TTS] no Thai voice — using device default voice:', text);
+        }
+        u.rate = 1.0;
+        u.volume = 1.0;
+        window.speechSynthesis.speak(u);
+        return true;
+    } catch (e) {
+        console.error('[TTS] native fallback failed:', e);
+        return false;
+    }
+}
+
+// แคช AudioBuffer ที่ decode แล้ว — ครั้งหน้าเล่นทันที ไม่ต้องโหลดซ้ำ
+var _ttsBufferCache = {};
+var _currentWebAudioSrc = null;
+
+// เล่น TTS ผ่าน Web Audio API — autoplay-friendly บน iOS/Android ที่บล็อก HTMLAudioElement
+function _playViaWebAudio(text, important, arrayBuffer) {
+    return new Promise(function(resolve, reject) {
+        try {
+            var ctx = getAudioCtx();
+            if (ctx.state === 'suspended') ctx.resume();
+            var doPlay = function(buffer) {
+                _ttsBufferCache[text] = buffer; // เก็บไว้เล่นซ้ำ
+                try { if (_currentWebAudioSrc) _currentWebAudioSrc.stop(); } catch (_) {}
+                var src = ctx.createBufferSource();
+                src.buffer = buffer;
+                src.connect(ctx.destination);
+                _currentWebAudioSrc = src;
+                _currentTtsAudio = src; // ใช้ตัวเดียวกับ HTMLAudio path สำหรับ stop logic
+                _currentTtsImportant = important;
+                _currentTtsStartedAt = Date.now();
+                if (_currentTtsWatchdog) clearTimeout(_currentTtsWatchdog);
+                _currentTtsWatchdog = setTimeout(function() {
+                    console.warn('[TTS-WA] watchdog timeout');
+                    try { src.stop(); } catch (_) {}
+                }, TTS_MAX_AUDIO_MS);
+                src.onended = function() {
+                    if (_currentWebAudioSrc === src) {
+                        _currentWebAudioSrc = null;
+                        _currentTtsAudio = null;
+                        _currentTtsImportant = false;
+                        _currentTtsStartedAt = 0;
+                        if (_currentTtsWatchdog) { clearTimeout(_currentTtsWatchdog); _currentTtsWatchdog = null; }
+                        _playNextInQueue();
+                    }
+                };
+                src.start(0);
+                console.log('[TTS-WA] playing' + (important ? ' [IMPORTANT]' : '') + ':', text);
+                resolve();
+            };
+            if (_ttsBufferCache[text]) {
+                doPlay(_ttsBufferCache[text]);
+            } else {
+                // ใช้ slice(0) เพราะ decodeAudioData อาจ detach buffer
+                ctx.decodeAudioData(arrayBuffer.slice(0), doPlay, function(err) {
+                    console.error('[TTS-WA] decode failed:', err);
+                    reject(err);
+                });
+            }
+        } catch (e) {
+            reject(e);
+        }
+    });
+}
+
+function _playTtsNow(text, important, retryCount) {
+    retryCount = retryCount || 0;
+
+    // ถ้ามี buffer ที่ decode แล้วใน cache → เล่นทันทีผ่าน Web Audio (เร็วสุด)
+    if (_ttsBufferCache[text]) {
+        _playViaWebAudio(text, important, null).catch(function() {
+            _speakNative(text); _playNextInQueue();
+        });
+        return;
+    }
+
+    var url = apiBase + '/qr-scan/api/tts?q=' + encodeURIComponent(text);
+    fetch(url, { credentials: 'same-origin', cache: 'no-cache', redirect: 'error' })
         .then(function(r) {
-            if (!r.ok) throw new Error('TTS ' + r.status);
-            return r.blob();
+            if (r.status === 429) {
+                // โดน rate limit → รอยาวขึ้นก่อน retry
+                throw new Error('TTS rate limited (429)');
+            }
+            if (!r.ok) throw new Error('TTS HTTP ' + r.status);
+            var ct = (r.headers.get('content-type') || '').toLowerCase();
+            if (ct.indexOf('audio') === -1) {
+                throw new Error('TTS bad content-type: ' + ct);
+            }
+            return r.arrayBuffer();
         })
-        .then(function(blob) {
-            var blobUrl = URL.createObjectURL(blob);
-            var audio = new Audio(blobUrl);
-            audio.volume = 1.0;
-            audio.play().then(function() {
-                console.log('[TTS] playing:', text);
-                audio.onended = function() { URL.revokeObjectURL(blobUrl); };
-            }).catch(function(e) {
-                console.error('[TTS] play failed:', e);
-                URL.revokeObjectURL(blobUrl);
+        .then(function(arrayBuffer) {
+            if (!arrayBuffer || arrayBuffer.byteLength < 256) {
+                throw new Error('TTS empty buffer ' + (arrayBuffer ? arrayBuffer.byteLength : 0));
+            }
+
+            // ลอง Web Audio API ก่อน (ทำงานบน iOS/Android แม้ HTMLAudioElement ถูกบล็อก)
+            return _playViaWebAudio(text, important, arrayBuffer).catch(function(waErr) {
+                console.warn('[TTS] Web Audio failed, trying HTMLAudio:', waErr);
+                // Fallback: HTMLAudioElement (path เดิม)
+                return _playViaHtmlAudio(text, important, arrayBuffer);
             });
         })
-        .catch(function(e) { console.error('[TTS] fetch failed:', e); });
+        .catch(function(e) {
+            console.warn('[TTS] all paths failed (retry=' + retryCount + '):', e);
+            if (retryCount < 1) {
+                setTimeout(function() { _playTtsNow(text, important, retryCount + 1); }, 300);
+            } else {
+                _speakNative(text);
+                _playNextInQueue();
+            }
+        });
 }
+
+// HTMLAudio fallback path — ใช้เมื่อ Web Audio decode/play ไม่ได้
+function _playViaHtmlAudio(text, important, arrayBuffer) {
+    return new Promise(function(resolve, reject) {
+        try {
+            var blob = new Blob([arrayBuffer], { type: 'audio/mpeg' });
+            var blobUrl = URL.createObjectURL(blob);
+            // ใช้ <audio> ที่ถูก warm ไว้แล้ว → mobile browsers อนุญาตให้เล่นซ้ำได้
+            var audio = _getTtsAudioEl();
+            try { audio.pause(); } catch (_) {}
+            audio.src = blobUrl;
+            audio.currentTime = 0;
+            audio.volume = 1.0;
+
+            var cleared = false;
+            var clearIfMine = function(reason) {
+                if (cleared) return;
+                cleared = true;
+                if (_currentTtsAudio === audio) {
+                    try { if (_currentTtsWatchdog) clearTimeout(_currentTtsWatchdog); } catch (_) {}
+                    try { URL.revokeObjectURL(blobUrl); } catch (_) {}
+                    audio.onended = null;
+                    audio.onerror = null;
+                    _currentTtsAudio = null;
+                    _currentTtsBlobUrl = null;
+                    _currentTtsImportant = false;
+                    _currentTtsStartedAt = 0;
+                    _currentTtsWatchdog = null;
+                    if (reason) console.log('[TTS-HA] cleared (' + reason + '):', text);
+                    _playNextInQueue();
+                }
+            };
+            audio.onended = function() { clearIfMine('ended'); };
+            audio.onerror = function(e) {
+                console.error('[TTS-HA] audio error:', e);
+                clearIfMine('error');
+            };
+
+            _currentTtsBlobUrl = blobUrl;
+            _currentTtsAudio = audio;
+            _currentTtsImportant = important;
+            _currentTtsStartedAt = Date.now();
+            _currentTtsWatchdog = setTimeout(function() {
+                console.warn('[TTS-HA] safety timeout for:', text);
+                clearIfMine('timeout');
+            }, TTS_MAX_AUDIO_MS);
+
+            var p = audio.play();
+            if (p && p.then) {
+                p.then(function() {
+                    console.log('[TTS-HA] playing' + (important ? ' [IMPORTANT]' : '') + ':', text);
+                    resolve();
+                }).catch(function(e) {
+                    console.warn('[TTS-HA] audio.play() rejected:', e);
+                    clearIfMine('play-rejected');
+                    reject(e);
+                });
+            } else {
+                resolve();
+            }
+        } catch (e) {
+            reject(e);
+        }
+    });
+}
+
+// Pre-warm common phrases to disk cache & browser cache after first user gesture.
+// This ensures the first scan of the day plays instantly (no Google round-trip)
+// and stays the SAME consistent Google Thai female voice on every device.
+function preWarmTtsCache() {
+    var phrases = [];
+    for (var n = 1; n <= 50; n++) {
+        phrases.push('กอง ' + n);
+        phrases.push('รับเอง กอง ' + n);
+    }
+    var ctx = getAudioCtx();
+    var i = 0;
+    var staggerMs = 250; // ขยายเป็น 1500ms ถ้าโดน 429
+    function step() {
+        if (i >= phrases.length) {
+            console.log('[TTS] preWarm done — cached', Object.keys(_ttsBufferCache).length, 'of', phrases.length);
+            return;
+        }
+        var q = phrases[i++];
+        try {
+            fetch(apiBase + '/qr-scan/api/tts?q=' + encodeURIComponent(q),
+                  { credentials: 'same-origin', cache: 'no-cache', redirect: 'error' })
+              .then(function(r) {
+                  if (r.status === 429) { staggerMs = 1500; return null; }
+                  if (!r.ok) return null;
+                  var ct = (r.headers.get('content-type') || '').toLowerCase();
+                  if (ct.indexOf('audio') === -1) return null;
+                  return r.arrayBuffer();
+              })
+              .then(function(ab) {
+                  if (!ab || ab.byteLength < 256) return;
+                  ctx.decodeAudioData(ab.slice(0), function(buf) {
+                      _ttsBufferCache[q] = buf;
+                  }, function() {});
+              })
+              .catch(function() {});
+        } catch (_) {}
+        setTimeout(step, staggerMs);
+    }
+    setTimeout(step, 1500);
+}
+document.addEventListener('click', function once() {
+    document.removeEventListener('click', once);
+    preWarmTtsCache();
+}, { once: true });
 
 // ===== IMAGE PREVIEW =====
 function showParcelImage(boxNo) {
@@ -1337,7 +1822,8 @@ function showParcelImage(boxNo) {
     if (!parcel) return;
 
     var boxNum = parcel.box_no.replace(/^BOX-\d{8}-0*/, '');
-    document.getElementById('imgTitle').textContent = '📦 Box.' + boxNum + ' — ' + (parcel.track_no || '-');
+    document.getElementById('imgRound').textContent = '📅 รอบ ' + (parcel.etd || '-');
+    document.getElementById('imgBox').textContent = '📦 Box.' + boxNum;
 
     var imgEl = document.getElementById('imgPreview');
     var noImgEl = document.getElementById('imgNoImage');

@@ -126,6 +126,10 @@ class CustomershippingExport implements FromCollection, WithHeadings, WithColumn
     {
         if (empty($this->etd)) return [];
 
+        // Pile sort order — must match scanner (resources/views/scanner/pickup.blade.php):
+        //   1. Normal recipients (binary strcmp ascending)
+        //   2. SB-prefixed names (รับเอง — known)
+        //   3. Empty / unknown names (รับเอง — ไม่ระบุผู้รับ) → very last
         $allRecipients = Customershipping::where('excel_status', '1')
             ->where('customerno', 'ANW-820')
             ->whereRaw('DATE(etd)=?', [$this->etd])
@@ -133,11 +137,15 @@ class CustomershippingExport implements FromCollection, WithHeadings, WithColumn
             ->pluck('delivery_fullname')
             ->unique()
             ->sort(function ($a, $b) {
-                $aSB = str_starts_with($a, 'SB ');
-                $bSB = str_starts_with($b, 'SB ');
+                $aU = ($a === null || trim((string)$a) === '');
+                $bU = ($b === null || trim((string)$b) === '');
+                if ($aU && !$bU) return 1;
+                if (!$aU && $bU) return -1;
+                $aSB = str_starts_with((string)$a, 'SB ');
+                $bSB = str_starts_with((string)$b, 'SB ');
                 if ($aSB && !$bSB) return 1;
                 if (!$aSB && $bSB) return -1;
-                return strcmp($a, $b);
+                return strcmp((string)$a, (string)$b);
             })
             ->values();
 

@@ -71,26 +71,40 @@
             <small class="form-text text-muted">COD Rate ณ วันที่สร้าง (ไม่สามารถแก้ไขได้)</small>
             {!! $errors->first('cod_rate', '<div class="invalid-feedback">:message</div>') !!}
         </div>
-        <div class="form-group">
-            {{ Form::label('weight','น้ำหนัก') }}
+        <!-- Sub-header: น้ำหนัก/ขนาด สำหรับทำส่งพัสดุในประเทศไทย -->
+        <div class="th-ship-banner" style="background: linear-gradient(90deg, #dbeafe 0%, #bfdbfe 100%); border-left: 4px solid #2563eb; padding: 10px 14px; margin: 18px 0 12px; border-radius: 6px; display: flex; align-items: center; gap: 8px;">
+            <i class="fa fa-truck" style="color: #2563eb; font-size: 16px;"></i>
+            <div style="display: flex; flex-direction: column; line-height: 1.2;">
+                <strong style="color: #1e3a8a; font-size: 14px;">น้ำหนัก / ขนาด</strong>
+                <span style="color: #475569; font-size: 11px;">สำหรับทำส่งพัสดุในประเทศไทย</span>
+            </div>
+        </div>
+        <div class="form-group th-ship-field">
+            {{ Form::label('weight','น้ำหนัก (kg)') }}
             {{ Form::number('weight', $customershipping->weight, ['class' => 'form-control' . ($errors->has('weight') ? ' is-invalid' : ''), 'step' => '0.01', 'placeholder' => '']) }}
             {!! $errors->first('weight', '<div class="invalid-feedback">:message</div>') !!}
         </div>
-        <div class="form-group">
-            {{ Form::label('width','กว้าง') }}
+        <div class="form-group th-ship-field">
+            {{ Form::label('width','กว้าง (cm)') }}
             {{ Form::number('width', $customershipping->width, ['class' => 'form-control' . ($errors->has('width') ? ' is-invalid' : ''), 'step' => '0.01', 'placeholder' => '']) }}
             {!! $errors->first('width', '<div class="invalid-feedback">:message</div>') !!}
         </div>
-        <div class="form-group">
-            {{ Form::label('length','ยาว') }}
+        <div class="form-group th-ship-field">
+            {{ Form::label('length','ยาว (cm)') }}
             {{ Form::number('length', $customershipping->length, ['class' => 'form-control' . ($errors->has('length') ? ' is-invalid' : ''), 'step' => '0.01', 'placeholder' => '']) }}
             {!! $errors->first('length', '<div class="invalid-feedback">:message</div>') !!}
         </div>
-        <div class="form-group">
-            {{ Form::label('height','สูง') }}
+        <div class="form-group th-ship-field">
+            {{ Form::label('height','สูง (cm)') }}
             {{ Form::number('height', $customershipping->height, ['class' => 'form-control' . ($errors->has('height') ? ' is-invalid' : ''), 'step' => '0.01', 'placeholder' => '']) }}
             {!! $errors->first('height', '<div class="invalid-feedback">:message</div>') !!}
         </div>
+        <style>
+            /* Subtle visual emphasis for Thai domestic shipping fields */
+            .th-ship-field label { color: #1e3a8a; font-weight: 600; }
+            .th-ship-field .form-control { border-color: #bfdbfe; }
+            .th-ship-field .form-control:focus { border-color: #2563eb; box-shadow: 0 0 0 0.15rem rgba(37,99,235,0.15); }
+        </style>
         </div><!-- /form-section package -->
 
         <!-- Section: ราคา -->
@@ -457,9 +471,9 @@
                 
                 // เปลี่ยนรายการราคาต่อหน่วย
                 var seaPrices = ['180','170','160','150','140','130','120','115','110','100','90','0'];
-                var airPrices = ['400','380','360','339','320','300','0'];
+                var airPrices = ['500','480','460','450','420','400','0'];
                 var prices = method == 2 ? airPrices : seaPrices;
-                var defaultPrice = method == 2 ? '339' : '150';
+                var defaultPrice = method == 2 ? '450' : '150';
                 
                 var $select = $('#importcost_select');
                 var currentVal = $select.val();

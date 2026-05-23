@@ -47,6 +47,9 @@ Route::group(['middleware' => ['role:admin']], function () {
     // LINE notification
     Route::post('/send-line-notification', 'CustomershippingController@sendLineNotification')->name('send.line.notification');
 
+    // 📢 บรอดแคสข้อความเฉพาะรอบปิดตู้ (admin)
+    Route::post('/broadcast-etd-message', 'CustomershippingController@broadcastEtdMessage')->name('broadcast.etd.message');
+
     Route::resource('permissions', 'Admin\PermissionsController');
     Route::resource('roles', 'Admin\RolesController');
     Route::resource('users', 'Admin\UsersController');
@@ -63,8 +66,15 @@ Route::group(['middleware' => ['role:admin']], function () {
     Route::post('fetch-purchase-requests', 'PurchaseRequestController@fetch')->name('fetch.purchase-requests');
     Route::post('purchase-requests/bulk-status', 'PurchaseRequestController@bulkUpdateStatus')->name('purchase-requests.bulk-status');
     Route::resource('customers', 'CustomerController');
+    Route::get('customers/{id}/credentials', 'CustomerController@showCredentials')->name('customers.credentials');
+    Route::post('customers/{id}/reset-password', 'CustomerController@resetPassword')->name('customers.resetPassword');
+
     Route::resource('pay-status', 'PayStatusController');
     Route::resource('shipping-status', 'ShippingStatusController');
+
+    // System Settings (warehouse address ฯลฯ)
+    Route::get('admin/settings/warehouse', 'Admin\SystemSettingController@warehouse')->name('admin.settings.warehouse');
+    Route::post('admin/settings/warehouse', 'Admin\SystemSettingController@updateWarehouse')->name('admin.settings.warehouse.update');
 
     Route::get('/clear-cache', function () {
         \Illuminate\Support\Facades\Artisan::call('optimize:clear');
@@ -156,7 +166,13 @@ Route::post('/check-existing-itemnos', 'CustomershippingController@checkExisting
 
 });
 
-Auth::routes();
+// ปิดการสมัครสมาชิกเอง — ลูกค้าต้องติดต่อแอดมินเพื่อขอเปิดบัญชี
+Auth::routes(['register' => false]);
+
+// Redirect ใครก็ตามที่เข้า /register (ลิงก์เก่า/bookmark) ไปยังหน้า login พร้อมข้อความ
+Route::get('/register', function () {
+    return redirect()->route('login')->with('info', 'ระบบไม่เปิดให้สมัครสมาชิกเอง กรุณาติดต่อแอดมินเพื่อขอเปิดบัญชี');
+})->name('register');
 
 Route::get('/home', 'HomeController@index')->name('home');
 
@@ -202,13 +218,15 @@ Route::post('/scanner/login', 'ScannerAuthController@login');
 Route::post('/scanner/logout', 'ScannerAuthController@logout')->name('scanner.logout');
 
 // Scanner Home (scanner guard — แยก session จาก admin)
-Route::middleware(['auth:scanner'])->group(function () {
+// scanner.single = บังคับ 1 บัญชี ต่อ 1 อุปกรณ์ (เตะ session เก่าออกเมื่อมีอุปกรณ์ใหม่ login)
+Route::middleware(['auth:scanner', 'scanner.single'])->group(function () {
     Route::get('/scanner', 'QrScanController@scannerHome')->name('scanner.home');
     Route::get('/scanner/pickup', 'QrScanController@pickupHome')->name('scanner.pickup');
 });
 
 // QR Scan API (รองรับทั้ง admin และ scanner guard)
-Route::middleware('auth:web,scanner')->group(function () {
+// scanner.single = เช็คเฉพาะกรณีล็อกอินผ่าน scanner guard (admin guard=web ไม่ถูกกระทบ)
+Route::middleware(['auth:web,scanner', 'scanner.single'])->group(function () {
     Route::get('/qr-scan/api/box/{box_no}', 'QrScanController@getBoxInfo')->name('qrscan.api.box');
     Route::post('/qr-scan/api/update-status', 'QrScanController@updateBoxStatus')->name('qrscan.api.update-status');
     Route::post('/qr-scan/api/clear-scan', 'QrScanController@clearScan')->name('qrscan.api.clear-scan');
@@ -217,12 +235,16 @@ Route::middleware('auth:web,scanner')->group(function () {
     Route::get('/qr-scan/api/pickup/customers', 'QrScanController@getPickupCustomers')->name('qrscan.api.pickup-customers');
     Route::get('/qr-scan/api/pickup/customer/{customerno}', 'QrScanController@getCustomerParcels')->name('qrscan.api.pickup-customer');
     Route::post('/qr-scan/api/pickup/scan', 'QrScanController@pickupScan')->name('qrscan.api.pickup-scan');
-    Route::get('/qr-scan/api/tts', 'QrScanController@ttsProxy')->middleware('throttle:60,1')->name('qrscan.api.tts');
+    // throttle สูงขึ้นเพื่อรองรับ preWarm 100 phrases ตอนเข้าหน้า + scan จริง (เกือบทั้งหมดมา disk cache แล้ว ไม่ hit Google)
+    Route::get('/qr-scan/api/tts', 'QrScanController@ttsProxy')->middleware('throttle:600,1')->name('qrscan.api.tts');
 });
 
 // Scan History (admin)
 Route::middleware(['auth', 'role:admin'])->get('/scan-history', 'QrScanController@scanHistory')->name('scan-history');
 Route::middleware(['auth', 'role:admin'])->get('/scan-history/data', 'QrScanController@scanHistoryData')->name('scan-history.data');
+
+// TTS Health Check (admin only) - แสดงสถานะระบบเสียงประกาศ + errors ล่าสุด
+Route::middleware(['auth', 'role:admin'])->get('/qr-scan/api/tts/health', 'QrScanController@ttsHealth')->name('qrscan.api.tts-health');
 
 // QR Code Scanner System (admin only)
 Route::middleware(['auth', 'role:admin'])->group(function () {

@@ -351,17 +351,36 @@ class InvoiceController extends Controller
         // Mode: check_only — just check chat connection status
         if ($request->input('check_only')) {
             $customerNos = $request->input('customer_nos', []);
+            // Normalize: ensure plain string array (some payloads come in as assoc arrays)
+            $customerNos = array_values(array_filter(array_map(function ($v) {
+                return is_string($v) ? trim($v) : (is_scalar($v) ? trim((string) $v) : null);
+            }, (array) $customerNos)));
+
             if (empty($customerNos)) {
                 return response()->json(['success' => false, 'error' => 'No customers']);
             }
             try {
                 $chatBase = rtrim((string) config('services.skjchat.base_url'), '/');
-                $response = \Illuminate\Support\Facades\Http::withHeaders([
-                    'X-API-Key' => (string) config('services.skjchat.api_key'),
-                    'Content-Type' => 'application/json',
-                ])->timeout(15)->post($chatBase . '/api/invoice-check', [
+                $payload  = [
                     'customer_nos' => $customerNos,
-                ]);
+                    'etd'          => $request->input('etd'),
+                ];
+
+                $response = \Illuminate\Support\Facades\Http::withHeaders([
+                    'X-API-Key'   => (string) config('services.skjchat.api_key'),
+                    'Accept'      => 'application/json',
+                ])
+                    ->asJson()
+                    ->timeout(15)
+                    ->post($chatBase . '/api/invoice-check', $payload);
+
+                if (!$response->successful()) {
+                    Log::warning('[INVOICE-CHECK] non-2xx', [
+                        'status'  => $response->status(),
+                        'payload' => $payload,
+                        'body'    => substr((string) $response->body(), 0, 500),
+                    ]);
+                }
                 return response()->json($response->json(), $response->status());
             } catch (\Exception $e) {
                 Log::error('checkChatConnection error: ' . $e->getMessage());
@@ -472,11 +491,19 @@ class InvoiceController extends Controller
 
                 if ($response->successful() && ($data['success'] ?? false)) {
                     // อัพเดทสถานะเป็น "รอโอน" (pay_status=5) สำหรับรายการที่ยังไม่ได้ชำระ
+                    // ใช้ batch timestamp เดียวกันสำหรับทุกแถวในบิลนี้ — กรณีออกบิลแยก 2 ครั้งจะแยกกองได้ถูก
+                    $batchSentAt = now();
+                    $batchIds = [];
                     foreach ($shippings as $shipping) {
                         if ($shipping->pay_status != 2) {
-                            $shipping->pay_status = 5;
-                            $shipping->save();
+                            $batchIds[] = $shipping->id;
                         }
+                    }
+                    if (!empty($batchIds)) {
+                        Customershipping::whereIn('id', $batchIds)->update([
+                            'pay_status'      => 5,
+                            'invoice_sent_at' => $batchSentAt,
+                        ]);
                     }
 
                     // เช็คว่ามี step ที่ fail ไหม (partial success)
@@ -487,8 +514,11 @@ class InvoiceController extends Controller
                         foreach ($failedSteps as $fs) {
                             $stepName = $fs['step'] ?? '';
                             $stepErr = $fs['error'] ?? '';
-                            if (str_contains($stepErr, '24') || str_contains($stepErr, 'window')) {
+                            $stepSub = $fs['fb_subcode'] ?? null;
+                            if ($stepSub === 2018278 || str_contains($stepErr, '24') || str_contains($stepErr, 'window')) {
                                 $failDetail .= ' [' . $stepName . ': FB เกิน 24 ชม.]';
+                            } elseif ($stepSub === 2018300) {
+                                $failDetail .= ' [' . $stepName . ': มีแอปอื่นถือ thread]';
                             } else {
                                 $failDetail .= ' [' . $stepName . ': ' . mb_substr($stepErr, 0, 60) . ']';
                             }
@@ -517,8 +547,17 @@ class InvoiceController extends Controller
                 } elseif ($response->successful() && !($data['success'] ?? true)) {
                     // Chat API returned 200 but success=false (all steps failed)
                     $errorMsg = $data['error'] ?? 'ส่งไม่สำเร็จ';
-                    if (str_contains($errorMsg, '24') || str_contains($errorMsg, 'window')) {
-                        $errorMsg = 'FB เกิน 24 ชม. ส่งข้อความไม่ได้';
+                    // ตรวจ FB subcode ที่พบบ่อย แล้ว normalize ข้อความให้แอดมินเข้าใจ + แนะวิธีแก้
+                    $failedSteps = $data['failedSteps'] ?? [];
+                    $firstSub = collect($failedSteps)->pluck('fb_subcode')->filter()->first();
+                    if ($firstSub === 2018278 || str_contains($errorMsg, '24') || str_contains($errorMsg, 'window')) {
+                        $errorMsg = 'FB เกิน 24 ชม. → ลูกค้าต้องทักหา Page ก่อน';
+                    } elseif ($firstSub === 2018300 || str_contains($errorMsg, 'thread control')) {
+                        $errorMsg = 'Page Inbox จับ thread อยู่ → ลูกค้าต้อง "Done" แชทใน Page Inbox';
+                    } elseif ($firstSub === 2018028 || $firstSub === 1545041) {
+                        $errorMsg = 'ลูกค้าบล็อก/ปิดรับข้อความจาก Page';
+                    } elseif ($firstSub === 2018108) {
+                        $errorMsg = 'PSID ลูกค้าไม่ถูกต้อง (อาจเปลี่ยน FB account)';
                     }
                     $results['failed']++;
                     $results['details'][] = [

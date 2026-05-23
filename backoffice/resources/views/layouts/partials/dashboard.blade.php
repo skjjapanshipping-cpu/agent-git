@@ -64,12 +64,16 @@
     </div>
 
     <!-- Quick Actions -->
+    <style>
+        .action-card .action-icon.gradient-green { background: linear-gradient(135deg, #10b981, #059669); }
+        .action-card .action-icon.gradient-orange { background: linear-gradient(135deg, #f59e0b, #d97706); }
+    </style>
     <div class="section-title">
         <span class="title-bar"></span>
         Quick Actions
     </div>
     <div class="quick-actions">
-        <a href="https://skjjapanshipping.com/skjtrack/customershippings/create" target="_blank" class="action-card">
+        <a href="https://skjjapanshipping.com/skjtrack/customershippings/create" class="action-card">
             <div class="action-icon gradient-blue">
                 <i class="fa fa-plus"></i>
             </div>
@@ -78,13 +82,31 @@
                 <p>เพิ่มสินค้าเข้าคลัง</p>
             </div>
         </a>
-        <a href="https://skjjapanshipping.com/skjtrack/tracking" target="_blank" class="action-card">
+        <a href="https://skjjapanshipping.com/skjtrack/customers/create" class="action-card">
+            <div class="action-icon gradient-green">
+                <i class="fa fa-user-plus"></i>
+            </div>
+            <div class="action-content">
+                <h3>เพิ่มสมาชิกใหม่</h3>
+                <p>เปิดบัญชีลูกค้า + ส่งอีเมล</p>
+            </div>
+        </a>
+        <a href="https://skjjapanshipping.com/skjtrack/tracking" target="_blank" rel="noopener" class="action-card">
             <div class="action-icon gradient-red">
                 <i class="fa fa-search"></i>
             </div>
             <div class="action-content">
                 <h3>ค้นหาพัสดุ</h3>
                 <p>ติดตามสถานะพัสดุ</p>
+            </div>
+        </a>
+        <a href="https://skjjapanshipping.com/skjtrack/admin/settings/warehouse" class="action-card">
+            <div class="action-icon gradient-orange">
+                <i class="fa fa-building"></i>
+            </div>
+            <div class="action-content">
+                <h3>ตั้งค่าโกดังญี่ปุ่น</h3>
+                <p>แก้ที่อยู่/เบอร์โทรโกดัง</p>
             </div>
         </a>
     </div>

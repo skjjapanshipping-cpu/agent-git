@@ -234,4 +234,126 @@ class LineMessagingService
             ],
         ];
     }
+
+    /**
+     * Build Flex Message สำหรับบรอดแคสเฉพาะรอบปิดตู้
+     * - ใช้แจ้งข่าวเช่น "สินค้าล่าช้ากว่ากำหนด" ฯลฯ
+     *
+     * @param string $customerno    รหัสลูกค้า
+     * @param string $etdDate       วันที่ปิดตู้ (รูปแบบ d/m/Y)
+     * @param string $title         หัวข้อสั้นๆ บน header
+     * @param string $messageBody   เนื้อหาที่ admin พิมพ์
+     * @param int    $shippingMethod 1 = เรือ, 2 = อากาศ
+     * @param string $viewUrl       ลิงก์ดูสถานะ
+     * @param string $headerColor   สีพื้น header (hex) — default ส้ม
+     */
+    public function buildBroadcastNotification(
+        string $customerno,
+        string $etdDate,
+        string $title,
+        string $messageBody,
+        int $shippingMethod = 1,
+        string $viewUrl = 'https://skjjapanshipping.com/skjtrack/shippingview',
+        string $headerColor = '#F59E0B'
+    ): array {
+        $isAir = $shippingMethod == 2;
+        $methodIcon = $isAir ? '✈️' : '🚢';
+        $etdLabel = $isAir ? 'รอบเที่ยวบิน' : 'รอบปิดตู้';
+
+        // ลด/จำกัดความยาว message body เพื่อไม่ให้เกิน LINE limit
+        $bodyText = mb_substr(trim($messageBody), 0, 700);
+        $altTitle = mb_substr($title, 0, 50);
+
+        return [
+            [
+                'type' => 'flex',
+                'altText' => "📢 {$altTitle} (รอบ {$etdDate})",
+                'contents' => [
+                    'type' => 'bubble',
+                    'size' => 'mega',
+                    'header' => [
+                        'type' => 'box',
+                        'layout' => 'vertical',
+                        'contents' => [
+                            [
+                                'type' => 'text',
+                                'text' => '📢 ' . $title,
+                                'weight' => 'bold',
+                                'size' => 'lg',
+                                'color' => '#FFFFFF',
+                                'wrap' => true,
+                            ],
+                            [
+                                'type' => 'text',
+                                'text' => "{$methodIcon} {$etdLabel} {$etdDate}",
+                                'size' => 'sm',
+                                'color' => '#FFFFFFCC',
+                                'margin' => 'sm',
+                            ],
+                        ],
+                        'backgroundColor' => $headerColor,
+                        'paddingAll' => '20px',
+                    ],
+                    'body' => [
+                        'type' => 'box',
+                        'layout' => 'vertical',
+                        'contents' => [
+                            [
+                                'type' => 'text',
+                                'text' => $bodyText,
+                                'size' => 'md',
+                                'color' => '#1F2937',
+                                'wrap' => true,
+                            ],
+                            [
+                                'type' => 'separator',
+                                'margin' => 'xl',
+                            ],
+                            [
+                                'type' => 'box',
+                                'layout' => 'horizontal',
+                                'margin' => 'lg',
+                                'contents' => [
+                                    [
+                                        'type' => 'text',
+                                        'text' => 'รหัสลูกค้า',
+                                        'size' => 'xs',
+                                        'color' => '#9CA3AF',
+                                        'flex' => 0,
+                                    ],
+                                    [
+                                        'type' => 'text',
+                                        'text' => strtoupper($customerno),
+                                        'size' => 'xs',
+                                        'color' => '#0c5e8e',
+                                        'weight' => 'bold',
+                                        'align' => 'end',
+                                    ],
+                                ],
+                            ],
+                        ],
+                        'paddingAll' => '20px',
+                    ],
+                    'footer' => [
+                        'type' => 'box',
+                        'layout' => 'vertical',
+                        'contents' => [
+                            [
+                                'type' => 'button',
+                                'action' => [
+                                    'type' => 'uri',
+                                    'label' => 'ตรวจสอบสถานะสินค้า',
+                                    'uri' => $viewUrl,
+                                ],
+                                'style' => 'primary',
+                                'color' => $headerColor,
+                                'height' => 'md',
+                            ],
+                        ],
+                        'paddingAll' => '20px',
+                    ],
+                ],
+            ],
+        ];
+    }
 }

@@ -142,14 +142,14 @@ class CustomershippingController extends Controller
                             $query->whereBetween('etd', [$request->start_date, $request->end_date]);
                         else if (!empty($request->start_date))
                             $query->whereRaw("DATE(etd) BETWEEN ? AND ?", [$request->start_date, $request->start_date]);
-                    })->orderByRaw('customerno asc')->orderBy('ship_date', 'desc')->take(1500)->get();
+                    })->orderByRaw('LENGTH(customerno) ASC, customerno ASC')->orderBy('ship_date', 'desc')->take(1500)->get();
 
 
                     $sqlQuery = $queryAll->toSql();
                     //                    dd($sqlQuery);
                 }
             } else {
-                $data = $queryAll->orderByRaw('customerno asc')->orderBy('ship_date', 'desc')->take(300)->get(); // โหลดเพียง 20 รายการเมื่อครั้งแรก
+                $data = $queryAll->orderByRaw('LENGTH(customerno) ASC, customerno ASC')->orderBy('ship_date', 'desc')->take(300)->get(); // โหลดเพียง 20 รายการเมื่อครั้งแรก
 
             }
             $sqlQuery = $queryAll->toSql();
@@ -169,10 +169,16 @@ class CustomershippingController extends Controller
             $priceTotal = $import_costTotal + $codTotal;
             $totalRecords = count($data);
 
+            // คำนวณยอดต่อบิล (batch) — แยกตาม invoice_sent_at เพื่อรองรับการออกบิลแยกหลายครั้ง
+            // ในรอบปิดตู้/ลูกค้าเดียวกัน. กรณีบิลเก่าที่ยังไม่มี invoice_sent_at (null)
+            // จะถูกจัดกลุ่มเดียวกัน (เหมือนพฤติกรรมเดิม — ไม่ regression)
             $invoiceGroupTotals = $data->filter(function($item) {
                 return $item->pay_status != 1;
             })->groupBy(function($item) {
-                return $item->customerno . '|' . ($item->etd ?? '') . '|' . $item->pay_status;
+                $batchKey = $item->invoice_sent_at
+                    ? \Carbon\Carbon::parse($item->invoice_sent_at)->format('YmdHis')
+                    : 'legacy';
+                return $item->customerno . '|' . ($item->etd ?? '') . '|' . $item->pay_status . '|' . $batchKey;
             })->map(function($group) {
                 return round($group->sum(function($s) {
                     return $s->import_cost + ($s->cod * ($s->cod_rate ?? 0.25));
@@ -207,7 +213,10 @@ class CustomershippingController extends Controller
                     return $row->thai_bill_amount ? number_format($row->thai_bill_amount, 0) : '-';
                 })->addColumn('invoice_group_total', function ($row) use ($invoiceGroupTotals) {
                     if ($row->pay_status == 1) return '-';
-                    $key = $row->customerno . '|' . ($row->etd ?? '') . '|' . $row->pay_status;
+                    $batchKey = $row->invoice_sent_at
+                        ? \Carbon\Carbon::parse($row->invoice_sent_at)->format('YmdHis')
+                        : 'legacy';
+                    $key = $row->customerno . '|' . ($row->etd ?? '') . '|' . $row->pay_status . '|' . $batchKey;
                     $total = $invoiceGroupTotals[$key] ?? 0;
                     return $total > 0 ? number_format($total, 2) : '-';
                 })
@@ -453,6 +462,16 @@ class CustomershippingController extends Controller
         $isWholePrice = $request->input('iswholeprice', 0); // ถ้าไม่เลือกจะเป็น 0
         $import_cost = $isWholePrice == 1 ? $request->import_cost : $unit_price * $weight; //ถ้าเป็นราคาเหมา ให้แสดงค่านำเข้าเลยไม่ต้องคำนวณ
 
+        // ราคาเหมา: ถ้ามีขนาดครบ คำนวณ import_cost จาก w*l*h*0.01 อัตโนมัติเสมอ
+        if ($isWholePrice == 1) {
+            $w = (float) $request->input('width');
+            $l = (float) $request->input('length');
+            $h = (float) $request->input('height');
+            if ($w > 0 && $l > 0 && $h > 0) {
+                $import_cost = round($w * $l * $h * 0.01, 2);
+            }
+        }
+
         $customerorder = Customerorder::where('customerno', $request->customerno)->where('itemno', $request->itemno)->first();
         
         // ตรวจสอบว่ามี customerorder ก่อนอัพเดท
@@ -609,6 +628,16 @@ class CustomershippingController extends Controller
         $isWholePrice = $request->input('iswholeprice', 0); // ถ้าไม่เลือกจะเป็น 0
 
         $import_cost = $isWholePrice == 1 ? $request->import_cost : $unit_price * $weight; //ถ้าเป็นราคาเหมา ให้แสดงค่านำเข้าเลยไม่ต้องคำนวณ
+
+        // ราคาเหมา: ถ้ามีขนาดครบ คำนวณ import_cost จาก w*l*h*0.01 อัตโนมัติเสมอ
+        if ($isWholePrice == 1) {
+            $w = (float) $request->input('width');
+            $l = (float) $request->input('length');
+            $h = (float) $request->input('height');
+            if ($w > 0 && $l > 0 && $h > 0) {
+                $import_cost = round($w * $l * $h * 0.01, 2);
+            }
+        }
         //        dd($request->all(),array_merge($request->all()
         //        , $saveImages,['import_cost'=>$import_cost,'iswholeprice' => $isWholePrice,'pay_status'=>$request->pay_status]));
         $customershipping->update(array_merge(
@@ -849,6 +878,11 @@ class CustomershippingController extends Controller
             session()->flash('import_errors', $importErrors);
         }
 
+        $importSkipped = $customershippingsImport->getSkipped();
+        if (!empty($importSkipped)) {
+            session()->flash('import_skipped', $importSkipped);
+        }
+
         return redirect()->route('customershippingsconfirm')
             ->with('success', 'กรุณาตรวจสอบข้อมูลก่อนยืนยัน');
     }
@@ -1058,13 +1092,20 @@ class CustomershippingController extends Controller
 
         $grouped = $shippings->groupBy('delivery_fullname');
 
-        // Sort: non-SB first (A-Z), then SB (A-Z)
+        // Sort order — must match scanner (resources/views/scanner/pickup.blade.php):
+        //   1. Normal recipients (binary strcmp ascending)
+        //   2. SB-prefixed names (รับเอง — known)
+        //   3. Empty / unknown names (รับเอง — ไม่ระบุผู้รับ) → very last
         $sortedKeys = $grouped->keys()->sort(function ($a, $b) {
-            $aSB = str_starts_with($a, 'SB ');
-            $bSB = str_starts_with($b, 'SB ');
+            $aU = ($a === null || trim((string)$a) === '');
+            $bU = ($b === null || trim((string)$b) === '');
+            if ($aU && !$bU) return 1;
+            if (!$aU && $bU) return -1;
+            $aSB = str_starts_with((string)$a, 'SB ');
+            $bSB = str_starts_with((string)$b, 'SB ');
             if ($aSB && !$bSB) return 1;
             if (!$aSB && $bSB) return -1;
-            return strcmp($a, $b);
+            return strcmp((string)$a, (string)$b);
         })->values();
 
         $labels = [];
@@ -1072,12 +1113,14 @@ class CustomershippingController extends Controller
         foreach ($sortedKeys as $name) {
             $items = $grouped[$name];
             $pileNum++;
-            $isSB = str_starts_with($name, 'SB ');
+            $isUnknown = ($name === null || trim((string)$name) === '');
+            $isSB = !$isUnknown && str_starts_with((string)$name, 'SB ');
+            $isSelfPickup = $isSB || $isUnknown;
             $labels[] = [
                 'pile_num' => $pileNum,
                 'qty' => $items->count(),
-                'recipient' => $name,
-                'delivery_type' => $isSB ? 'รับเอง' : 'จัดส่งในไทย',
+                'recipient' => $isUnknown ? '(ไม่ระบุผู้รับ)' : $name,
+                'delivery_type' => $isSelfPickup ? 'รับเอง' : 'จัดส่งในไทย',
                 'etd' => $etdFormatted,
             ];
         }
@@ -1400,6 +1443,166 @@ class CustomershippingController extends Controller
         return response()->json([
             'success' => true,
             'message' => "แจ้งเตือนรอบปิดตู้ {$etdFormatted} เสร็จสิ้น: สำเร็จ {$results['success']} ราย, ไม่สำเร็จ {$results['failed']} ราย, ไม่มี LINE {$results['no_line']} ราย" . ($results['already_sent'] > 0 ? ", เคยแจ้งแล้ว {$results['already_sent']} ราย" : ''),
+            'results' => $results,
+        ]);
+    }
+
+    /**
+     * 📢 บรอดแคสข้อความให้ลูกค้า "ทั้งหมด" ในรอบปิดตู้ที่เลือก
+     * ส่งผ่าน SKJ Chat (เหมือนระบบส่งบิล) — ไม่ต้องให้ลูกค้าเชื่อม LINE
+     *
+     * Body:
+     *   etd              required date
+     *   title            required string
+     *   message          required string
+     *   header_color     optional hex (#F59E0B)
+     *   customer_nos     optional array — ถ้าระบุ จะบรอดแคสเฉพาะรหัสที่ส่งมา
+     */
+    public function broadcastEtdMessage(Request $request)
+    {
+        $request->validate([
+            'etd'            => 'required|date',
+            'title'          => 'required|string|max:80',
+            'message'        => 'required|string|max:700',
+            'header_color'   => 'nullable|string|max:9',
+            'customer_nos'   => 'nullable|array',
+            'customer_nos.*' => 'string|max:50',
+        ]);
+
+        $etdDate     = $request->input('etd');
+        $title       = trim($request->input('title'));
+        $message     = trim($request->input('message'));
+        $headerColor = $request->input('header_color') ?: '#F59E0B';
+        $filterNos   = collect($request->input('customer_nos', []))
+            ->map(fn($c) => trim($c))
+            ->filter()
+            ->unique()
+            ->values();
+
+        $adminId = Auth::id();
+
+        // ดึง customer ที่มีพัสดุในรอบปิดตู้นี้ (group by customerno)
+        $query = Customershipping::where('excel_status', '1')
+            ->whereDate('etd', $etdDate);
+
+        if ($filterNos->isNotEmpty()) {
+            $query->whereIn('customerno', $filterNos);
+        }
+
+        $customers = $query
+            ->select('customerno', DB::raw('COUNT(*) as item_count'), DB::raw('MAX(shipping_method) as shipping_method'))
+            ->groupBy('customerno')
+            ->get();
+
+        if ($customers->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ไม่พบลูกค้าในรอบปิดตู้วันที่ ' . Carbon::parse($etdDate)->format('d/m/Y'),
+            ]);
+        }
+
+        $etdFormatted = Carbon::parse($etdDate)->format('d/m/Y');
+
+        // เรียก SKJ Chat API — broadcast ทั้ง batch ในครั้งเดียว
+        $payload = [
+            'etd'         => $etdDate,
+            'etdDisplay'  => $etdFormatted,
+            'title'       => $title,
+            'message'     => $message,
+            'headerColor' => $headerColor,
+            'customers'   => $customers->map(fn($c) => [
+                'customerno'     => $c->customerno,
+                'itemCount'      => (int) $c->item_count,
+                'shippingMethod' => (int) ($c->shipping_method ?? 1),
+            ])->values()->toArray(),
+        ];
+
+        $chatBaseUrl = rtrim((string) config('services.skjchat.base_url'), '/');
+        $chatApiKey  = (string) config('services.skjchat.tracking_key', config('services.skjchat.api_key', ''));
+
+        if (!$chatBaseUrl || !$chatApiKey) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ระบบ SKJ Chat ยังไม่ได้ตั้งค่า (services.skjchat.base_url / tracking_key)',
+            ], 500);
+        }
+
+        $results = ['success' => 0, 'failed' => 0, 'no_contact' => 0, 'details' => []];
+
+        try {
+            $response = \Illuminate\Support\Facades\Http::timeout(60)
+                ->withHeaders(['X-API-Key' => $chatApiKey])
+                ->asJson()
+                ->post($chatBaseUrl . '/api/etd-broadcast', $payload);
+
+            $data = $response->json();
+
+            if (!$response->successful() || empty($data['success'])) {
+                $errMsg = $data['error'] ?? $data['message'] ?? ('HTTP ' . $response->status());
+                Log::error('[broadcastEtdMessage] SKJ Chat error', [
+                    'status' => $response->status(),
+                    'body'   => substr((string) $response->body(), 0, 500),
+                ]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'ส่งบรอดแคสไม่สำเร็จ: ' . $errMsg,
+                ]);
+            }
+
+            foreach (($data['results'] ?? []) as $r) {
+                $cn = $r['customerno'] ?? '';
+                $st = $r['status'] ?? 'failed';
+                $msg = '';
+                if ($st === 'sent') {
+                    $results['success']++;
+                    $platform = $r['platform'] ?? '';
+                    $msg = 'ส่งสำเร็จ' . ($platform ? " ({$platform})" : '');
+                } elseif ($st === 'no_contact') {
+                    $results['no_contact']++;
+                    $msg = $r['error'] ?? 'ไม่พบ contact ในแชท';
+                } else {
+                    $results['failed']++;
+                    $msg = $r['error'] ?? 'ส่งไม่สำเร็จ';
+                }
+
+                $results['details'][] = [
+                    'customerno' => $cn,
+                    'status'     => $st === 'sent' ? 'success' : ($st === 'no_contact' ? 'no_contact' : 'failed'),
+                    'message'    => $msg,
+                ];
+
+                // log
+                try {
+                    DB::table('line_notifications')->insert([
+                        'customerno'    => $cn,
+                        'etd'           => $etdDate,
+                        'line_user_id'  => $r['platform'] ?? null,
+                        'item_count'    => 0,
+                        'status'        => $st === 'sent' ? 'success' : 'failed',
+                        'error_message' => '[broadcast:' . $st . '] ' . substr($title, 0, 60) . ($msg ? ' - ' . substr($msg, 0, 100) : ''),
+                        'sent_by'       => $adminId,
+                        'created_at'    => now(),
+                        'updated_at'    => now(),
+                    ]);
+                } catch (\Throwable $e) {
+                    Log::warning('[broadcastEtdMessage] log insert failed', ['error' => $e->getMessage()]);
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::error('[broadcastEtdMessage] exception', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'ติดต่อ SKJ Chat ไม่ได้: ' . $e->getMessage(),
+            ], 500);
+        }
+
+        $summary = "บรอดแคสรอบปิดตู้ {$etdFormatted} เสร็จสิ้น: สำเร็จ {$results['success']} ราย"
+            . ", ไม่สำเร็จ {$results['failed']} ราย"
+            . ", ไม่พบในแชท {$results['no_contact']} ราย";
+
+        return response()->json([
+            'success' => true,
+            'message' => $summary,
             'results' => $results,
         ]);
     }

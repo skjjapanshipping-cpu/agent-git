@@ -35,6 +35,13 @@ class Kernel extends ConsoleKernel
                  ->timezone('Asia/Bangkok')
                  ->withoutOverlapping()
                  ->appendOutputTo(storage_path('logs/sheets-sync.log'));
+
+        // ลบ TTS cache (.mp3) ที่ไม่ได้ใช้นานกว่า 30 วัน ทุกวันอาทิตย์ 04:00 น.
+        $schedule->command('tts:cleanup --days=30')
+                 ->weeklyOn(0, '04:00')
+                 ->timezone('Asia/Bangkok')
+                 ->withoutOverlapping()
+                 ->appendOutputTo(storage_path('logs/tts-cleanup.log'));
     }
 
     /**

@@ -43,6 +43,20 @@ class RegisterController extends Controller
     }
 
     /**
+     * ปิดการสมัครสมาชิกเอง — ลูกค้าต้องติดต่อแอดมิน
+     * (เก็บ controller ไว้เผื่อในอนาคต — แต่ block ทุก request)
+     */
+    public function showRegistrationForm()
+    {
+        return redirect()->route('login')->with('info', 'ระบบไม่เปิดให้สมัครสมาชิกเอง กรุณาติดต่อแอดมินเพื่อขอเปิดบัญชี');
+    }
+
+    public function register(\Illuminate\Http\Request $request)
+    {
+        return redirect()->route('login')->with('info', 'ระบบไม่เปิดให้สมัครสมาชิกเอง กรุณาติดต่อแอดมินเพื่อขอเปิดบัญชี');
+    }
+
+    /**
      * Get a validator for an incoming registration request.
      *
      * @param  array  $data
@@ -112,12 +126,4 @@ class RegisterController extends Controller
         return $user;
     }
 
-    public function showRegistrationForm()
-    {
-        $provinces = Tambon::getCachedProvinces();
-        $amphoes = Tambon::getCachedAmphoes();
-        $tambons = Tambon::getCachedTambons();
-        return view('auth.register', compact('provinces','amphoes','tambons'));
-
-    }
 }

@@ -136,6 +136,25 @@
             font-size: 11px;
             color: #475569;
         }
+
+        .single-device-note {
+            margin-top: 14px;
+            padding: 10px 14px;
+            background: rgba(59, 130, 246, 0.08);
+            border: 1px solid rgba(59, 130, 246, 0.25);
+            border-radius: 10px;
+            color: #93c5fd;
+            font-size: 12px;
+            line-height: 1.55;
+            display: flex;
+            gap: 8px;
+            align-items: flex-start;
+        }
+        .single-device-note i {
+            margin-top: 2px;
+            color: #60a5fa;
+            font-size: 13px;
+        }
     </style>
 </head>
 <body>
@@ -183,6 +202,11 @@
             <button type="submit" class="btn-login">
                 <i class="fa fa-sign-in"></i> เข้าสู่ระบบ
             </button>
+
+            <div class="single-device-note">
+                <i class="fa fa-shield"></i>
+                <span><strong>นโยบาย 1 บัญชี ต่อ 1 อุปกรณ์</strong> — หากเข้าสู่ระบบจากอุปกรณ์ใหม่ ระบบจะออกจากเครื่องเดิมโดยอัตโนมัติ</span>
+            </div>
         </form>
     </div>
 

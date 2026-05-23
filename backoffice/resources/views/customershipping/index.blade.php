@@ -316,10 +316,11 @@
                             </div>
                             <div class="toolbar-group" style="margin-left:4px;">
                                 <span class="toolbar-group-label">แชท:</span>
-                                <button id="btn-send-invoice-chat" class="btn-modern btn-blue"><i class="fa fa-paper-plane"></i> ส่งบิล</button>
+                                <button id="btn-send-invoice-chat" class="btn-modern btn-blue"><i class="fa fa-paper-plane"></i> แจ้งค่านำเข้า</button>
                                 <button id="btn-line-notify" class="btn-modern btn-line"><i class="fa fa-commenting"></i> LINE</button>
                                 <button id="btn-thai-shipping-notify" class="btn-modern btn-modern" style="background:linear-gradient(135deg,#0ea5e9,#06b6d4) !important; color:#fff !important;"><i class="fa fa-truck"></i> แจ้งค่าส่งไทย</button>
                                 <button id="btn-thai-remind" class="btn-modern btn-modern" style="background:linear-gradient(135deg,#ef4444,#f97316) !important; color:#fff !important;"><i class="fa fa-bell"></i> แจ้งเตือนค้างจ่าย</button>
+                                <button id="btn-broadcast-etd" class="btn-modern btn-modern" style="background:linear-gradient(135deg,#f59e0b,#d97706) !important; color:#fff !important;" title="ส่งข้อความบรอดแคสให้ลูกค้าทั้งหมดในรอบปิดตู้ที่เลือก"><i class="fa fa-bullhorn"></i> บรอดแคสรอบนี้</button>
                             </div>
                         </div>
                     </div>
@@ -1433,6 +1434,123 @@
                 });
             });
 
+            // === Invoice Chat helpers ===
+            // คลิก variable chip → แทรกตัวแปรเข้า textarea
+            $(document).on('click', '.ic-var', function() {
+                var v = $(this).data('var');
+                var el = document.getElementById('invoiceChatMessageTemplate');
+                if (!el) return;
+                var s = el.selectionStart, e = el.selectionEnd;
+                var val = el.value;
+                el.value = val.substring(0, s) + v + val.substring(e);
+                el.selectionStart = el.selectionEnd = s + String(v).length;
+                el.focus();
+                autoGrowIcMessage();
+            });
+
+            // ค้นหารายชื่อใน list
+            $(document).on('input', '#invoiceChatSearch', function() {
+                var q = $(this).val().toLowerCase().trim();
+                $('#invoiceChatCustomerList .ic-row').each(function() {
+                    var txt = $(this).text().toLowerCase();
+                    $(this).toggle(!q || txt.indexOf(q) !== -1);
+                });
+            });
+
+            // auto-grow textarea (เหมือน broadcast)
+            function autoGrowIcMessage() {
+                var el = document.getElementById('invoiceChatMessageTemplate');
+                if (!el) return;
+                el.style.height = 'auto';
+                var newH = Math.min(Math.max(el.scrollHeight + 2, 260), 520);
+                el.style.height = newH + 'px';
+            }
+            $(document).on('input', '#invoiceChatMessageTemplate', autoGrowIcMessage);
+            $('#invoiceChatModal').on('shown.bs.modal', autoGrowIcMessage);
+
+            // === Invoice Result Modal (Swal style with filter chips + search) ===
+            window.showInvoiceResultModal = function(summary, details, counts) {
+                function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+                var order = { failed: 0, not_found: 1, partial: 2, success: 3, paid: 4, unknown: 5 };
+                var sorted = (details || []).slice().sort(function(a, b) {
+                    var oa = order[a.status] != null ? order[a.status] : 6;
+                    var ob = order[b.status] != null ? order[b.status] : 6;
+                    if (oa !== ob) return oa - ob;
+                    return String(a.customerno || '').localeCompare(String(b.customerno || ''), undefined, { numeric: true });
+                });
+
+                function rowHtml(d) {
+                    var icon, color, label;
+                    if (d.status === 'success')        { icon='✅'; color='#10b981'; label='สำเร็จ'; }
+                    else if (d.status === 'partial')   { icon='⚠️'; color='#f59e0b'; label='บางส่วน'; }
+                    else if (d.status === 'not_found') { icon='🔍'; color='#d97706'; label='ไม่พบในแชท'; }
+                    else if (d.status === 'paid')      { icon='💰'; color='#0e7490'; label='ชำระแล้ว'; }
+                    else                                { icon='❌'; color='#ef4444'; label='ไม่สำเร็จ'; }
+                    return '<div class="ic-result-row" data-status="'+d.status+'" '
+                        +'style="display:flex; align-items:center; gap:10px; padding:8px 12px; border-bottom:1px solid #f1f5f9; font-size:13px;">'
+                        +'<span style="flex:0 0 28px;">'+icon+'</span>'
+                        +'<span style="flex:0 0 110px; font-family:\'SF Mono\',monospace; font-weight:600; color:#0c5e8e;">'+esc(d.customerno)+'</span>'
+                        +'<span style="flex:0 0 110px; color:'+color+'; font-weight:600;">'+label+'</span>'
+                        +'<span style="flex:1; color:#475569; word-break:break-word;">'+esc(d.message || '')+'</span>'
+                        +'</div>';
+                }
+
+                var total = (counts.success||0) + (counts.partial||0) + (counts.not_found||0) + (counts.failed||0);
+                var hasError = (counts.failed||0) > 0 || (counts.not_found||0) > 0 || (counts.partial||0) > 0;
+
+                function chip(label, status, count, color) {
+                    return '<button type="button" class="ic-filter-chip" data-filter="'+status+'" '
+                        + 'style="background:#fff; color:'+color+'; border:1px solid '+color+'; border-radius:18px; padding:5px 14px; font-size:13px; font-weight:600; cursor:pointer;">'+label+' ('+count+')</button>';
+                }
+
+                var chipsHtml = '<div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px;">'
+                    + '<button type="button" class="ic-filter-chip" data-filter="all" style="background:#0084FF; color:#fff; border:0; border-radius:18px; padding:5px 14px; font-size:13px; font-weight:600; cursor:pointer;">ทั้งหมด ('+total+')</button>'
+                    + chip('✅ สำเร็จ', 'success', counts.success||0, '#10b981')
+                    + (counts.partial   ? chip('⚠️ บางส่วน',    'partial',   counts.partial,   '#f59e0b') : '')
+                    + (counts.not_found ? chip('🔍 ไม่พบในแชท', 'not_found', counts.not_found, '#d97706') : '')
+                    + (counts.failed    ? chip('❌ ไม่สำเร็จ',   'failed',    counts.failed,    '#ef4444') : '')
+                    + '</div>';
+
+                var searchHtml = '<input type="text" id="icResultSearch" placeholder="🔍 ค้นหา ANW-xxx..." '
+                    + 'style="width:100%; padding:6px 12px; border:1px solid #cbd5e1; border-radius:8px; margin-bottom:10px; font-size:13px;">';
+
+                var headerHtml = '<div style="color:#475569; font-size:13px; margin-bottom:10px; padding:10px 12px; background:#f8fafc; border-radius:8px;">'
+                    + esc(summary) + '</div>';
+
+                var listHtml = '<div id="icResultList" style="max-height:380px; overflow-y:auto; border:1px solid #e2e8f0; border-radius:8px; background:#fff;">' + sorted.map(rowHtml).join('') + '</div>';
+
+                Swal.fire({
+                    icon: hasError ? 'warning' : 'success',
+                    title: hasError ? 'ส่งบิลเสร็จสิ้น (มีบางรายไม่สำเร็จ)' : 'ส่งบิลสำเร็จ',
+                    html: headerHtml + chipsHtml + searchHtml + listHtml,
+                    width: '760px',
+                    confirmButtonColor: '#0084FF',
+                    confirmButtonText: 'ปิด',
+                    didOpen: function() {
+                        $(document).off('click.icfilter').on('click.icfilter', '.ic-filter-chip', function() {
+                            var f = $(this).data('filter');
+                            $('.ic-filter-chip').each(function() {
+                                var fx = $(this).data('filter');
+                                var color = fx === 'success' ? '#10b981' : (fx === 'partial' ? '#f59e0b' : (fx === 'not_found' ? '#d97706' : (fx === 'failed' ? '#ef4444' : '#0084FF')));
+                                if (fx === f) { $(this).css({ background: color, color: '#fff', borderColor: color }); }
+                                else { $(this).css({ background: '#fff', color: color, borderColor: color, border: fx === 'all' ? '0' : '1px solid '+color }); }
+                            });
+                            $('.ic-result-row').each(function() {
+                                var st = $(this).data('status');
+                                $(this).toggle(f === 'all' || st === f);
+                            });
+                        });
+                        $(document).off('input.icsearch').on('input.icsearch', '#icResultSearch', function() {
+                            var q = $(this).val().toLowerCase().trim();
+                            $('.ic-result-row').each(function() {
+                                var txt = $(this).text().toLowerCase();
+                                $(this).toggle(!q || txt.indexOf(q) !== -1);
+                            });
+                        });
+                    }
+                });
+            };
+
             // === ส่งบิลผ่านแชท (SKJ Chat) ===
             $('#btn-send-invoice-chat').on('click', function() {
                 var etdDate = $('#start_date').val();
@@ -1465,6 +1583,11 @@
                     return;
                 }
 
+                // เรียงรหัสลูกค้าจากน้อย → มาก แบบ natural sort (ANW-9 ก่อน ANW-10)
+                customerNos.sort(function(a, b) {
+                    return String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: 'base' });
+                });
+
                 // เก็บ customerMap ไว้ใน modal data
                 $('#invoiceChatModal').data('customerMap', customerMap);
 
@@ -1476,12 +1599,16 @@
                 var listHtml = '';
                 customerNos.forEach(function(cn) {
                     var count = customerMap[cn].length;
-                    listHtml += '<label id="chat-row-' + cn.replace(/[^a-zA-Z0-9-]/g, '_') + '" style="display:flex;align-items:center;gap:6px;padding:6px 4px;cursor:pointer;border-bottom:1px solid #f0f0f0;margin:0;flex-wrap:wrap;">'
-                        + '<input type="checkbox" class="chat-invoice-check" value="' + cn + '" checked style="width:18px;height:18px;flex-shrink:0;cursor:pointer;">'
-                        + '<span style="font-weight:600;min-width:70px;">' + cn.toUpperCase() + '</span>'
-                        + '<span class="badge badge-info" style="font-size:11px;">' + count + ' ชิ้น</span>'
-                        + '<span class="chat-status-badge" data-cn="' + cn + '" style="font-size:10px;"><i class="fa fa-spinner fa-spin"></i></span>'
-                        + '<span class="chat-send-result" data-cn="' + cn + '" style="font-size:10px;"></span>'
+                    var safeId = cn.replace(/[^a-zA-Z0-9-]/g, '_');
+                    listHtml += '<label class="ic-row" id="chat-row-' + safeId + '" data-cn="' + cn + '" '
+                        + 'style="display:flex; align-items:center; gap:8px; padding:7px 10px; cursor:pointer; '
+                        + 'background:#fff; border:1px solid #e2e8f0; border-radius:10px; margin:0 0 5px; transition:.15s; white-space:nowrap; overflow:hidden;">'
+                        + '<input type="checkbox" class="chat-invoice-check" value="' + cn + '" checked '
+                        +   'style="width:16px; height:16px; flex-shrink:0; cursor:pointer; accent-color:#0084FF;">'
+                        + '<span style="font-family:\'SF Mono\',monospace; font-weight:700; color:#0c5e8e; font-size:13px; flex-shrink:0;">' + cn.toUpperCase() + '</span>'
+                        + '<span style="background:#dbeafe; color:#1e40af; padding:1px 7px; border-radius:10px; font-size:10px; font-weight:600; flex-shrink:0;">' + count + ' ชิ้น</span>'
+                        + '<span class="chat-status-badge" data-cn="' + cn + '" style="font-size:10px; flex-shrink:0;"><i class="fa fa-spinner fa-spin" style="color:#94a3b8;"></i></span>'
+                        + '<span class="chat-send-result" data-cn="' + cn + '" style="font-size:10px; margin-left:auto; flex-shrink:0; text-align:right;"></span>'
                         + '</label>';
                 });
 
@@ -1517,31 +1644,32 @@
                                     var badge = $('.chat-status-badge[data-cn="' + cn + '"]');
                                     if (info && info.connected) {
                                         connectedCount++;
-                                        badge.html('<span class="badge" style="background:#28a745;color:#fff;font-size:10px;">✓ เชื่อมต่อแล้ว</span>');
+                                        badge.html('<span style="background:#dcfce7; color:#15803d; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:600;">✓ เชื่อมต่อแล้ว</span>');
                                         if (info.invoiceSent) {
                                             invoiceSentCount++;
                                             var sendBadge = $('.chat-send-result[data-cn="' + cn + '"]');
                                             if (info.invoiceStatus === 'paid') {
-                                                sendBadge.html('<span class="badge" style="background:#17a2b8;color:#fff;font-size:10px;">💰 ชำระแล้ว</span>');
+                                                sendBadge.html('<span title="ชำระแล้ว" style="display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; background:#cffafe; color:#0e7490; border-radius:50%; font-size:12px; font-weight:700;">💰</span>');
                                             } else {
-                                                sendBadge.html('<span class="badge" style="background:#28a745;color:#fff;font-size:10px;">✅ ส่งบิลแล้ว</span> <span class="badge" style="background:#fd7e14;color:#fff;font-size:10px;">🟠 รอโอน</span>');
+                                                sendBadge.html('<span title="ส่งบิลแล้ว" style="display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; background:#dcfce7; color:#15803d; border-radius:50%; font-size:12px; font-weight:700;">✅</span> <span title="รอโอน" style="display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; background:#fed7aa; color:#9a3412; border-radius:50%; font-size:12px; font-weight:700;">🟠</span>');
                                             }
                                         }
                                     } else {
                                         notConnectedCount++;
-                                        badge.html('<span class="badge" style="background:#dc3545;color:#fff;font-size:10px;">✗ ยังไม่เชื่อมต่อ</span>');
+                                        badge.html('<span style="background:#fee2e2; color:#b91c1c; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:600;">✗ ยังไม่เชื่อมต่อ</span>');
                                         badge.closest('label').find('.chat-invoice-check').prop('checked', false);
-                                        badge.closest('label').css('opacity', '0.6');
+                                        badge.closest('label').css({ 'opacity':'0.55', 'background':'#fafafa' });
                                     }
                                 });
-                                var summaryHtml = '<span style="font-size:12px;color:#666;">'
-                                    + '🟢 เชื่อมต่อ: <b>' + connectedCount + '</b> ราย &nbsp;|&nbsp; 🔴 ยังไม่เชื่อมต่อ: <b>' + notConnectedCount + '</b> ราย'
-                                    + '</span>';
-                                $('#invoiceChatConnectionSummary').html(summaryHtml).show();
+                                var chipsHtml =
+                                    '<span style="background:#dcfce7; color:#15803d; padding:5px 12px; border-radius:18px; font-size:12px; font-weight:700;">🟢 เชื่อมต่อ ' + connectedCount + ' ราย</span>'
+                                    + '<span style="background:#fee2e2; color:#b91c1c; padding:5px 12px; border-radius:18px; font-size:12px; font-weight:700;">🔴 ยังไม่เชื่อมต่อ ' + notConnectedCount + ' ราย</span>'
+                                    + (invoiceSentCount > 0 ? '<span style="background:#fef3c7; color:#92400e; padding:5px 12px; border-radius:18px; font-size:12px; font-weight:700;">📨 ส่งบิลแล้ว ' + invoiceSentCount + ' ราย</span>' : '');
+                                $('#invoiceChatConnectionChips').html(chipsHtml);
                             }
                         },
                         error: function() {
-                            $('.chat-status-badge').html('<span class="badge badge-secondary" style="font-size:10px;">? ไม่ทราบ</span>');
+                            $('.chat-status-badge').html('<span style="background:#f1f5f9; color:#475569; padding:2px 8px; border-radius:10px; font-size:11px;">? ไม่ทราบ</span>');
                         }
                     });
                 }
@@ -1568,7 +1696,7 @@
                 $('#invoiceChatMessageTemplate').val(messageTemplate);
                 $('#invoiceChatMessengerFee').val('');
                 $('#invoiceChatResult').html('').hide();
-                $('#invoiceChatSendBtn').prop('disabled', false).text('📩 ส่งบิล');
+                $('#invoiceChatSendBtn').prop('disabled', false).text('📩 แจ้งค่านำเข้า');
 
                 $('#invoiceChatModal').modal('show');
             });
@@ -1590,6 +1718,11 @@
                     return;
                 }
 
+                // เรียงจากน้อย → มาก แบบ natural sort (ANW-500 → ANW-501 → ANW-502 ...)
+                selectedCustomers.sort(function(a, b) {
+                    return String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: 'base' });
+                });
+
                 var btn = $(this);
                 btn.prop('disabled', true).text('⏳ กำลังส่ง...');
                 $('#invoiceChatResult').html('<div class="alert alert-info"><i class="fa fa-spinner fa-spin"></i> กำลังส่งบิล ' + selectedCustomers.length + ' ราย กรุณารอ...</div>').show();
@@ -1606,68 +1739,128 @@
                     if (customerMap[cn]) shippingIdsMap[cn] = customerMap[cn];
                 });
 
-                $.ajax({
-                    url: "{{ route('send.invoice.chat') }}",
-                    type: 'POST',
-                    data: {
-                        etd: etdDate,
-                        customer_nos: selectedCustomers,
-                        shipping_ids_map: shippingIdsMap,
-                        message_template: messageTemplate,
-                        messenger_fee: messengerFee,
-                        _token: "{{ csrf_token() }}"
-                    },
-                    success: function(response) {
-                        btn.prop('disabled', false).text('📩 ส่งบิล');
+                // ส่งทีละรหัสแบบ sequential เพื่อให้ UI แต่ละแถวอัปเดตทันทีเมื่อส่งสำเร็จ
+                var successCount = 0, partialCount = 0, notFoundCount = 0, failedCount = 0;
+                var totalCount = selectedCustomers.length;
+                var idx = 0;
 
-                        // อัพเดทผลลัพธ์ inline ข้างๆ badge เชื่อมต่อของแต่ละราย
-                        var successCount = 0, partialCount = 0, failedCount = 0;
-                        if (response.results && response.results.details) {
-                            response.results.details.forEach(function(d) {
-                                var cn = d.customerno;
-                                var badge = $('.chat-send-result[data-cn="' + cn + '"]');
-                                if (d.status === 'success') {
-                                    successCount++;
-                                    badge.html('<span class="badge" style="background:#28a745;color:#fff;font-size:10px;">✅ ส่งสำเร็จ</span> <span class="badge" style="background:#fd7e14;color:#fff;font-size:10px;">🟠 รอโอน</span>');
-                                } else if (d.status === 'partial') {
-                                    partialCount++;
-                                    var shortMsg = d.message.replace(/.*→.*\)/, '').trim();
-                                    badge.html('<span class="badge" style="background:#fd7e14;color:#fff;font-size:10px;">⚠️ ส่งได้บางส่วน</span> <span class="badge" style="background:#fd7e14;color:#fff;font-size:10px;">🟠 รอโอน</span>'
-                                        + (shortMsg ? '<br><span style="font-size:9px;color:#fd7e14;">' + shortMsg + '</span>' : ''));
-                                } else if (d.status === 'not_found') {
-                                    failedCount++;
-                                    badge.html('<span class="badge" style="background:#ffc107;color:#333;font-size:10px;">🔍 ไม่พบในแชท</span>');
-                                } else {
-                                    failedCount++;
-                                    var errMsg = d.message || 'ส่งไม่สำเร็จ';
-                                    if (errMsg.indexOf('24') >= 0 || errMsg.indexOf('window') >= 0) {
-                                        errMsg = 'FB เกิน 24 ชม.';
-                                    }
-                                    badge.html('<span class="badge" style="background:#dc3545;color:#fff;font-size:10px;">❌ ' + errMsg.substring(0, 40) + '</span>');
-                                }
-                            });
-                        }
+                function updateProgressBanner() {
+                    var done = successCount + partialCount + notFoundCount + failedCount;
+                    var html = '<div class="alert alert-info" style="padding:8px 12px;margin-top:8px;">'
+                        + '<i class="fa fa-spinner fa-spin"></i> กำลังส่งบิล <b>' + Math.min(idx + 1, totalCount) + '/' + totalCount + '</b>'
+                        + (done > 0 ? ' &nbsp;|&nbsp; ✅ ' + successCount + (partialCount > 0 ? ' &nbsp;⚠️ ' + partialCount : '') + (notFoundCount > 0 ? ' &nbsp;🔍 ' + notFoundCount : '') + (failedCount > 0 ? ' &nbsp;❌ ' + failedCount : '') : '')
+                        + '</div>';
+                    $('#invoiceChatResult').html(html).show();
+                }
 
-                        // สรุปย่อด้านล่าง
-                        var summaryParts = [];
-                        if (successCount > 0) summaryParts.push('✅ สำเร็จ ' + successCount + ' ราย');
-                        if (partialCount > 0) summaryParts.push('⚠️ บางส่วน ' + partialCount + ' ราย');
-                        if (failedCount > 0) summaryParts.push('❌ ไม่สำเร็จ ' + failedCount + ' ราย');
-                        var alertClass = failedCount > 0 ? 'alert-warning' : 'alert-success';
-                        $('#invoiceChatResult').html('<div class="alert ' + alertClass + '" style="padding:8px 12px;margin-top:8px;"><b>' + summaryParts.join(' &nbsp;|&nbsp; ') + '</b></div>').show();
+                function finalizeSummary() {
+                    btn.prop('disabled', false).html('<i class="fa fa-paper-plane"></i> แจ้งค่านำเข้า');
 
-                        // รีเฟรชสถานะส่งบิลหลังส่งสำเร็จ
-                        setTimeout(function() { refreshInvoiceStatus(); }, 1000);
-                    },
-                    error: function(xhr) {
-                        btn.prop('disabled', false).text('📩 ส่งบิล');
-                        var errMsg = 'เกิดข้อผิดพลาด';
-                        if (xhr.responseJSON && xhr.responseJSON.message) {
-                            errMsg = xhr.responseJSON.message;
-                        }
-                        $('#invoiceChatResult').html('<div class="alert alert-danger">' + errMsg + '</div>').show();
+                    // เก็บผลลัพธ์จาก badges
+                    var details = [];
+                    $('.chat-invoice-check').each(function() {
+                        var cn = $(this).val();
+                        var resultEl = $('.chat-send-result[data-cn="' + cn + '"]');
+                        var txt = resultEl.text() || '';
+                        var status = 'unknown';
+                        if (txt.indexOf('✅') >= 0) status = 'success';
+                        else if (txt.indexOf('⚠️') >= 0) status = 'partial';
+                        else if (txt.indexOf('🔍') >= 0) status = 'not_found';
+                        else if (txt.indexOf('❌') >= 0) status = 'failed';
+                        else if (txt.indexOf('💰') >= 0) status = 'paid';
+                        details.push({ customerno: cn, status: status, message: txt.trim() });
+                    });
+
+                    var totalSent = successCount + partialCount + notFoundCount + failedCount;
+                    var summary = 'ส่งบิลเสร็จสิ้น: สำเร็จ ' + successCount + ' ราย'
+                        + (partialCount > 0 ? ', บางส่วน ' + partialCount + ' ราย' : '')
+                        + (notFoundCount > 0 ? ', ไม่พบในแชท ' + notFoundCount + ' ราย' : '')
+                        + (failedCount > 0 ? ', ไม่สำเร็จ ' + failedCount + ' ราย' : '');
+
+                    var alertClass = (failedCount > 0 || notFoundCount > 0) ? 'alert-warning' : 'alert-success';
+                    $('#invoiceChatResult').html('<div class="alert ' + alertClass + '" style="padding:8px 12px;margin-top:8px;"><b>' + summary + '</b></div>').show();
+
+                    if (typeof showInvoiceResultModal === 'function') {
+                        showInvoiceResultModal(summary, details, {
+                            success: successCount, partial: partialCount, not_found: notFoundCount, failed: failedCount
+                        });
                     }
-                });
+                    setTimeout(function() { refreshInvoiceStatus(); }, 1000);
+                }
+
+                function sendNextInvoice() {
+                    if (idx >= totalCount) {
+                        finalizeSummary();
+                        return;
+                    }
+
+                    var cn = selectedCustomers[idx];
+                    var singleMap = {};
+                    if (shippingIdsMap[cn]) singleMap[cn] = shippingIdsMap[cn];
+
+                    updateProgressBanner();
+
+                    $.ajax({
+                        url: "{{ route('send.invoice.chat') }}",
+                        type: 'POST',
+                        data: {
+                            etd: etdDate,
+                            customer_nos: [cn],
+                            shipping_ids_map: singleMap,
+                            message_template: messageTemplate,
+                            messenger_fee: messengerFee,
+                            _token: "{{ csrf_token() }}"
+                        },
+                        success: function(response) {
+                            var badge = $('.chat-send-result[data-cn="' + cn + '"]');
+                            var d = (response.results && response.results.details && response.results.details[0])
+                                ? response.results.details[0] : null;
+
+                            // ปั้น icon-only badge (โค้งกลม) พร้อม tooltip
+                            var pi = function(bg, color, icon, tip){
+                                return '<span title="'+tip+'" style="display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; background:'+bg+'; color:'+color+'; border-radius:50%; font-size:12px; font-weight:700;">'+icon+'</span>';
+                            };
+                            if (!d) {
+                                failedCount++;
+                                badge.html(pi('#fee2e2','#b91c1c','❌','ส่งไม่สำเร็จ'));
+                            } else if (d.status === 'success') {
+                                successCount++;
+                                badge.html(pi('#dcfce7','#15803d','✅','ส่งสำเร็จ') + ' ' + pi('#fed7aa','#9a3412','🟠','รอโอน'));
+                            } else if (d.status === 'partial') {
+                                partialCount++;
+                                var shortMsg = (d.message || '').replace(/.*→.*\)/, '').trim();
+                                badge.html(pi('#fed7aa','#9a3412','⚠️','ส่งได้บางส่วน' + (shortMsg ? ' — ' + shortMsg : '')) + ' ' + pi('#fed7aa','#9a3412','🟠','รอโอน'));
+                            } else if (d.status === 'not_found') {
+                                notFoundCount++;
+                                badge.html(pi('#fef3c7','#92400e','🔍','ไม่พบในแชท'));
+                            } else {
+                                failedCount++;
+                                var errMsg = d.message || 'ส่งไม่สำเร็จ';
+                                if (errMsg.indexOf('24') >= 0 || errMsg.indexOf('window') >= 0) {
+                                    errMsg = 'FB เกิน 24 ชม.';
+                                }
+                                badge.html(pi('#fee2e2','#b91c1c','❌', errMsg.substring(0, 80)));
+                            }
+
+                            idx++;
+                            // เว้น 500ms ระหว่างรายเพื่อลดความเสี่ยง rate limit (LINE/FB)
+                            setTimeout(sendNextInvoice, 500);
+                        },
+                        error: function(xhr) {
+                            failedCount++;
+                            var badge = $('.chat-send-result[data-cn="' + cn + '"]');
+                            var errMsg = 'เชื่อมต่อไม่ได้';
+                            if (xhr.responseJSON && xhr.responseJSON.message) {
+                                errMsg = xhr.responseJSON.message;
+                            }
+                            badge.html('<span title="' + String(errMsg).substring(0, 80) + '" style="display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; background:#fee2e2; color:#b91c1c; border-radius:50%; font-size:12px; font-weight:700;">❌</span>');
+                            idx++;
+                            setTimeout(sendNextInvoice, 500);
+                        }
+                    });
+                }
+
+                sendNextInvoice();
             });
 
             // เลือกทั้งหมด / ยกเลิกทั้งหมด
@@ -1789,6 +1982,246 @@
                 dataTable.ajax.reload(null, false);
             });
 
+            // === 📢 บรอดแคสรอบปิดตู้ ===
+            $('#btn-broadcast-etd').on('click', function() {
+                var etdDate = $('#start_date').val();
+                if (!etdDate) {
+                    alert('กรุณาเลือกวันที่ปิดตู้ก่อน');
+                    return;
+                }
+
+                var d = new Date(etdDate);
+                var displayDate = ('0'+d.getDate()).slice(-2) + '/' + ('0'+(d.getMonth()+1)).slice(-2) + '/' + d.getFullYear();
+                $('#bcEtdDisplay').text(displayDate);
+
+                // นับจำนวนลูกค้าในรอบ (จาก dataTable ปัจจุบัน)
+                var customerSet = {};
+                dataTable.rows().every(function() {
+                    var data = this.data();
+                    if (data && data.customerno) {
+                        customerSet[data.customerno] = true;
+                    }
+                });
+                $('#bcCustomerCount').text(Object.keys(customerSet).length);
+
+                // reset form ถ้ายังไม่เคยกรอก
+                if (!$('#bcMessage').val()) {
+                    $('.bc-preset-btn[data-title="🕐 แจ้งสินค้าล่าช้ากว่ากำหนด"]').first().click();
+                }
+
+                $('#broadcastEtdModal').modal('show');
+            });
+
+            // preset click → fill title + message + color
+            $(document).on('click', '.bc-preset-btn', function() {
+                var $b = $(this);
+                $('#bcTitle').val($b.data('title') || '');
+                $('#bcMessage').val($b.data('message') || '');
+                var color = $b.data('color') || '#f59e0b';
+                $('#bcHeaderColor').val(color);
+                $('.bc-color-btn').each(function(){
+                    $(this).css('box-shadow', $(this).data('color').toLowerCase() === color.toLowerCase()
+                        ? '0 0 0 3px ' + color : '0 0 0 2px #e5e7eb');
+                });
+                updateBcPreview();
+            });
+
+            // color swatch click
+            $(document).on('click', '.bc-color-btn', function() {
+                var color = $(this).data('color');
+                $('#bcHeaderColor').val(color);
+                $('.bc-color-btn').each(function(){
+                    $(this).css('box-shadow', $(this).data('color').toLowerCase() === color.toLowerCase()
+                        ? '0 0 0 3px ' + color : '0 0 0 2px #e5e7eb');
+                });
+                var names = {'#f59e0b':'ส้ม','#10b981':'เขียว','#0ea5e9':'ฟ้า','#ef4444':'แดง','#1D8AC9':'น้ำเงิน'};
+                $('#bcColorName').text(names[color.toLowerCase()] || color).css('color', color);
+            });
+
+            // textarea counter + preview update + auto-grow
+            function autoGrowBcMessage() {
+                var el = document.getElementById('bcMessage');
+                if (!el) return;
+                el.style.height = 'auto';
+                var newH = Math.min(Math.max(el.scrollHeight + 2, 180), 520);
+                el.style.height = newH + 'px';
+            }
+
+            $('#bcMessage, #bcTitle').on('input', function() {
+                var remain = 700 - ($('#bcMessage').val() || '').length;
+                $('#bcCharLeft').text(remain);
+                updateBcPreview();
+                if (this.id === 'bcMessage') autoGrowBcMessage();
+            });
+
+            // grow ตอน modal เปิด (รวมถึงตอน preset auto-fill ที่กด click ภายนอก)
+            $('#broadcastEtdModal').on('shown.bs.modal', autoGrowBcMessage);
+            $(document).on('click', '.bc-preset-btn', function() { setTimeout(autoGrowBcMessage, 30); });
+
+            function updateBcPreview() {
+                var title = $('#bcTitle').val() || 'หัวข้อ';
+                var etd = $('#bcEtdDisplay').text() || 'dd/mm/yyyy';
+                $('#bcAltText').text('📢 ' + title + ' (รอบ ' + etd + ')');
+            }
+
+            // ส่งบรอดแคส
+            $('#bcSendBtn').on('click', function() {
+                var etdDate = $('#start_date').val();
+                var title = $.trim($('#bcTitle').val());
+                var message = $.trim($('#bcMessage').val());
+                var headerColor = $('#bcHeaderColor').val();
+                var onlySelected = $('#bcOnlySelected').is(':checked');
+
+                if (!title) { alert('กรุณากรอกหัวข้อ'); return; }
+                if (!message) { alert('กรุณากรอกข้อความ'); return; }
+
+                var customerNos = [];
+                if (onlySelected) {
+                    var checked = $('tbody').find(':checkbox:checked');
+                    if (checked.length === 0) {
+                        alert('คุณเลือก "ส่งเฉพาะที่ติ๊ก" แต่ยังไม่ได้ติ๊กแถวใดในตาราง');
+                        return;
+                    }
+                    checked.each(function() {
+                        var row = dataTable.row($(this).closest('tr'));
+                        var data = row.data();
+                        if (data && data.customerno && customerNos.indexOf(data.customerno) === -1) {
+                            customerNos.push(data.customerno);
+                        }
+                    });
+                }
+
+                var d = new Date(etdDate);
+                var displayDate = ('0'+d.getDate()).slice(-2) + '/' + ('0'+(d.getMonth()+1)).slice(-2) + '/' + d.getFullYear();
+                var targetCount = onlySelected ? customerNos.length : $('#bcCustomerCount').text();
+
+                if (!confirm('ส่งบรอดแคสให้ลูกค้า ' + targetCount + ' ราย\nรอบปิดตู้: ' + displayDate + '\nหัวข้อ: ' + title + '\n\nยืนยันการส่ง?')) {
+                    return;
+                }
+
+                var btn = $(this);
+                var orig = btn.html();
+                btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> กำลังส่ง...');
+
+                $.ajax({
+                    url: "{{ route('broadcast.etd.message') }}",
+                    type: 'POST',
+                    data: {
+                        etd: etdDate,
+                        title: title,
+                        message: message,
+                        header_color: headerColor,
+                        customer_nos: customerNos,
+                        _token: "{{ csrf_token() }}"
+                    },
+                    success: function(response) {
+                        btn.prop('disabled', false).html(orig);
+                        var summary = response.message || '';
+                        var details = (response.results && response.results.details) ? response.results.details : [];
+
+                        if (!response.success) {
+                            Swal.fire({ icon:'error', title:'ส่งบรอดแคสไม่สำเร็จ', text: summary });
+                            return;
+                        }
+
+                        // --- สรุปจำนวนแต่ละ status ---
+                        var counts = { success: 0, failed: 0, no_contact: 0 };
+                        details.forEach(function(d) { if (counts.hasOwnProperty(d.status)) counts[d.status]++; });
+
+                        function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+
+                        // sort: failed → no_contact → success
+                        var order = { failed: 0, no_contact: 1, success: 2 };
+                        var sorted = details.slice().sort(function(a, b) {
+                            var oa = order[a.status] != null ? order[a.status] : 3;
+                            var ob = order[b.status] != null ? order[b.status] : 3;
+                            if (oa !== ob) return oa - ob;
+                            return String(a.customerno || '').localeCompare(String(b.customerno || ''));
+                        });
+
+                        function rowHtml(d) {
+                            var icon, color, label;
+                            if (d.status === 'success')    { icon='✅'; color='#10b981'; label='สำเร็จ'; }
+                            else if (d.status === 'no_contact') { icon='⚠️'; color='#f59e0b'; label='ไม่พบในแชท'; }
+                            else                            { icon='❌'; color='#ef4444'; label='ไม่สำเร็จ'; }
+                            return '<div class="bc-result-row" data-status="'+d.status+'" '
+                                +'style="display:flex; align-items:center; gap:10px; padding:8px 12px; border-bottom:1px solid #f1f5f9; font-size:13px;">'
+                                +'<span style="flex:0 0 28px;">'+icon+'</span>'
+                                +'<span style="flex:0 0 110px; font-family:\'SF Mono\',monospace; font-weight:600; color:#1D8AC9;">'+esc(d.customerno)+'</span>'
+                                +'<span style="flex:0 0 90px; color:'+color+'; font-weight:600;">'+label+'</span>'
+                                +'<span style="flex:1; color:#475569;">'+esc(d.message)+'</span>'
+                                +'</div>';
+                        }
+
+                        var rowsHtml = sorted.map(rowHtml).join('');
+
+                        var chipsHtml =
+                            '<div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px;">'
+                            +'<button type="button" class="bc-filter-chip" data-filter="all" '
+                            +'style="background:#1D8AC9; color:#fff; border:0; border-radius:18px; padding:5px 14px; font-size:13px; font-weight:600; cursor:pointer;">ทั้งหมด ('+details.length+')</button>'
+                            +'<button type="button" class="bc-filter-chip" data-filter="success" '
+                            +'style="background:#fff; color:#10b981; border:1px solid #10b981; border-radius:18px; padding:5px 14px; font-size:13px; font-weight:600; cursor:pointer;">✅ สำเร็จ ('+counts.success+')</button>'
+                            +'<button type="button" class="bc-filter-chip" data-filter="no_contact" '
+                            +'style="background:#fff; color:#f59e0b; border:1px solid #f59e0b; border-radius:18px; padding:5px 14px; font-size:13px; font-weight:600; cursor:pointer;">⚠️ ไม่พบในแชท ('+counts.no_contact+')</button>'
+                            +'<button type="button" class="bc-filter-chip" data-filter="failed" '
+                            +'style="background:#fff; color:#ef4444; border:1px solid #ef4444; border-radius:18px; padding:5px 14px; font-size:13px; font-weight:600; cursor:pointer;">❌ ไม่สำเร็จ ('+counts.failed+')</button>'
+                            +'</div>';
+
+                        var searchHtml = '<input type="text" id="bcResultSearch" placeholder="🔍 ค้นหา ANW-xxx..." '
+                            +'style="width:100%; padding:6px 12px; border:1px solid #cbd5e1; border-radius:8px; margin-bottom:10px; font-size:13px;">';
+
+                        var headerHtml = '<div style="color:#475569; font-size:13px; margin-bottom:10px; padding:10px 12px; background:#f8fafc; border-radius:8px;">'
+                            + esc(summary) + '</div>';
+
+                        var listHtml = '<div id="bcResultList" style="max-height:380px; overflow-y:auto; border:1px solid #e2e8f0; border-radius:8px; background:#fff;">' + rowsHtml + '</div>';
+
+                        $('#broadcastEtdModal').modal('hide');
+
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'บรอดแคสสำเร็จ',
+                            html: headerHtml + chipsHtml + searchHtml + listHtml,
+                            width: '720px',
+                            confirmButtonColor: '#f59e0b',
+                            confirmButtonText: 'ปิด',
+                            didOpen: function() {
+                                // filter chip
+                                $(document).off('click.bcfilter').on('click.bcfilter', '.bc-filter-chip', function() {
+                                    var f = $(this).data('filter');
+                                    $('.bc-filter-chip').each(function() {
+                                        var fx = $(this).data('filter');
+                                        var color = fx === 'success' ? '#10b981' : (fx === 'no_contact' ? '#f59e0b' : (fx === 'failed' ? '#ef4444' : '#1D8AC9'));
+                                        if (fx === f) {
+                                            $(this).css({ background: color, color: '#fff', borderColor: color });
+                                        } else {
+                                            $(this).css({ background: '#fff', color: color, borderColor: color });
+                                        }
+                                    });
+                                    $('.bc-result-row').each(function() {
+                                        var st = $(this).data('status');
+                                        $(this).toggle(f === 'all' || st === f);
+                                    });
+                                });
+                                // search
+                                $(document).off('input.bcsearch').on('input.bcsearch', '#bcResultSearch', function() {
+                                    var q = $(this).val().toLowerCase().trim();
+                                    $('.bc-result-row').each(function() {
+                                        var txt = $(this).text().toLowerCase();
+                                        $(this).toggle(!q || txt.indexOf(q) !== -1);
+                                    });
+                                });
+                            }
+                        });
+                    },
+                    error: function(xhr) {
+                        btn.prop('disabled', false).html(orig);
+                        var errMsg = 'เกิดข้อผิดพลาด';
+                        if (xhr.responseJSON && xhr.responseJSON.message) errMsg = xhr.responseJSON.message;
+                        Swal.fire({ icon:'error', title:'Error', text: errMsg });
+                    }
+                });
+            });
+
             // === แจ้งค่าส่งไทย LINE (ส่งบิล Shippop) ===
             // Preview รูปบิลที่อัพโหลด (รองรับหลายไฟล์)
             $(document).on('change', '#tsInvoiceFile', function() {
@@ -1854,7 +2287,10 @@
                     }
                 });
 
-                var customerNos = Object.keys(customerMap);
+                // เรียงรหัสลูกค้าจากน้อย → มาก แบบ natural sort
+                var customerNos = Object.keys(customerMap).sort(function(a, b) {
+                    return String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: 'base' });
+                });
                 if (customerNos.length === 0) {
                     alert('ไม่พบรหัสลูกค้าจากรายการที่เลือก');
                     return;
@@ -1869,23 +2305,94 @@
                 var listHtml = '';
                 customerNos.forEach(function(cn) {
                     var count = customerMap[cn].length;
-                    listHtml += '<label style="display:flex;align-items:center;gap:6px;padding:6px 4px;cursor:pointer;border-bottom:1px solid #f0f0f0;margin:0;">'
+                    listHtml += '<label class="ts-row" data-cn="' + cn + '" style="display:flex;align-items:center;gap:8px;padding:8px 10px;cursor:pointer;border-bottom:1px solid #f0f0f0;margin:0;background:#fff;border-radius:8px;margin-bottom:4px;transition:.12s;">'
                         + '<input type="checkbox" class="ts-customer-check" value="' + cn + '" checked style="width:18px;height:18px;flex-shrink:0;cursor:pointer;">'
-                        + '<span style="font-weight:600;min-width:70px;">' + cn.toUpperCase() + '</span>'
-                        + '<span class="badge badge-info" style="font-size:11px;">' + count + ' ชิ้น</span>'
-                        + '<span class="ts-send-result" data-cn="' + cn + '" style="font-size:10px;"></span>'
+                        + '<span style="font-weight:700;min-width:80px;color:#0c5e8e;font-family:\'SF Mono\',monospace;font-size:12px;">' + cn.toUpperCase() + '</span>'
+                        + '<span class="badge" style="background:#dbeafe;color:#1e40af;font-size:10px;padding:3px 7px;border-radius:6px;font-weight:600;">' + count + ' ชิ้น</span>'
+                        + '<span class="ts-line-badge" data-cn="' + cn + '" style="font-size:10px; flex-shrink:0;"><i class="fa fa-spinner fa-spin" style="color:#94a3b8;"></i></span>'
+                        + '<span class="ts-send-result" data-cn="' + cn + '" style="font-size:10px;margin-left:auto;flex-shrink:0;text-align:right;"></span>'
                         + '</label>';
                 });
                 $('#tsCustomerList').html(listHtml);
                 $('#tsCustomerCount').text(customerNos.length);
 
                 $('#tsInvoiceFile').val('');
-                $('#tsInvoicePreview').hide().html('<img id="tsPreviewImg" src="" style="max-width:100%; max-height:300px; border:1px solid #e2e8f0; border-radius:8px;">');
+                $('#tsInvoicePreview').hide().html('');
                 $('#tsMessage').val('');
                 $('#tsResult').html('').hide();
-                $('#tsSendBtn').prop('disabled', false).html('🚚 ส่งบิล LINE แจ้งค่าส่งไทย');
+                $('#tsSearch').val('');
+                $('#tsSendBtn').prop('disabled', false).html('<i class="fa fa-truck"></i> ส่งแจ้งค่าส่งไทย');
 
                 $('#thaiShippingModal').modal('show');
+
+                // ตรวจสอบ LINE/Chat connection ของแต่ละราย ผ่าน endpoint เดียวกับ invoiceChat (check_only)
+                $.ajax({
+                    url: "{{ route('send.invoice.chat') }}",
+                    type: 'POST',
+                    data: { _token: "{{ csrf_token() }}", check_only: 1, customer_nos: customerNos, etd: etdDate },
+                    success: function(resp) {
+                        var results = (resp && resp.results) || {};
+                        var lineCount = 0, otherCount = 0, noCount = 0;
+                        customerNos.forEach(function(cn) {
+                            var info = results[cn] || {};
+                            var badge = $('.ts-line-badge[data-cn="' + cn + '"]');
+                            var platform = (info.platform || '').toLowerCase();
+                            if (info.connected && platform === 'line') {
+                                lineCount++;
+                                badge.html('<span title="LINE" style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;background:#dcfce7;color:#15803d;border-radius:50%;font-size:11px;font-weight:700;">L</span>');
+                            } else if (info.connected) {
+                                otherCount++;
+                                var plat = platform === 'facebook' ? 'F' : (platform.substring(0,1).toUpperCase() || '?');
+                                badge.html('<span title="เชื่อมต่อผ่าน ' + platform + '" style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;background:#dbeafe;color:#1e40af;border-radius:50%;font-size:11px;font-weight:700;">' + plat + '</span>');
+                            } else {
+                                noCount++;
+                                badge.html('<span title="ยังไม่เชื่อมต่อ — จะถูกข้าม" style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;background:#fee2e2;color:#b91c1c;border-radius:50%;font-size:13px;font-weight:700;">✗</span>');
+                                badge.closest('label').find('.ts-customer-check').prop('checked', false);
+                                badge.closest('label').css({ 'opacity': '0.55', 'background': '#fafafa' });
+                            }
+                        });
+                        var chips = '<span style="background:#dcfce7;color:#15803d;padding:5px 12px;border-radius:18px;font-size:12px;font-weight:700;">🟢 LINE ' + lineCount + ' ราย</span>';
+                        if (otherCount > 0) chips += '<span style="background:#dbeafe;color:#1e40af;padding:5px 12px;border-radius:18px;font-size:12px;font-weight:700;">🔵 อื่นๆ ' + otherCount + ' ราย</span>';
+                        chips += '<span style="background:#fee2e2;color:#b91c1c;padding:5px 12px;border-radius:18px;font-size:12px;font-weight:700;">🔴 ยังไม่เชื่อมต่อ ' + noCount + ' ราย</span>';
+                        $('#tsLineChips').html(chips);
+                    },
+                    error: function() {
+                        $('.ts-line-badge').html('<span style="background:#f1f5f9;color:#475569;padding:2px 8px;border-radius:10px;font-size:11px;">?</span>');
+                    }
+                });
+            });
+
+            // สลับทั้งหมด
+            $(document).on('click', '#tsSelectAll', function() {
+                var visible = $('.ts-row:visible .ts-customer-check');
+                var allChecked = visible.filter(':checked').length === visible.length;
+                visible.prop('checked', !allChecked);
+            });
+
+            // ค้นหา ANW-xxx
+            $(document).on('input', '#tsSearch', function() {
+                var q = $(this).val().toLowerCase().trim();
+                $('.ts-row').each(function() {
+                    var cn = String($(this).data('cn') || '').toLowerCase();
+                    $(this).toggle(!q || cn.indexOf(q) !== -1);
+                });
+            });
+
+            // Drag & Drop upload
+            $(document).on('dragover dragenter', '#tsDropZone', function(e) {
+                e.preventDefault(); e.stopPropagation();
+                $(this).css({ background:'#dbeafe', borderColor:'#3b82f6' });
+            });
+            $(document).on('dragleave drop', '#tsDropZone', function(e) {
+                e.preventDefault(); e.stopPropagation();
+                $(this).css({ background:'#f0f9ff', borderColor:'#93c5fd' });
+            });
+            $(document).on('drop', '#tsDropZone', function(e) {
+                var files = e.originalEvent.dataTransfer && e.originalEvent.dataTransfer.files;
+                if (files && files.length) {
+                    document.getElementById('tsInvoiceFile').files = files;
+                    $('#tsInvoiceFile').trigger('change');
+                }
             });
 
             // ===== แจ้งเตือนค้างจ่าย =====
@@ -2038,13 +2545,18 @@
                     return;
                 }
 
-                if (!confirm('ต้องการส่งบิล Shippop ผ่าน LINE ให้ลูกค้า ' + selectedCustomers.length + ' ราย\n(' + selectedCustomers.join(', ') + ')\nใช่หรือไม่?')) {
+                if (!confirm('ต้องการส่งบิล Shippop ผ่าน LINE ให้ลูกค้า ' + selectedCustomers.length + ' ราย?')) {
                     return;
                 }
 
+                // เรียงรหัสจากน้อย → มาก
+                selectedCustomers.sort(function(a, b) {
+                    return String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: 'base' });
+                });
+
                 var btn = $(this);
                 btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> กำลังอัพโหลดและส่ง...');
-                $('#tsResult').html('<div class="alert alert-info"><i class="fa fa-spinner fa-spin"></i> กำลังอัพโหลดรูปบิลและส่ง LINE ' + selectedCustomers.length + ' ราย...</div>').show();
+                $('#tsResult').html('<div class="alert alert-info" style="padding:8px 12px;"><i class="fa fa-spinner fa-spin"></i> กำลังส่งบิล ' + selectedCustomers.length + ' ราย กรุณารอ...</div>').show();
 
                 selectedCustomers.forEach(function(cn) {
                     $('.ts-send-result[data-cn="' + cn + '"]').html('<i class="fa fa-spinner fa-spin" style="color:#0ea5e9;"></i>');
@@ -2063,6 +2575,11 @@
                 });
                 formData.append('customer_map', JSON.stringify(customerMap));
 
+                // Helper: badge icon-only พร้อม tooltip
+                var pi = function(bg, color, icon, tip){
+                    return '<span title="' + tip.replace(/"/g, '&quot;') + '" style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;background:' + bg + ';color:' + color + ';border-radius:50%;font-size:12px;font-weight:700;">' + icon + '</span>';
+                };
+
                 $.ajax({
                     url: "{{ route('shippop.notify.shipping') }}",
                     type: 'POST',
@@ -2070,35 +2587,53 @@
                     processData: false,
                     contentType: false,
                     success: function(response) {
-                        btn.prop('disabled', false).html('🚚 ส่งบิล LINE แจ้งค่าส่งไทย');
+                        btn.prop('disabled', false).html('<i class="fa fa-truck"></i> ส่งแจ้งค่าส่งไทย');
 
-                        var successCount = 0, failedCount = 0;
+                        var successCount = 0, failedCount = 0, notFoundCount = 0;
+                        var details = [];
                         if (response.results && response.results.details) {
                             response.results.details.forEach(function(d) {
                                 var cn = d.customerno;
                                 var badge = $('.ts-send-result[data-cn="' + cn + '"]');
                                 if (d.status === 'success') {
                                     successCount++;
-                                    badge.html('<span class="badge" style="background:#28a745;color:#fff;font-size:10px;">✅ ส่งสำเร็จ</span>');
+                                    badge.html(pi('#dcfce7','#15803d','✅','ส่งสำเร็จ'));
+                                } else if (d.status === 'not_found' || (d.message || '').indexOf('ไม่มี LINE') >= 0) {
+                                    notFoundCount++;
+                                    badge.html(pi('#fef3c7','#92400e','🔍','ไม่พบ LINE: ' + (d.message||'')));
                                 } else {
                                     failedCount++;
-                                    badge.html('<span class="badge" style="background:#dc3545;color:#fff;font-size:10px;">❌ ' + (d.message||'ไม่สำเร็จ') + '</span>');
+                                    badge.html(pi('#fee2e2','#b91c1c','❌','ส่งไม่สำเร็จ: ' + (d.message||'')));
                                 }
+                                details.push({
+                                    customerno: cn,
+                                    status: d.status === 'success' ? 'success' : (d.status === 'not_found' ? 'not_found' : 'failed'),
+                                    message: d.message || ''
+                                });
                             });
                         }
 
-                        var alertClass = failedCount > 0 ? 'alert-warning' : 'alert-success';
+                        var alertClass = (failedCount > 0 || notFoundCount > 0) ? 'alert-warning' : 'alert-success';
                         var summaryParts = [];
                         if (successCount > 0) summaryParts.push('✅ สำเร็จ ' + successCount + ' ราย');
-                        if (failedCount > 0) summaryParts.push('❌ ไม่สำเร็จ ' + failedCount + ' ราย');
+                        if (failedCount > 0)  summaryParts.push('❌ ไม่สำเร็จ ' + failedCount + ' ราย');
+                        if (notFoundCount > 0) summaryParts.push('🔍 ไม่พบ LINE ' + notFoundCount + ' ราย');
                         var warningHtml = '';
                         if (response.parse_warning) {
                             warningHtml = '<div class="alert alert-danger" style="padding:6px 12px;margin-bottom:4px;"><b>' + response.parse_warning + '</b></div>';
                         }
-                        $('#tsResult').html(warningHtml + '<div class="alert ' + alertClass + '" style="padding:8px 12px;"><b>' + summaryParts.join(' &nbsp;|&nbsp; ') + '</b></div>').show();
+                        var summary = summaryParts.join(' | ');
+                        $('#tsResult').html(warningHtml + '<div class="alert ' + alertClass + '" style="padding:8px 12px;"><b>' + summary + '</b></div>').show();
+
+                        // เปิด result modal (ใช้ฟังก์ชันร่วมกับ invoiceChat)
+                        if (typeof showInvoiceResultModal === 'function' && details.length > 0) {
+                            showInvoiceResultModal(summary, details, {
+                                success: successCount, partial: 0, not_found: notFoundCount, failed: failedCount
+                            });
+                        }
                     },
                     error: function(xhr) {
-                        btn.prop('disabled', false).html('🚚 ส่งบิล LINE แจ้งค่าส่งไทย');
+                        btn.prop('disabled', false).html('<i class="fa fa-truck"></i> ส่งแจ้งค่าส่งไทย');
                         var errMsg = 'เกิดข้อผิดพลาด';
                         if (xhr.responseJSON && xhr.responseJSON.message) {
                             errMsg = xhr.responseJSON.message;
@@ -2311,49 +2846,89 @@
 
     </script>
 
-<!-- Thai Shipping Notify Modal -->
-<div class="modal fade" id="thaiShippingModal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered" role="document" style="max-height: 90vh;">
-        <div class="modal-content" style="max-height: 90vh; display: flex; flex-direction: column;">
-            <div class="modal-header py-2" style="background: linear-gradient(135deg,#0ea5e9,#06b6d4); color: white; flex-shrink: 0;">
-                <h5 class="modal-title">🚚 แจ้งค่าส่งในไทย (LINE)</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="color: white;">
+<!-- Thai Shipping Notify Modal (redesigned to match Invoice Chat style) -->
+<div class="modal fade" id="thaiShippingModal" tabindex="-1" role="dialog" aria-labelledby="thaiShippingModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document" style="max-height: 92vh; max-width: 1180px; width: 96%;">
+        <div class="modal-content" style="max-height: 92vh; display: flex; flex-direction: column; border:0; border-radius:14px; box-shadow:0 12px 40px rgba(0,0,0,.15);">
+            <div class="modal-header py-3" style="background:linear-gradient(135deg,#0ea5e9,#06b6d4); color:#fff; flex-shrink: 0; border-radius:14px 14px 0 0;">
+                <h5 class="modal-title" id="thaiShippingModalLabel" style="font-weight:700;"><i class="fa fa-truck"></i> แจ้งค่าส่งในไทย (LINE)</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="color: white; opacity:.9;">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
-            <div class="modal-body" style="overflow-y: auto; flex: 1 1 auto;">
-                <div class="row">
-                    <div class="col-md-5">
-                        <h6 class="mb-2"><b>รอบปิดตู้:</b> <span id="tsEtdDisplay" class="text-primary"></span></h6>
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span><b>ลูกค้า (<span id="tsCustomerCount">0</span> ราย)</b></span>
-                        </div>
-                        <div id="tsCustomerList" style="max-height: 300px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 4px; padding: 8px;">
-                        </div>
-                        <small class="text-muted mt-1 d-block">ลูกค้าที่ไม่มี LINE จะถูกข้ามอัตโนมัติ</small>
+            <div class="modal-body" style="overflow-y: auto; flex: 1 1 auto; padding:20px 22px; background:#f8fafc;">
+
+                <!-- ===== Top stats row ===== -->
+                <div style="display:flex; flex-wrap:wrap; align-items:center; gap:14px; padding:10px 16px; background:#fff; border-radius:12px; box-shadow:0 1px 4px rgba(0,0,0,.04); margin-bottom:14px;">
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <i class="fa fa-calendar" style="color:#0369a1;"></i>
+                        <span style="color:#64748b; font-size:12px;">รอบปิดตู้:</span>
+                        <strong style="color:#0369a1; font-size:14px;"><span id="tsEtdDisplay">-</span></strong>
                     </div>
-                    <div class="col-md-7">
-                        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px; margin-bottom:12px;">
-                            <h6 style="font-weight:700; color:#0369a1; margin-bottom:10px;"><i class="fa fa-file-text-o"></i> บิลจาก Shippop</h6>
-                            <div class="form-group mb-2">
-                                <label class="mb-1" style="font-size:12px; font-weight:600;">อัพโหลดรูปบิล / ใบเสร็จ Shippop <span class="text-danger">*</span></label>
-                                <input type="file" class="form-control form-control-sm" id="tsInvoiceFile" accept="image/*,.pdf" multiple>
-                                <small class="text-muted">รองรับ JPG, PNG, PDF — เลือกได้หลายไฟล์</small>
+                    <div style="display:flex; align-items:center; gap:6px; padding-left:14px; border-left:1px solid #e2e8f0;">
+                        <i class="fa fa-users" style="color:#475569;"></i>
+                        <span style="color:#64748b; font-size:12px;">ลูกค้า:</span>
+                        <strong style="color:#1e293b; font-size:14px;"><span id="tsCustomerCount">0</span> ราย</strong>
+                    </div>
+                    <div id="tsLineChips" style="flex:1 1 auto; display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end;"></div>
+                </div>
+
+                <div class="row">
+                    <!-- ===== LEFT: Customer list ===== -->
+                    <div class="col-lg-4 mb-3 mb-lg-0">
+                        <div style="background:#fff; border-radius:12px; box-shadow:0 1px 4px rgba(0,0,0,.04); padding:14px 16px; height:100%;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:10px; flex-wrap:wrap;">
+                                <strong style="color:#0369a1; font-size:14px;"><i class="fa fa-users"></i> รายชื่อลูกค้า</strong>
+                                <button type="button" class="btn btn-sm" id="tsSelectAll" style="background:#f1f5f9; color:#475569; border:0; font-size:11px; font-weight:600; padding:4px 10px; border-radius:8px;">
+                                    <i class="fa fa-check-square-o"></i> สลับทั้งหมด
+                                </button>
                             </div>
-                            <div id="tsInvoicePreview" style="display:none; margin-top:8px;">
+                            <input type="text" id="tsSearch" placeholder="🔍 ค้นหา ANW-xxx..." style="width:100%; padding:6px 12px; border:1px solid #cbd5e1; border-radius:8px; margin-bottom:8px; font-size:13px;">
+                            <div id="tsCustomerList" style="max-height: 460px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 10px; padding:6px; background:#fafbfc;">
                             </div>
+                            <small class="text-muted mt-2 d-block" style="font-size:11px;">⚠️ ลูกค้าที่ไม่มี LINE จะถูกยกเลิกอัตโนมัติ</small>
                         </div>
-                        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px;">
-                            <h6 style="font-weight:700; color:#0369a1; margin-bottom:10px;"><i class="fa fa-commenting-o"></i> ข้อความเพิ่มเติม <small class="text-muted">(ไม่บังคับ)</small></h6>
-                            <textarea class="form-control form-control-sm" id="tsMessage" rows="4" placeholder="เช่น &#10;แจ้งยอดค่าส่งพัสดุในไทยครับ&#10;กรุณาชำระเงินภายใน 3 วันนะครับ"></textarea>
+                    </div>
+
+                    <!-- ===== RIGHT: Upload + Message ===== -->
+                    <div class="col-lg-8">
+                        <!-- Upload card -->
+                        <div style="background:#fff; border-radius:12px; box-shadow:0 1px 4px rgba(0,0,0,.04); padding:14px 16px; margin-bottom:12px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px; flex-wrap:wrap;">
+                                <span style="color:#0369a1; font-weight:700; font-size:14px;"><i class="fa fa-file-text-o"></i> บิลจาก Shippop / ใบเสร็จ <span class="text-danger">*</span></span>
+                                <small class="text-muted" style="font-size:11px;">JPG · PNG · PDF — เลือกได้หลายไฟล์</small>
+                            </div>
+                            <label for="tsInvoiceFile" id="tsDropZone" style="display:block; cursor:pointer; border:2px dashed #93c5fd; background:#f0f9ff; border-radius:10px; padding:18px; text-align:center; color:#0369a1; font-weight:600; transition:.15s;">
+                                <i class="fa fa-cloud-upload" style="font-size:24px; color:#0ea5e9;"></i>
+                                <div style="margin-top:6px; font-size:13px;">คลิกเพื่อเลือกไฟล์ — หรือลากไฟล์มาวาง</div>
+                                <small class="text-muted d-block" style="font-weight:400; font-size:11px;">รองรับหลายไฟล์พร้อมกัน</small>
+                            </label>
+                            <input type="file" id="tsInvoiceFile" accept="image/*,.pdf" multiple style="display:none;">
+                            <div id="tsInvoicePreview" style="display:none; margin-top:10px;"></div>
+                        </div>
+
+                        <!-- Message card -->
+                        <div style="background:#fff; border-radius:12px; box-shadow:0 1px 4px rgba(0,0,0,.04); padding:14px 16px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px; flex-wrap:wrap;">
+                                <span style="color:#0369a1; font-weight:700; font-size:14px;"><i class="fa fa-commenting-o"></i> ข้อความเพิ่มเติม <small class="text-muted" style="font-weight:400;">(ไม่บังคับ)</small></span>
+                            </div>
+                            <small class="text-muted d-block mb-2" style="font-size:11px;">💡 ลากมุมขวาล่างเพื่อขยายช่อง</small>
+                            <textarea class="form-control" id="tsMessage" rows="5"
+                                placeholder="เช่น&#10;แจ้งยอดค่าส่งพัสดุในไทยครับ&#10;กรุณาชำระเงินภายใน 3 วันนะครับ"
+                                style="font-size:14px; line-height:1.7; resize:vertical; min-height:140px; max-height:360px; border-radius:10px;"></textarea>
+                        </div>
+
+                        <!-- Info banner -->
+                        <div style="padding:10px 14px; margin-top:12px; background:#cffafe; border-left:4px solid #06b6d4; border-radius:8px; color:#155e75; font-size:12px; line-height:1.6;">
+                            <strong>📨 ระบบจะส่ง:</strong> รูปบิล/ใบเสร็จ Shippop ทั้งหมด + ข้อความเพิ่มเติม (ถ้ามี) ผ่าน LINE Official Account
                         </div>
                     </div>
                 </div>
                 <div id="tsResult" style="display: none;" class="mt-2"></div>
             </div>
-            <div class="modal-footer py-2" style="flex-shrink: 0;">
+            <div class="modal-footer py-2" style="flex-shrink: 0; background:#fff; border-radius:0 0 14px 14px;">
                 <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">ปิด</button>
-                <button type="button" class="btn btn-sm" id="tsSendBtn" style="background:linear-gradient(135deg,#0ea5e9,#06b6d4); color:#fff; font-weight:700;">🚚 ส่ง LINE แจ้งค่าส่งไทย</button>
+                <button type="button" class="btn btn-sm" id="tsSendBtn" style="background:linear-gradient(135deg,#0ea5e9,#06b6d4); color:#fff; font-weight:700;"><i class="fa fa-truck"></i> ส่งแจ้งค่าส่งไทย</button>
             </div>
         </div>
     </div>
@@ -2403,55 +2978,201 @@
     </div>
 </div>
 
-<!-- Invoice Chat Modal -->
-<div class="modal fade" id="invoiceChatModal" tabindex="-1" role="dialog" aria-labelledby="invoiceChatModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered" role="document" style="max-height: 90vh;">
-        <div class="modal-content" style="max-height: 90vh; display: flex; flex-direction: column;">
-            <div class="modal-header py-2" style="background: #0084FF; color: white; flex-shrink: 0;">
-                <h5 class="modal-title" id="invoiceChatModalLabel">📩 ส่งบิลผ่าน SKJ Chat</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="color: white;">
+<!-- 📢 Broadcast ETD Modal -->
+<div class="modal fade" id="broadcastEtdModal" tabindex="-1" role="dialog" aria-labelledby="broadcastEtdModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header py-2" style="background:linear-gradient(135deg,#f59e0b,#d97706); color:#fff;">
+                <h5 class="modal-title" id="broadcastEtdModalLabel"><i class="fa fa-bullhorn"></i> บรอดแคสรอบปิดตู้</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="color:#fff;">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
-            <div class="modal-body" style="overflow-y: auto; flex: 1 1 auto;">
-                <div class="row">
+            <div class="modal-body" style="padding: 18px 22px;">
+                <div class="row mb-2">
                     <div class="col-md-6">
-                        <h6 class="mb-2"><b>รอบปิดตู้:</b> <span id="invoiceChatEtdDisplay" class="text-primary"></span></h6>
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span><b>ลูกค้า (<span id="invoiceChatCustomerCount">0</span> ราย)</b></span>
-                            <button type="button" class="btn btn-outline-secondary btn-sm" id="invoiceChatSelectAll">เลือก/ยกเลิกทั้งหมด</button>
-                        </div>
-                        <div id="invoiceChatCustomerList" style="max-height: 400px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 4px; padding: 8px; resize: vertical;">
-                        </div>
-                        <div id="invoiceChatConnectionSummary" class="mt-1" style="display:none;"></div>
-                        <small class="text-muted mt-1 d-block">⚠️ ลูกค้าที่ยังไม่เชื่อมต่อ จะถูกยกเลิกการเลือกอัตโนมัติ</small>
+                        <small class="text-muted">รอบปิดตู้:</small>
+                        <div><strong id="bcEtdDisplay" class="text-primary"></strong></div>
                     </div>
                     <div class="col-md-6">
-                        <div class="form-group mb-2">
-                            <label class="mb-1"><b>ข้อความแจ้งลูกค้า</b></label>
-                            <small class="text-muted d-block mb-1"><code>@{{จำนวน}}</code> และ <code>@{{รวม}}</code> จะถูกแทนที่อัตโนมัติตามข้อมูลแต่ละลูกค้า</small>
-                            <textarea class="form-control form-control-sm" id="invoiceChatMessageTemplate" rows="14" style="font-size: 13px; line-height: 1.6; resize: vertical; min-height: 280px;"></textarea>
-                        </div>
-                        <div class="form-group mb-2">
-                            <label class="mb-1"><b>ค่าแมสเซ็นเจอร์</b> <small class="text-muted">(ไม่บังคับ — ใส่ยอดเพื่อรวมในบิล)</small></label>
-                            <div class="input-group input-group-sm">
-                                <div class="input-group-prepend"><span class="input-group-text">฿</span></div>
-                                <input type="number" class="form-control form-control-sm" id="invoiceChatMessengerFee" placeholder="0" min="0" step="1" value="">
-                                <div class="input-group-append"><span class="input-group-text">บาท</span></div>
+                        <small class="text-muted">จำนวนลูกค้าในรอบนี้:</small>
+                        <div><strong id="bcCustomerCount" class="text-warning">-</strong> ราย</div>
+                    </div>
+                </div>
+
+                <hr style="margin:10px 0;">
+
+                <label class="mt-2"><strong>📋 เลือกข้อความสำเร็จรูป (หรือพิมพ์เอง):</strong></label>
+                <div id="bcPresetGroup" class="d-flex flex-wrap" style="gap:6px; margin-bottom:12px;">
+                    <button type="button" class="btn btn-sm btn-outline-warning bc-preset-btn"
+                            data-title="🕐 แจ้งสินค้าล่าช้ากว่ากำหนด" data-color="#f59e0b"
+                            data-message="เรียนลูกค้าทุกท่าน&#10;&#10;เนื่องจากสถานการณ์การขนส่ง สินค้าในรอบปิดตู้นี้จะมาถึงประเทศไทยล่าช้ากว่ากำหนดประมาณ 3-5 วัน&#10;&#10;ทางทีมงานต้องขออภัยในความไม่สะดวก และจะแจ้งให้ทราบทันทีเมื่อสินค้าถึงโกดังไทย ขอบคุณที่เข้าใจครับ 🙏">
+                        🕐 ล่าช้ากว่ากำหนด
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-success bc-preset-btn"
+                            data-title="📦 สินค้ามาถึงโกดังไทยแล้ว" data-color="#10b981"
+                            data-message="แจ้งข่าวดี! สินค้ารอบนี้ถึงโกดังประเทศไทยเรียบร้อยแล้ว 🎉&#10;&#10;ทีมงานกำลังคัดแยกและเตรียมจัดส่งภายใน 1-2 วันทำการ สามารถเช็คสถานะการจัดส่งผ่านระบบได้ตลอดเวลา ขอบคุณที่ใช้บริการครับ 🙏">
+                        📦 ถึงโกดังไทยแล้ว
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-info bc-preset-btn"
+                            data-title="🚚 เริ่มจัดส่งในประเทศไทย" data-color="#0ea5e9"
+                            data-message="สินค้าของท่านในรอบนี้กำลังจัดส่งโดยขนส่งในประเทศไทย 🚚&#10;&#10;กรุณาเตรียมรับสินค้า สามารถติดตามสถานะได้ผ่านระบบ ขอบคุณที่ใช้บริการครับ 🙏">
+                        🚚 เริ่มจัดส่ง
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-danger bc-preset-btn"
+                            data-title="⚠️ แจ้งเหตุขัดข้องการขนส่ง" data-color="#ef4444"
+                            data-message="เรียนลูกค้าทุกท่าน&#10;&#10;ทางทีมงานได้รับแจ้งจากบริษัทขนส่งว่ามีเหตุขัดข้องในรอบนี้ จะแจ้งความคืบหน้าให้ทราบโดยเร็วที่สุด&#10;&#10;ขออภัยในความไม่สะดวกครับ 🙏">
+                        ⚠️ เหตุขัดข้อง
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary bc-preset-btn"
+                            data-title="📌 แจ้งข่าวสาร" data-color="#1D8AC9" data-message="">
+                        📝 พิมพ์เอง
+                    </button>
+                </div>
+
+                <div class="form-group">
+                    <label><strong>หัวข้อแจ้งเตือน:</strong> <span class="text-danger">*</span></label>
+                    <input type="text" id="bcTitle" class="form-control" maxlength="80" placeholder="หัวข้อสั้นๆ เช่น แจ้งสินค้าล่าช้า">
+                </div>
+
+                <div class="form-group">
+                    <label class="d-flex justify-content-between align-items-center">
+                        <span><strong>ข้อความถึงลูกค้า:</strong> <span class="text-danger">*</span></span>
+                        <small class="text-muted" style="font-weight:400; font-size:11px;">💡 ลากมุมขวาล่างเพื่อขยายช่อง</small>
+                    </label>
+                    <textarea id="bcMessage" class="form-control" rows="8" maxlength="700"
+                              placeholder="พิมพ์ข้อความถึงลูกค้า..."
+                              style="min-height:180px; max-height:520px; resize:vertical; line-height:1.6; font-size:14px;"></textarea>
+                    <small class="text-muted">เหลือ <span id="bcCharLeft">700</span> ตัวอักษร</small>
+                </div>
+
+                <div class="form-group">
+                    <label><strong>สีหัว Flex Message:</strong></label>
+                    <div class="d-flex" style="gap:8px;">
+                        @php $colors = [
+                            ['#f59e0b','ส้ม (แจ้งเตือน)'],
+                            ['#10b981','เขียว (ข่าวดี)'],
+                            ['#0ea5e9','ฟ้า (ข้อมูล)'],
+                            ['#ef4444','แดง (สำคัญ)'],
+                            ['#1D8AC9','น้ำเงิน (ทั่วไป)'],
+                        ]; @endphp
+                        @foreach($colors as $c)
+                            <button type="button" class="bc-color-btn" data-color="{{ $c[0] }}" title="{{ $c[1] }}"
+                                style="width:32px; height:32px; border-radius:8px; border:2px solid #fff; box-shadow:0 0 0 2px #e5e7eb; background:{{ $c[0] }}; cursor:pointer;"></button>
+                        @endforeach
+                        <input type="hidden" id="bcHeaderColor" value="#f59e0b">
+                        <span style="margin-left:auto; font-size:13px; color:#64748b;">เลือก: <span id="bcColorName" style="font-weight:700; color:#f59e0b;">ส้ม</span></span>
+                    </div>
+                </div>
+
+                <hr style="margin:10px 0;">
+
+                <div class="form-group">
+                    <label class="d-flex align-items-center" style="gap:6px;">
+                        <input type="checkbox" id="bcOnlySelected">
+                        <span>ส่งเฉพาะลูกค้าที่ติ๊กในตาราง (default = ส่งทุกคนในรอบนี้)</span>
+                    </label>
+                </div>
+
+                <div id="bcPreview" style="background:#fff7ed; border:1px dashed #fde68a; border-radius:10px; padding:12px 14px; font-size:13px; color:#92400e;">
+                    💡 <strong>ตัวอย่าง alt text:</strong> <span id="bcAltText" style="color:#1f2937;">📢 หัวข้อ (รอบ dd/mm/yyyy)</span>
+                </div>
+            </div>
+            <div class="modal-footer py-2">
+                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">ยกเลิก</button>
+                <button type="button" class="btn btn-sm" id="bcSendBtn" style="background:linear-gradient(135deg,#f59e0b,#d97706); color:#fff; font-weight:700;">
+                    <i class="fa fa-paper-plane"></i> ส่งบรอดแคส LINE
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Invoice Chat Modal -->
+<div class="modal fade" id="invoiceChatModal" tabindex="-1" role="dialog" aria-labelledby="invoiceChatModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document" style="max-height: 92vh; max-width: 1180px; width: 96%;">
+        <div class="modal-content" style="max-height: 92vh; display: flex; flex-direction: column; border:0; border-radius:14px; box-shadow:0 12px 40px rgba(0,0,0,.15);">
+            <div class="modal-header py-3" style="background:linear-gradient(135deg,#0084FF,#0c5e8e); color:#fff; flex-shrink: 0; border-radius:14px 14px 0 0;">
+                <h5 class="modal-title" id="invoiceChatModalLabel" style="font-weight:700;"><i class="fa fa-paper-plane"></i> ส่งบิลผ่าน SKJ Chat</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="color: white; opacity:.9;">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" style="overflow-y: auto; flex: 1 1 auto; padding:20px 22px; background:#f8fafc;">
+
+                <!-- ===== Top stats row ===== -->
+                <div style="display:flex; flex-wrap:wrap; align-items:center; gap:14px; padding:10px 16px; background:#fff; border-radius:12px; box-shadow:0 1px 4px rgba(0,0,0,.04); margin-bottom:14px;">
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <i class="fa fa-calendar" style="color:#0c5e8e;"></i>
+                        <span style="color:#64748b; font-size:12px;">รอบปิดตู้:</span>
+                        <strong style="color:#0c5e8e; font-size:14px;"><span id="invoiceChatEtdDisplay">-</span></strong>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:6px; padding-left:14px; border-left:1px solid #e2e8f0;">
+                        <i class="fa fa-users" style="color:#475569;"></i>
+                        <span style="color:#64748b; font-size:12px;">ลูกค้า:</span>
+                        <strong style="color:#1e293b; font-size:14px;"><span id="invoiceChatCustomerCount">0</span> ราย</strong>
+                    </div>
+                    <div id="invoiceChatConnectionChips" style="flex:1 1 auto; display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end;"></div>
+                </div>
+
+                <div class="row">
+                    <!-- ===== LEFT: Customer list ===== -->
+                    <div class="col-lg-4 mb-3 mb-lg-0">
+                        <div style="background:#fff; border-radius:12px; box-shadow:0 1px 4px rgba(0,0,0,.04); padding:14px 16px; height:100%;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:10px; flex-wrap:wrap;">
+                                <strong style="color:#0c5e8e; font-size:14px;"><i class="fa fa-users"></i> รายชื่อลูกค้า</strong>
+                                <button type="button" class="btn btn-sm" id="invoiceChatSelectAll" style="background:#f1f5f9; color:#475569; border:0; font-size:11px; font-weight:600; padding:4px 10px; border-radius:8px;">
+                                    <i class="fa fa-check-square-o"></i> สลับทั้งหมด
+                                </button>
                             </div>
-                            <small class="text-muted">ใช้ <code>@{{ค่าแมส}}</code> และ <code>@{{ยอดรวมทั้งหมด}}</code> ในข้อความเพื่อแทนค่าอัตโนมัติ</small>
+                            <input type="text" id="invoiceChatSearch" placeholder="🔍 ค้นหา ANW-xxx..." style="width:100%; padding:6px 12px; border:1px solid #cbd5e1; border-radius:8px; margin-bottom:8px; font-size:13px;">
+                            <div id="invoiceChatCustomerList" style="max-height: 460px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 10px; padding:6px; background:#fafbfc;">
+                            </div>
+                            <small class="text-muted mt-2 d-block" style="font-size:11px;">⚠️ ลูกค้าที่ยังไม่เชื่อมต่อ จะถูกยกเลิกอัตโนมัติ</small>
                         </div>
-                        <div class="text-muted" style="font-size: 11px; line-height: 1.6;">
-                            <b>ระบบจะส่ง:</b> 1) ข้อความด้านบน 2) PDF ใบแจ้งหนี้ 3) QR PromptPay (สร้างอัตโนมัติ)
+                    </div>
+
+                    <!-- ===== RIGHT: Message + fee ===== -->
+                    <div class="col-lg-8">
+                        <div style="background:#fff; border-radius:12px; box-shadow:0 1px 4px rgba(0,0,0,.04); padding:14px 16px; margin-bottom:12px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px; flex-wrap:wrap;">
+                                <span style="color:#0c5e8e; font-weight:700; font-size:14px;"><i class="fa fa-commenting-o"></i> ข้อความแจ้งลูกค้า</span>
+                                <div style="display:flex; flex-wrap:wrap; gap:4px; align-items:center;">
+                                    <span style="font-size:11px; color:#64748b;">แทรกตัวแปร:</span>
+                                    <code class="ic-var" data-var="@{{จำนวน}}" style="cursor:pointer; background:#dbeafe; color:#1e40af; padding:2px 7px; border-radius:6px; font-size:11px; font-weight:600;">@{{จำนวน}}</code>
+                                    <code class="ic-var" data-var="@{{รวม}}" style="cursor:pointer; background:#dbeafe; color:#1e40af; padding:2px 7px; border-radius:6px; font-size:11px; font-weight:600;">@{{รวม}}</code>
+                                    <code class="ic-var" data-var="@{{ค่าแมส}}" style="cursor:pointer; background:#fef3c7; color:#92400e; padding:2px 7px; border-radius:6px; font-size:11px; font-weight:600;">@{{ค่าแมส}}</code>
+                                    <code class="ic-var" data-var="@{{ยอดรวมทั้งหมด}}" style="cursor:pointer; background:#fef3c7; color:#92400e; padding:2px 7px; border-radius:6px; font-size:11px; font-weight:600;">@{{ยอดรวมทั้งหมด}}</code>
+                                </div>
+                            </div>
+                            <small class="text-muted d-block mb-2" style="font-size:11px;">💡 ลากมุมขวาล่างเพื่อขยายช่อง — คลิก chip ด้านบนเพื่อแทรกตัวแปรเข้าตำแหน่ง cursor</small>
+                            <textarea class="form-control" id="invoiceChatMessageTemplate"
+                                placeholder="พิมพ์ข้อความแจ้งลูกค้า..."
+                                style="font-size:14px; line-height:1.7; resize:vertical; min-height:260px; max-height:520px; border-radius:10px;"></textarea>
+                            <small class="text-muted d-block mt-1" style="font-size:11px;">ตัวแปร <code>@{{จำนวน}}</code> และ <code>@{{รวม}}</code> จะถูกแทนที่อัตโนมัติตามข้อมูลแต่ละลูกค้า</small>
+                        </div>
+
+                        <div style="display:flex; gap:12px; align-items:stretch; flex-wrap:wrap;">
+                            <div style="background:#fff; border-radius:12px; box-shadow:0 1px 4px rgba(0,0,0,.04); padding:12px 14px; flex:1 1 240px;">
+                                <label class="mb-2 d-block" style="font-size:13px;"><span style="color:#92400e; font-weight:700;"><i class="fa fa-motorcycle"></i> ค่าแมสเซ็นเจอร์</span> <small class="text-muted" style="font-weight:400;">(ไม่บังคับ)</small></label>
+                                <div class="input-group input-group-sm">
+                                    <div class="input-group-prepend"><span class="input-group-text" style="background:#fef3c7; border-color:#fcd34d; color:#92400e; font-weight:700;">฿</span></div>
+                                    <input type="number" class="form-control" id="invoiceChatMessengerFee" placeholder="0" min="0" step="1" value="" style="border-color:#fcd34d; font-weight:600;">
+                                    <div class="input-group-append"><span class="input-group-text" style="background:#fef3c7; border-color:#fcd34d; color:#92400e;">บาท</span></div>
+                                </div>
+                            </div>
+                            <div style="padding:12px 14px; background:#dbeafe; border-left:4px solid #1D8AC9; border-radius:8px; color:#1e3a8a; font-size:12px; line-height:1.6; flex:2 1 320px;">
+                                <strong>📨 ระบบจะส่ง 3 อย่าง:</strong><br>1) ข้อความด้านบน &nbsp; 2) PDF ใบแจ้งหนี้ &nbsp; 3) QR PromptPay (สร้างอัตโนมัติ)
+                            </div>
                         </div>
                     </div>
                 </div>
                 <div id="invoiceChatResult" style="display: none;" class="mt-2"></div>
             </div>
-            <div class="modal-footer py-2" style="flex-shrink: 0;">
+            <div class="modal-footer py-2" style="flex-shrink: 0; background:#fff; border-radius:0 0 14px 14px;">
                 <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">ปิด</button>
-                <button type="button" class="btn btn-warning btn-sm" id="invoiceChatRemindBtn"><i class="fa fa-bell"></i> เตือนชำระเงิน</button>
-                <button type="button" class="btn btn-primary" id="invoiceChatSendBtn">📩 ส่งบิล</button>
+                <button type="button" class="btn btn-sm" id="invoiceChatRemindBtn" style="background:linear-gradient(135deg,#f59e0b,#d97706); color:#fff; font-weight:700;"><i class="fa fa-bell"></i> เตือนชำระเงิน</button>
+                <button type="button" class="btn btn-sm" id="invoiceChatSendBtn" style="background:linear-gradient(135deg,#0084FF,#0c5e8e); color:#fff; font-weight:700;"><i class="fa fa-paper-plane"></i> แจ้งค่านำเข้า</button>
             </div>
         </div>
     </div>

@@ -55,7 +55,36 @@ class LoginController extends Controller
         if (!Auth::check()) {
             return view('errors.404');
         }
+
+        // ป้องกันบัญชี scanner เข้าผ่านหน้า login ของลูกค้า → ต้องใช้ /scanner/login เท่านั้น
+        // (scanner-only = มี role 'scanner' แต่ไม่มี 'admin' หรือ 'user')
+        if ($user->hasRole('scanner') && !$user->hasRole('admin') && !$user->hasRole('user')) {
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return redirect()->route('login')->withErrors([
+                'email' => '⚠️ บัญชีนี้สำหรับระบบ Scanner เท่านั้น กรุณาเข้าสู่ระบบที่หน้า Scanner Login',
+            ])->withInput($request->only($this->username()));
+        }
+
         event(new UserEvent($request, $user));
+    }
+
+    /**
+     * รองรับ login ด้วย "อีเมล" หรือ "รหัสลูกค้า" (ANW-xxxx)
+     * - ถ้าค่า input เป็น email format → ค้นด้วย field `email`
+     * - มิฉะนั้น → ค้นด้วย field `customerno` (case-insensitive ด้วย collation default)
+     */
+    protected function credentials(Request $request)
+    {
+        $login = trim((string) $request->input($this->username()));
+        $field = filter_var($login, FILTER_VALIDATE_EMAIL) ? 'email' : 'customerno';
+
+        return [
+            $field     => $login,
+            'password' => $request->input('password'),
+        ];
     }
 
 //    public function login(Request $request){

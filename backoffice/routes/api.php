@@ -20,6 +20,7 @@ Route::middleware('auth:api')->get('/user', function (Request $request) {
 Route::get('/provinces','API\TambonController@getProvinces');
 Route::get('/amphoes','API\TambonController@getAmphoes');
 Route::get('/tambons','API\TambonController@getTambons');
+Route::get('/tambons/search','API\TambonController@searchAddress');
 Route::get('/zipcodes','API\TambonController@getZipcodes');
 
 Route::prefix('address')->group(function () {

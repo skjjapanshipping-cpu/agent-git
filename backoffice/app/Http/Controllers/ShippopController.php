@@ -129,38 +129,91 @@ class ShippopController extends Controller
             }
             $flexMessages[] = $flexMsg;
 
-            // ลองส่งผ่าน SKJ Chat API ก่อน
-            try {
-                $response = Http::withHeaders([
-                    'X-API-Key' => $chatApiKey,
-                    'Content-Type' => 'application/json',
-                ])->timeout(30)->post($chatApiUrl, [
-                    'customerno' => $customerno,
-                    'totalAmount' => $totalAmount > 0 ? round($totalAmount, 2) : null,
-                    'pdfUrl' => $fileUrl,
-                    'originalFilename' => $originalFilename,
-                    'message' => $message ?: null,
-                    'qrImageUrl' => $dynamicQrUrl,
-                    'flexMessages' => $flexMessages,
-                    'allFileUrls' => collect($uploadedFiles)->pluck('url')->toArray(),
-                ]);
+            // ลองส่งผ่าน SKJ Chat API ก่อน (retry สูงสุด 3 ครั้งกรณี timeout/network)
+            $maxAttempts = 3;
+            $lastException = null;
+            for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+                try {
+                    $response = Http::withHeaders([
+                        'X-API-Key' => $chatApiKey,
+                        'Content-Type' => 'application/json',
+                    ])->timeout(30)->post($chatApiUrl, [
+                        'customerno' => $customerno,
+                        'totalAmount' => $totalAmount > 0 ? round($totalAmount, 2) : null,
+                        'pdfUrl' => $fileUrl,
+                        'originalFilename' => $originalFilename,
+                        'message' => $message ?: null,
+                        'qrImageUrl' => $dynamicQrUrl,
+                        'flexMessages' => $flexMessages,
+                        'allFileUrls' => collect($uploadedFiles)->pluck('url')->toArray(),
+                    ]);
 
-                $data = $response->json();
+                    $data = $response->json();
 
-                if ($response->successful() && ($data['success'] ?? false)) {
-                    $sent = true;
-                    $contactName = $data['contactName'] ?? '';
-                    $platform = $data['platform'] ?? '';
-                    $statusMsg = "ส่งผ่านแชทสำเร็จ → {$contactName} ({$platform})";
-                } elseif ($response->status() === 404) {
-                    $statusMsg = $this->fallbackSendLine($customerno, $message, $totalAmount, $fileUrl, $hasPdf, $originalFilename);
-                    $sent = !empty($statusMsg);
-                    if (!$sent) $statusMsg = 'ไม่พบในระบบแชท + ไม่มี LINE account';
-                } else {
-                    $statusMsg = $data['error'] ?? 'Chat API error';
+                    if ($response->successful() && ($data['success'] ?? false)) {
+                        $sent = true;
+                        $contactName = $data['contactName'] ?? '';
+                        $platform = $data['platform'] ?? '';
+                        $statusMsg = "ส่งผ่านแชทสำเร็จ → {$contactName} ({$platform})";
+                        $lastException = null;
+                        break; // success — exit retry loop
+                    } elseif ($response->status() === 404) {
+                        $statusMsg = $this->fallbackSendLine($customerno, $message, $totalAmount, $fileUrl, $hasPdf, $originalFilename);
+                        $sent = !empty($statusMsg);
+                        if (!$sent) $statusMsg = 'ไม่พบในระบบแชท + ไม่มี LINE account';
+                        $lastException = null;
+                        break; // 404 not retryable — fallback handled
+                    } elseif ($response->successful() && empty($data['success'])) {
+                        // API responded 200 แต่ success:false — มักเป็น LINE-level failure (e.g. timeout, invalid msg)
+                        $results_summary = '';
+                        if (!empty($data['results']) && is_array($data['results'])) {
+                            $failed = array_filter($data['results'], fn($r) => ($r['status'] ?? '') !== 'sent');
+                            $errs = array_map(fn($r) => ($r['step'] ?? '?') . ':' . ($r['error'] ?? '?'), $failed);
+                            $results_summary = ' [' . implode(' | ', $errs) . ']';
+                        }
+                        Log::warning('[THAI-BILL] Chat API success:false', [
+                            'customerno' => $customerno,
+                            'attempt'    => $attempt,
+                            'response'   => $data,
+                        ]);
+                        $statusMsg = ($data['error'] ?? 'ส่งไม่สำเร็จ') . $results_summary;
+                        if ($attempt < $maxAttempts) {
+                            sleep(2); // wait 2s before retry
+                            continue;
+                        }
+                    } else {
+                        Log::warning('[THAI-BILL] Chat API non-2xx', [
+                            'customerno' => $customerno,
+                            'status'     => $response->status(),
+                            'body'       => mb_substr((string) $response->body(), 0, 500),
+                        ]);
+                        $statusMsg = $data['error'] ?? ('Chat API HTTP ' . $response->status());
+                        if ($attempt < $maxAttempts && in_array($response->status(), [500, 502, 503, 504])) {
+                            sleep(2);
+                            continue;
+                        }
+                    }
+                    break;
+                } catch (\Exception $e) {
+                    $lastException = $e;
+                    Log::warning('[THAI-BILL] Chat API exception', [
+                        'customerno' => $customerno,
+                        'attempt'    => $attempt,
+                        'error'      => $e->getMessage(),
+                    ]);
+                    if ($attempt < $maxAttempts) {
+                        sleep(2);
+                        continue;
+                    }
                 }
-            } catch (\Exception $e) {
-                Log::error('[THAI-BILL] Chat API exception', ['customerno' => $customerno, 'error' => $e->getMessage()]);
+            }
+
+            // ถ้ายังไม่สำเร็จหลังจาก retry และมี exception — fallback ไปยัง LINE โดยตรง
+            if (!$sent && $lastException) {
+                Log::error('[THAI-BILL] Chat API failed after retries, falling back to direct LINE', [
+                    'customerno' => $customerno,
+                    'error'      => $lastException->getMessage(),
+                ]);
                 $statusMsg = $this->fallbackSendLine($customerno, $message, $totalAmount, $fileUrl, $hasPdf, $originalFilename);
                 $sent = !empty($statusMsg);
                 if (!$sent) $statusMsg = 'Chat API error + ไม่มี LINE account';
