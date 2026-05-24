@@ -2264,13 +2264,18 @@
                 tsParsePreview(files);
             });
 
+            function tsEsc(s) { return String(s == null ? '' : s).replace(/"/g, '&quot;'); }
+
             function tsRenderPreviewRow(item, idx, allBoxesSet) {
-                var refNo = (item.refNo || '').replace(/"/g, '&quot;');
-                var courier = (item.courier || '').replace(/"/g, '&quot;');
-                var dest = (item.destination || '').replace(/"/g, '&quot;');
+                var refNo = tsEsc(item.refNo);
+                var courier = tsEsc(item.courier);
+                // ผู้รับ: ใช้ recipientName ก่อน → fallback ไป recipient ทั้งบรรทัด → ไป destination
+                var recName = tsEsc(item.recipientName || item.recipient || item.destination || '');
+                var dest = tsEsc(item.destination);
                 var boxes = Array.isArray(item.boxes) ? item.boxes : [];
                 var boxStr = boxes.join('+');
                 var price = item.totalPrice ? Number(item.totalPrice).toFixed(2) : '';
+                var pileLabel = (item.pileNo != null && item.pileNo !== '') ? ('กอง ' + item.pileNo) : '';
 
                 var matched = 0;
                 boxes.forEach(function(b){ if (allBoxesSet.has(String(b))) matched++; });
@@ -2285,11 +2290,17 @@
                     badge = '<span title="ไม่มี Box ที่ match กับลูกค้าที่เลือก" style="color:#b91c1c;">❌</span>';
                 }
 
-                return '<tr class="ts-parse-row" data-idx="' + idx + '">'
+                // Title (tooltip) ของ input ผู้รับ: แสดง destination ด้วยเพื่อ context
+                var recTitle = dest ? ('ปลายทาง: ' + dest) : '';
+
+                return '<tr class="ts-parse-row" data-idx="' + idx + '" data-dest="' + dest + '">'
                     + '<td style="padding:4px 8px; font-weight:700; color:#475569;">' + (idx + 1) + ' ' + badge + '</td>'
                     + '<td style="padding:4px 6px;"><input type="text" class="form-control form-control-sm ts-p-ref" value="' + refNo + '" style="font-size:11px; padding:3px 6px; font-family:monospace;"></td>'
                     + '<td style="padding:4px 6px;"><input type="text" class="form-control form-control-sm ts-p-courier" value="' + courier + '" style="font-size:11px; padding:3px 6px;"></td>'
-                    + '<td style="padding:4px 6px;"><input type="text" class="form-control form-control-sm ts-p-dest" value="' + dest + '" style="font-size:11px; padding:3px 6px;"></td>'
+                    + '<td style="padding:4px 6px;">'
+                        + (pileLabel ? '<div style="font-size:9px;color:#64748b;font-weight:600;margin-bottom:2px;">' + pileLabel + '</div>' : '')
+                        + '<input type="text" class="form-control form-control-sm ts-p-recipient" value="' + recName + '" title="' + recTitle + '" style="font-size:11px; padding:3px 6px;">'
+                    + '</td>'
                     + '<td style="padding:4px 6px;"><input type="text" class="form-control form-control-sm ts-p-boxes" value="' + boxStr + '" placeholder="66+88+..." style="font-size:11px; padding:3px 6px; font-family:monospace;"></td>'
                     + '<td style="padding:4px 6px;"><input type="number" step="0.01" min="0" class="form-control form-control-sm ts-p-price" value="' + price + '" style="font-size:11px; padding:3px 6px; text-align:right;"></td>'
                     + '<td style="padding:4px 6px; text-align:center;"><button type="button" class="btn btn-link p-0 ts-p-del" style="color:#dc2626;" title="ลบ"><i class="fa fa-trash"></i></button></td>'
@@ -2404,12 +2415,13 @@
                     var $r = $(this);
                     var refNo = ($r.find('.ts-p-ref').val() || '').trim();
                     var courier = ($r.find('.ts-p-courier').val() || '').trim();
-                    var dest = ($r.find('.ts-p-dest').val() || '').trim();
+                    var recipientName = ($r.find('.ts-p-recipient').val() || '').trim();
+                    var dest = ($r.data('dest') || '').toString().trim();
                     var boxesStr = ($r.find('.ts-p-boxes').val() || '').trim();
                     var priceVal = parseFloat($r.find('.ts-p-price').val()) || 0;
                     var boxes = boxesStr ? boxesStr.split(/[\s,+]+/).map(function(b){ return parseInt(b,10); }).filter(function(n){ return n>0; }) : [];
                     if (!refNo && boxes.length === 0) return;
-                    items.push({ refNo:refNo, courier:courier, destination:dest, totalPrice:priceVal, boxes:boxes });
+                    items.push({ refNo:refNo, courier:courier, recipientName:recipientName, destination:dest, totalPrice:priceVal, boxes:boxes });
                 });
                 return items;
             }
@@ -3088,7 +3100,7 @@
                                             <th style="font-size:11px; padding:6px 8px;">#</th>
                                             <th style="font-size:11px; padding:6px 8px; min-width:130px;">เลขอ้างอิง <span class="text-danger">*</span></th>
                                             <th style="font-size:11px; padding:6px 8px; min-width:100px;">Courier</th>
-                                            <th style="font-size:11px; padding:6px 8px; min-width:130px;">ปลายทาง</th>
+                                            <th style="font-size:11px; padding:6px 8px; min-width:150px;">ผู้รับ</th>
                                             <th style="font-size:11px; padding:6px 8px; min-width:90px;">Box <span class="text-danger">*</span></th>
                                             <th style="font-size:11px; padding:6px 8px; min-width:80px;">ราคา (฿)</th>
                                             <th style="font-size:11px; padding:6px 8px; width:40px;"></th>

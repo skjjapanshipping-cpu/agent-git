@@ -777,10 +777,12 @@ class ShippopController extends Controller
     {
         $rawText = implode("\n", $bucket['lines']);
 
+        // Header: "DHL Express เมืองมหาสารคาม 44000" → courier="DHL Express", destination="เมืองมหาสารคาม 44000"
         $header = $bucket['header'];
         $courier = '';
         $destination = '';
-        if (preg_match('/^([A-Za-z][A-Za-z0-9&\.\s\-]+?)\s+(.+)$/u', $header, $hm)) {
+        // จับ courier เป็น คำ ASCII ติดกันด้วย space (greedy ทุก word ที่เป็น ASCII)
+        if (preg_match('/^([A-Za-z][A-Za-z0-9&\.\-]*(?:\s+[A-Za-z][A-Za-z0-9&\.\-]*)*)\s+(.+)$/u', $header, $hm)) {
             $courier = trim($hm[1]);
             $destination = trim($hm[2]);
         } else {
@@ -804,9 +806,20 @@ class ShippopController extends Controller
             $boxes = array_values(array_unique($boxes));
         }
 
+        // ผู้รับ: "กอง 1 - Chanidapa Saengsit (Box.66 รวม 1 กล่อง)"
+        //   → pileNo=1, recipientName="Chanidapa Saengsit", recipient="กอง 1 - Chanidapa Saengsit"
         $recipient = '';
+        $recipientName = '';
+        $pileNo = null;
         if (preg_match('/ผู้รับ\s*[:：]\s*(.+?)(?:\(Box|$)/u', $rawText, $recM)) {
             $recipient = trim($recM[1]);
+            // แยก "กอง X - Name"
+            if (preg_match('/^กอง\s*(\d+)\s*[-—–]\s*(.+)$/u', $recipient, $rp)) {
+                $pileNo = (int) $rp[1];
+                $recipientName = trim($rp[2]);
+            } else {
+                $recipientName = $recipient;
+            }
         }
 
         $totalPrice = 0.0;
@@ -825,13 +838,15 @@ class ShippopController extends Controller
         }
 
         return [
-            'idx'         => $bucket['idx'] ?? null,
-            'refNo'       => $refNo,
-            'courier'     => $courier,
-            'destination' => $destination,
-            'totalPrice'  => round($totalPrice, 2),
-            'boxes'       => $boxes,
-            'recipient'   => $recipient,
+            'idx'           => $bucket['idx'] ?? null,
+            'refNo'         => $refNo,
+            'courier'       => $courier,
+            'destination'   => $destination,
+            'totalPrice'    => round($totalPrice, 2),
+            'boxes'         => $boxes,
+            'recipient'     => $recipient,
+            'recipientName' => $recipientName,
+            'pileNo'        => $pileNo,
             'rawText'     => $rawText,
         ];
     }
