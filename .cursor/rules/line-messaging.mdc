@@ -1,0 +1,56 @@
+---
+description: LINE Messaging API patterns (Flex Message, push, multicast)
+globs: backoffice/app/Services/LineMessagingService.php,backoffice/app/Http/Controllers/**/*.php
+alwaysApply: false
+---
+
+# LINE Messaging API
+
+> See also: `chat-integration.mdc` (skjchat fallback), skjchat `line-integration.mdc`
+
+## Service Class
+- ใช้ `App\Services\LineMessagingService` — wrapper ของ LINE Messaging API
+- Inject ผ่าน constructor หรือ `app(LineMessagingService::class)`
+
+## Methods
+| Method | Purpose | Limit |
+|---|---|---|
+| `pushMessage($userId, $messages)` | Push ถึง user เดียว | 500/นาที |
+| `multicast($userIds, $messages)` | ส่งหลาย user พร้อมกัน | 500 users/request |
+| `broadcast($messages)` | ส่งทุก friend ของ official account | 1 ครั้ง/วินาที |
+
+## Flex Message Pattern
+```php
+$flex = [
+    'type' => 'flex',
+    'altText' => 'ข้อความสำรอง (text fallback)',
+    'contents' => [
+        'type' => 'bubble',
+        'header' => [...],
+        'body' => [...],
+        'footer' => [...],
+    ],
+];
+$line->pushMessage($lineUserId, [$flex]);
+```
+
+## Builder Methods (already exists)
+- `buildShippingNotification(...)` — แจ้งสถานะส่ง
+- `buildBroadcastNotification(...)` — broadcast รอบปิดตู้
+- `buildThaiBillFlex(...)` — บิลค่าส่งไทย พร้อม PromptPay QR
+
+## Error Handling
+- Catch exception → log ด้วย tag `[LINE]`
+- Return `false` ถ้า fail → caller จัดการ fallback (เช่น email)
+- ห้าม throw exception ขึ้นไป — UI ต้องไม่ crash ถ้า LINE down
+
+## ⚠️ Quotas
+- Free tier: 1,000 push/เดือน
+- เกิน → ใช้ fallback (Chat app `LineMessagingService` → fallback เป็น email)
+- เช็ค quota: `/api/line-quota` ใน skjchat
+
+## Fallback Strategy
+ลำดับ:
+1. Chat API (`POST {chat_url}/send`) → ถ้า user มี LINE account ผูกแล้ว
+2. ถ้า 404 → fallback `pushMessage()` ตรงผ่าน LINE API
+3. ถ้า user ไม่มี LINE ID → log + email + Mark as failed

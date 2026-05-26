@@ -1,0 +1,43 @@
+---
+description: PDF parsing patterns (Shippop bills) — Smalot quirks
+globs: backoffice/app/Http/Controllers/ShippopController.php,backoffice/app/Http/Controllers/InvoiceController.php
+alwaysApply: false
+---
+
+# PDF Parsing (Smalot\PdfParser)
+
+> See also: `laravel-patterns.mdc`, `AGENTS.md` Gotchas → "PDF Parsing (Smalot)"
+
+## ⚠️ Smalot Quirks
+**Smalot ใส่ space แทรกในคำไทยอย่างไม่แน่นอน** — regex ต้องทนต่อ space ระหว่างทุกตัวอักษร
+
+| Expected | Smalot อาจให้ |
+|---|---|
+| `กล่องเบอร์` | `กล่ องเบอร์`, `กล่อง เบอร์`, `กล่อ งเบอร์` |
+| `ขนาดพัสดุ` | `ขนาด พัสดุ`, `ขนาดพัส ดุ` |
+| `ยอดสุทธิ` | `ยอด สุทธิ`, `ยอดสุท ธิ` |
+
+## Regex Patterns
+```php
+// Pattern ที่ทน Smalot spaces
+$boxRe = '/กล่\s*อ\s*ง\s*เ\s*บ\s*อ\s*ร์\s*([A-Z]+)\s+([\d.,]+)/u';
+
+// Early-stop conditions ใน recipient parsing
+$recipientRe = '/^(.+?)(?=\s\d+\.\)|ยอด\s*รวม|ยอด\s*สุท\s*ธิ|Additional\s*Fuel\s*Total|รับเงิน|ทอนเงิน|$)/u';
+```
+
+## Multi-Pass Parsing
+- **Pass 1**: หา item ที่มี marker `ขนาดพัสดุ` → extract box + price ปกติ
+- **Pass 2**: หา "ค่ากล่อง" pattern (เช่น `1 กล่องเบอร์ C 15.00`) — ไม่มี marker → save เป็น `ExtraShippingCharge`
+
+## Save Strategy
+- **Replace batch**: ลบ `ExtraShippingCharge` ของ `(customerno, etd_date)` ทั้งหมด → insert ใหม่พร้อม `sequence_no = 1, 2, 3, ...`
+- เหตุผล: admin มัก re-upload PDF เพื่อแก้ → ต้องการผลตรงเป๊ะ + กรณี multi-PDF ที่รายการซ้ำ ต้อง save แยก 100%
+
+## Debugging
+- เขียน debug script ที่ `backoffice/scripts/debug_*.php` — รัน server side `php scripts/debug_xxx.php`
+- ลบ debug script เมื่อแก้บัคเสร็จ
+
+## Frontend Filter
+- `tsCollectParsedItems()` ใน admin blade ต้อง **ไม่กรอง** items ที่มี price + recipient แต่ไม่มี box
+- ทุก item ที่มี identity (refNo OR boxes OR recipient+price) ต้องส่งไป backend

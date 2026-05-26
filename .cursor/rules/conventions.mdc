@@ -1,0 +1,32 @@
+---
+description: Project-wide conventions (UI language, formats, customer codes, icons)
+alwaysApply: true
+---
+
+# SKJ Conventions
+
+> See also: `AGENTS.md` (system overview), `deployment.mdc`, `blade-ui.mdc`
+
+## UI Language
+- **ภาษาไทย** สำหรับทุก label / button / modal / toast / error message
+- Comment โค้ดเป็นภาษาไทยได้ — เน้นอธิบาย "ทำไม" ไม่ใช่ "ทำอะไร"
+
+## Date Format
+- **Display**: `dd/MM/yyyy` (เช่น `20/04/2026`)
+- **DB**: `Y-m-d` (Carbon `format('Y-m-d')`)
+- ใช้ `Carbon::now()->startOfMonth()->subMonths($n)` กัน month overflow
+
+## Customer Code
+- DB: lowercase `anw-NNNN` (column `customerno` ใน `users`)
+- Display: uppercase `ANW-NNNN` ผ่าน `$user->customercode` accessor
+- ใน frontend: ใช้ font monospace + badge style ที่ clickable to copy
+
+## Icons
+- ใช้ **FontAwesome 4** (`fa fa-truck`, `fa fa-money`, `fa fa-balance-scale`, `fa fa-calculator`)
+- ❌ ห้ามใช้ `fa-truck-fast`, `fa-shipping-fast`, `fa-solid` prefix (FA5+ only)
+- สำหรับ icon ที่สวยกว่า FA4 → ใช้ **inline SVG** (24×24, stroke-width 1.8, Lucide-style)
+
+## Money / Numbers
+- เงิน: `฿` symbol (เครื่องหมายบาท) — แสดงหลังตัวเลข
+- ทศนิยม 2 ตำแหน่งเสมอ (`number_format($amount, 2)`)
+- น้ำหนัก: `kg`

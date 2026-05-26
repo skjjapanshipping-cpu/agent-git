@@ -1,0 +1,43 @@
+---
+description: Database migration conventions
+globs: backoffice/database/migrations/**/*.php
+alwaysApply: false
+---
+
+# Migration Conventions
+
+> See also: `laravel-patterns.mdc` (Eloquent), `deployment.mdc` (migrate --force)
+
+## Naming
+- Format: `YYYY_MM_DD_HHMMSS_action_target.php`
+- Action: `create`, `add_X_to`, `drop_X_from`, `rename_X_in`, `modify_X_in`
+- ตัวอย่าง:
+  - `2026_05_24_170000_create_extra_shipping_charges_table.php`
+  - `2026_05_24_200000_add_sequence_no_to_extra_shipping_charges.php`
+
+## Column Patterns
+```php
+Schema::table('extra_shipping_charges', function (Blueprint $table) {
+    $table->unsignedSmallInteger('sequence_no')
+        ->default(0)
+        ->after('description')
+        ->comment('ลำดับใน batch (กัน dedup ซ้ำ — รายการเหมือนกันก็ save แยก)');
+});
+```
+
+## Best Practices
+- **ใส่ `->comment()`** บน column สำคัญ — อธิบาย business logic เป็นภาษาไทย
+- **`->after('column')`** เพื่อ readable schema
+- **Index** บน FK + frequent filter columns (`customerno`, `etd_date`, `created_at`)
+- **`->nullable()`** สำหรับ optional fields
+- **`->default(value)`** สำหรับ field ที่ต้องมีค่าเสมอ
+
+## Deploy
+- ห้ามรัน migration ที่ local เพื่อ test production schema — server เป็น MySQL with utf8mb4
+- Production: `php artisan migrate --force` (`--force` เพราะ env=production)
+- เช็คผล: `mysql -u $USER -p$PASS $DB -e "DESC table_name;"`
+
+## ❌ Avoid
+- Destructive migration ที่ `dropColumn` ในตารางใหญ่ → lock ตาราง
+- Composite unique index ที่ไม่ได้ test การ insert ซ้ำ
+- Migration ที่ depend on data — แยก data migration เป็น `Artisan command`

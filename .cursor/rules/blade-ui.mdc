@@ -1,0 +1,53 @@
+---
+description: Blade view UI conventions (modern-dropdown, summary cards, modals)
+globs: backoffice/resources/views/**/*.blade.php
+alwaysApply: false
+---
+
+# Blade UI Conventions
+
+> See also: `conventions.mdc` (icons, dates), `datatable.mdc`, `AGENTS.md` (Key Views)
+
+## Custom Dropdown (`.modern-dropdown`)
+ใช้ class นี้แทน `<select>` native ในทุกที่ที่ต้องการ:
+- **Mobile-friendly** (ทำงานบน LINE LIFF webview, iOS ทุกเวอร์ชั่น)
+- **Search box** + **scroll buttons ▲▼** + **dynamic max-height** + **auto-flip**
+
+```html
+<select id="xxx_filter" style="display:none !important;">...</select>
+<div class="modern-dropdown" id="xxxDropdown">
+    <button type="button" class="dd-toggle" id="xxxToggle">label</button>
+    <div class="dd-menu" id="xxxMenu">
+        <input type="text" class="dd-search" id="xxxSearch" placeholder="ค้นหา...">
+        <div class="dd-scroll-wrap">
+            <button type="button" class="dd-scroll-btn up" id="xxxScrollUp">...</button>
+            <button type="button" class="dd-scroll-btn down" id="xxxScrollDown">...</button>
+            <div class="dd-list" id="xxxList"></div>
+        </div>
+    </div>
+</div>
+```
+
+JS sync: `$('#xxx_filter').val(val).trigger('change')` หลังคลิก item → flow เดิมทำงานต่อ
+
+## Summary Cards (Dashboard)
+- ใช้ class `.summary-card` + `.summary-card-icon.is-gradient`
+- Inline CSS vars: `--grad-from`, `--grad-to`, `--grad-shadow`
+- Icon เป็น **inline SVG** 24×24 stroke-width 1.8
+- Clickable card → เพิ่ม class `.is-clickable` + `.sc-arrow` indicator
+
+## Modal Pattern
+- Overlay: `.qv-overlay` + `.qv-modal`
+- Header: `.qv-header h3` + close button `.qv-close`
+- Body: `.qv-body`
+- Title prefix ด้วย FontAwesome icon (เช่น `<i class="fa fa-truck"></i> สรุปบิล...`)
+
+## Click-to-Copy
+- เพิ่ม `data-copy="{{ $value }}"` attribute + class signal
+- Toast notification "คัดลอกแล้ว: ..." 1.6s
+- Fallback `execCommand('copy')` สำหรับ browser เก่า
+
+## Mobile-First
+- Tap target **min 44×44px** (Apple HIG)
+- ใส่ `touch-action: manipulation` ลด tap delay 300ms
+- ใช้ทั้ง `click` **และ** `touchend` event ใน handler — กัน LIFF/iOS issue

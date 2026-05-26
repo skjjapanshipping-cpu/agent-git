@@ -1,0 +1,57 @@
+---
+description: Excel/HTML/PDF export patterns (Maatwebsite Excel + DomPDF)
+globs: backoffice/app/Exports/**/*.php,backoffice/app/Http/Controllers/InvoiceController.php
+alwaysApply: false
+---
+
+# Exports (Excel / HTML / PDF)
+
+> See also: `laravel-patterns.mdc`, `AGENTS.md` Gotchas → DomPDF Thai font
+
+## Libraries
+- **Maatwebsite Excel** (Laravel Excel) — สำหรับ xlsx/xls/csv
+- **DomPDF** — สำหรับ PDF generation
+- HTML export ใช้ Blade template render → save เป็น `.html` หรือ `.xlsx` ผ่าน Laravel Excel "FromView"
+
+## Export Classes (existing)
+- `CustomershippingExport` — Admin Excel export ของ shipping records
+- `CustomershippigHtmlExport` — Admin HTML format
+- `CustomershippigviewHtmlExport` — Customer-side HTML
+- `CustomerorderHtmlExport` — Order summary
+
+## Naming Convention
+- Class: `{Module}{Format}Export` (เช่น `InvoicePdfExport`)
+- File output: `{module}-{customerno}-{etd}.{ext}` (เช่น `invoice-ANW-500-2026-04-20.xlsx`)
+
+## Excel Patterns
+```php
+class CustomershippingExport implements FromView, WithStyles, ShouldAutoSize {
+    public function view(): View {
+        return view('exports.customershipping', ['rows' => $this->rows]);
+    }
+    public function styles(Worksheet $sheet) {
+        $sheet->getStyle('A1:Z1')->getFont()->setBold(true);
+        $sheet->freezePane('A2');
+    }
+}
+```
+
+## PDF Patterns (DomPDF)
+```php
+$pdf = PDF::loadView('exports.invoice', ['data' => $data])
+    ->setPaper('A4', 'portrait')
+    ->setOptions(['defaultFont' => 'sarabun', 'isRemoteEnabled' => true]);
+return $pdf->download("invoice-{$ref}.pdf");
+```
+
+## Thai Font Support
+- DomPDF default font ไม่รองรับไทย → ใช้ `sarabun` หรือ `noto-sans-thai` (ติดตั้งใน `storage/fonts/`)
+- HTML export: ระบุ `<meta charset="UTF-8">` + `font-family: 'Sarabun', sans-serif;`
+
+## Streaming Large Exports
+- > 10,000 rows → ใช้ `FromQuery` + chunking แทน `FromCollection`
+- Set memory: `ini_set('memory_limit', '512M');`
+
+## ⚠️ Avoid
+- ห้าม render รูปภาพ binary ใน Excel — ใช้ URL อ้างอิงแทน
+- ห้าม export ทุก field ของ Customershipping — เลือกเฉพาะที่ลูกค้าควรเห็น (กัน leak)

@@ -1,0 +1,45 @@
+---
+description: WordPress Astra child theme conventions
+globs: astra-child/**/*
+alwaysApply: false
+---
+
+# WordPress (astra-child)
+
+> See also: `AGENTS.md` astra-child section, `deployment.mdc` (cache clear)
+
+## Theme Structure
+- Parent: **Astra**
+- Child: `astra-child/` (deploy ไป `wp-content/themes/astra-child/`)
+- Custom templates: `template-homepage.php`, `template-parts/skj-{head,header,footer}.php`
+- CSS: `assets/css/skj-theme.css`, `skj-pages.css`
+- JS: `assets/js/skj-*.js`
+
+## Admin Login
+- ⚠️ `wp-login.php` ส่ง 404 — ถูก plugin `skj-hide-login` ซ่อน
+- URL จริง: **`/skj-admin-login`** → set cookie → redirect ไป `wp-login.php?`
+- ห้ามแก้ `.htaccess` เพิ่ม IP restriction บน `wp-login.php`
+
+## SEO
+- XML sitemap ที่ `/skj-sitemap.xml` → render โดย `skj_render_sitemap()` ใน `functions.php`
+- ใช้ `template_redirect` hook + `REQUEST_URI` check (ไม่พึ่ง rewrite rule — เสถียรกว่า)
+- JSON-LD structured data (LocalBusiness, FAQ, BreadcrumbList) ใน `skj-head.php`
+- Open Graph + Twitter Card meta tags
+
+## Performance
+- Preload critical resources ใน `skj-head.php`
+- DNS prefetch สำหรับ Google Fonts, cdnjs
+- Lazy load images: `loading="lazy"`
+- Hero slider images ใน WebP format
+
+## Cache
+- LiteSpeed / W3 Total Cache active
+- หลัง deploy theme → clear cache:
+  - `rm -rf /var/www/vhosts/skjjapanshipping.com/httpdocs/wp-content/cache/min/*`
+  - `rm -rf .../cache/page/*`
+- Cloudflare cache: purge ผ่าน dashboard หรือ API
+
+## ❌ Avoid
+- ห้ามแก้ Astra parent theme — ใช้ child override เท่านั้น
+- ห้ามใส่ inline `<style>` ขนาดใหญ่ใน partial — ใช้ CSS file external
+- ห้ามใช้ jQuery 1.x specific syntax — WP default จะเป็น 3.x

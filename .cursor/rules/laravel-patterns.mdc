@@ -1,0 +1,42 @@
+---
+description: Laravel backoffice patterns (models, controllers, middleware)
+globs: backoffice/**/*.php
+alwaysApply: false
+---
+
+# Laravel Patterns
+
+> See also: `AGENTS.md` (Key Models/Controllers), `migrations.mdc`, `pdf-parsing.mdc`, `chat-integration.mdc`
+
+## Laravel Version
+- Laravel 5.x + Eloquent + Blade — PHP 7.4.33 บน production
+- ❌ ห้ามใช้ features ที่ต้อง PHP 8+ (named arguments, enum, match expression, readonly, etc.)
+- ❌ ห้ามใช้ Laravel 9+ APIs (เช่น `Route::controller`, attribute-based routing)
+
+## Auth
+- `Auth::user()` คืน `App\User` (ไม่ใช่ `App\Models\User`)
+- Multi-guard: `web` (admin/customer) + `scanner` (mobile QR app)
+- Customer filter: `where('customerno', $authUser->customerno)`
+
+## Eloquent Patterns
+- ใช้ `updateOrCreate` สำหรับ idempotent insert ตาม composite key
+- ใช้ `selectRaw` + `groupBy` สำหรับ aggregate queries
+- DataTable backend: รับ `$request->start_date`, `$request->recipient_filter` etc. → filter chain
+
+## Logging
+- Critical flow → `Log::info('[TAG] message', ['key' => $value])` (เช่น `[THAI-BILL]`, `[SHIPPOP]`)
+- Error catch → `Log::error('[TAG] exception', ['error' => $e->getMessage()])`
+
+## API Responses
+```php
+return response()->json([
+    'success' => !$allFailed,
+    'message' => 'ข้อความภาษาไทย',
+    'results' => $results,
+]);
+```
+
+## Migrations
+- ตั้งชื่อ `YYYY_MM_DD_HHMMSS_description.php` (ตามรูปแบบ Laravel)
+- เพิ่ม `->comment('...')` บน column สำคัญ
+- ใส่ index บน FK columns + frequent filter columns

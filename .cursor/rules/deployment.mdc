@@ -1,0 +1,42 @@
+---
+description: Production deployment workflow (SSH, paths, cache, gotchas)
+alwaysApply: true
+---
+
+# Deployment
+
+> See also: `AGENTS.md` Production section, `.cursor/secrets.local.md` (real IP/SSH), `migrations.mdc`
+
+## Server Info
+- **Origin IP**: `<ORIGIN_IP>` (port `<SSH_PORT>`) — Cloudflare proxy ครอบ domain ด้านหน้า
+- **SSH key**: `<SSH_KEY_PATH>`, user `<SSH_USER>`
+- ค่าจริงอยู่ใน `.cursor/secrets.local.md` (gitignored)
+- ⚠️ **ห้าม** scp/ssh ผ่าน hostname `skjjapanshipping.com` — Cloudflare → timeout
+- ใช้ IP ตรง `<ORIGIN_IP>` เท่านั้น (ดู `.cursor/secrets.local.md`)
+
+## Paths
+| Component | Server Path |
+|---|---|
+| Laravel | `/var/www/vhosts/skjjapanshipping.com/backoffice/` |
+| WordPress | `/var/www/vhosts/skjjapanshipping.com/httpdocs/` |
+| WP theme | `/var/www/vhosts/skjjapanshipping.com/httpdocs/wp-content/themes/astra-child/` |
+
+## Deploy Pattern (PowerShell)
+> ค่าจริงของ `<SSH_KEY_PATH>`, `<SSH_PORT>`, `<ORIGIN_IP>` → ดู `.cursor/secrets.local.md`
+
+```powershell
+scp -i <SSH_KEY_PATH> -P <SSH_PORT> -o StrictHostKeyChecking=no `
+    "C:\skjtrack\backoffice\<file>" `
+    <SSH_USER>@<ORIGIN_IP>:/var/www/vhosts/skjjapanshipping.com/backoffice/<path>
+```
+
+## Cache Clear (หลัง deploy)
+- View change → `php artisan view:clear`
+- Config change → `php artisan config:clear`
+- Code change → `php artisan cache:clear`
+- Migration → `php artisan migrate --force`
+
+## PowerShell Gotchas
+- ❌ `&&` ไม่รองรับ — ใช้ `;` หรือเรียก command แยกแทน
+- ❌ Quoting bash command ผ่าน ssh ยาก — สร้าง bash script local → `scp` → ssh ไป run
+- ✅ `$()` ใน PowerShell ต้อง escape เป็น `\$()` ตอน pass ผ่าน ssh

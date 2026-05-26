@@ -1,0 +1,42 @@
+---
+description: Scanner mobile app patterns (QR pickup, scanner auth guard)
+globs: backoffice/app/Http/Controllers/QrScanController.php,backoffice/app/Http/Controllers/ScannerAuthController.php,backoffice/resources/views/scanner/**/*.blade.php
+alwaysApply: false
+---
+
+# Scanner Mobile App
+
+> See also: `laravel-patterns.mdc` (Auth + guards), `blade-ui.mdc`, `AGENTS.md`
+
+## Auth Guard
+- **Guard ชื่อ `scanner`** (ใน `config/auth.php`) แยกจาก `web`
+- Login ผ่าน `ScannerAuthController` — ใช้ `Auth::guard('scanner')->attempt()`
+- Single-session enforcement ผ่าน middleware `EnforceScannerSingleSession`
+  - เก็บ `scanner_session_id` ใน `users` table
+  - ทุก request เช็คว่า session ปัจจุบัน match → ถ้าไม่ → logout (กัน multi-device)
+
+## URL Routes
+- `/scanner/login` — Scanner login page
+- `/scanner/home` — Dashboard (เลือกประเภท scan)
+- `/scanner/pickup` — Pickup mode (scan QR เพื่อทำ pickup)
+- `/scanner/history` — ประวัติ scan
+
+## QR Scan Flow
+1. Mobile scan QR (รูปแบบ: tracking number หรือ box code)
+2. `QrScanController@scan` รับ payload → match `Customershipping` row
+3. Update `pickup_status`, `picked_at`, `picked_by_user_id`
+4. Return JSON response → frontend แสดง success/error
+
+## UI Conventions
+- **Mobile-first** — design สำหรับหน้าจอเล็ก (375px+)
+- ใช้ camera API (`navigator.mediaDevices.getUserMedia`) หรือ HTML5 BarcodeDetector
+- Touch target ≥ 44×44px ตาม Apple HIG
+- Loading spinner + haptic feedback (`navigator.vibrate(50)`) เมื่อ scan สำเร็จ
+
+## Session Management
+- Logout บน mobile → clear `scanner_session_id` ใน DB
+- Auto-logout ถ้า session ไม่ active เกิน 12 ชม.
+
+## Testing
+- เปิดผ่าน HTTPS เท่านั้น (camera API ต้องการ secure context)
+- ทดสอบบน Android Chrome + iOS Safari (LINE webview ไม่รองรับ camera ดี → ห้าม embed)

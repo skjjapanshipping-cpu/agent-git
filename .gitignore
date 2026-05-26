@@ -51,3 +51,9 @@ Thumbs.db
 # Database
 *.sqlite
 *.db
+
+# Cursor local-only secrets (NEVER commit)
+.cursor/secrets.local.md
+.cursor/*.local.md
+.cursor/*.local
+

@@ -1,0 +1,70 @@
+---
+description: jQuery DataTables patterns (server-side, custom render, mobile)
+globs: backoffice/resources/views/**/*.blade.php
+alwaysApply: false
+---
+
+# DataTables Patterns
+
+> See also: `blade-ui.mdc`, `laravel-patterns.mdc` (Yajra DataTables)
+
+## Library
+- jQuery DataTables 1.10+ (CDN หรือ local)
+- Bootstrap 4 integration: `dataTables.bootstrap4.min.css`
+
+## Server-Side vs Client-Side
+- < 500 rows → **client-side** (เร็วกว่า, search/sort frontend)
+- > 500 rows → **server-side** + ใช้ Yajra DataTables (Laravel package)
+
+## Standard Init (Client-Side)
+```javascript
+$('#myTable').DataTable({
+    language: { url: '//cdn.datatables.net/plug-ins/1.10.20/i18n/Thai.json' },
+    pageLength: 25,
+    lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'ทั้งหมด']],
+    order: [[0, 'desc']],
+    columnDefs: [
+        { targets: 'no-sort', orderable: false },
+        { targets: 'text-center', className: 'text-center' },
+    ],
+});
+```
+
+## Server-Side (Yajra)
+```php
+// Controller
+return DataTables::of($query)
+    ->addColumn('actions', fn($row) => view('partials.actions', compact('row')))
+    ->editColumn('etd_date', fn($row) => $row->etd_date?->format('d/m/Y'))
+    ->rawColumns(['actions'])
+    ->make(true);
+```
+
+## Custom Cell Rendering
+- เก็บ HTML ใน data attribute → render ผ่าน `columns.render`
+- ตัวอย่าง: รายการที่มี tooltip, badge, button — ใช้ `render: function(data, type, row) { ... }`
+
+## Mobile Responsive
+- ใช้ `responsive: true` + `dataTables.responsive.min.css`
+- หรือ wrap ใน `<div class="table-responsive">` (scroll horizontal)
+- ห้าม overflow ไปทับ navbar — ระวัง `position: sticky`
+
+## Common Pitfalls
+- **Re-init error**: ถ้า init table ซ้ำ → ใช้ `$('#myTable').DataTable().destroy()` ก่อน
+- **Memory leak**: ทุก `destroy()` ต้องเคลียร์ event handler ด้วย
+- **Search on hidden columns**: เปิดด้วย `columnDefs: [{ targets: [5], visible: false, searchable: true }]`
+
+## Performance
+- ปิด `processing: true` ถ้าไม่ใช้
+- `deferRender: true` สำหรับ table > 1000 rows
+- `scroller` plugin สำหรับ infinite scroll แทน pagination
+
+## Export Buttons
+```javascript
+dom: 'Bfrtip',
+buttons: ['copy', 'csv', 'excel', { extend: 'print', title: 'รายงาน' }],
+```
+
+## ⚠️ Conventions
+- ทุก action button ใช้ class เดียวกัน (`.btn-action-edit`, `.btn-action-delete`)
+- DataTable ID → format `#{module}Table` (เช่น `#customershippingTable`)

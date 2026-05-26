@@ -1,0 +1,71 @@
+---
+description: Laravel → skjchat (Next.js) API integration patterns
+globs: backoffice/app/Http/Controllers/**/*.php
+alwaysApply: false
+---
+
+# Chat Integration (Laravel → skjchat)
+
+> See also: `line-messaging.mdc` (fallback), skjchat repo `AGENTS.md` + `api-routes.mdc`
+
+## Base URL
+- Production: `https://skjjapanshipping.com/skjchat` (subpath ของ main site)
+- Local dev: `http://localhost:3000` (Next.js dev server)
+- ตั้งค่าใน `.env` → `CHAT_API_URL`
+
+## Auth
+- ใช้ shared secret header: `X-Chat-Token: {token}` (env `CHAT_API_TOKEN`)
+- ห้าม hardcode token — อ่านจาก `config('services.chat.token')`
+
+## Key Endpoints (Laravel ใช้บ่อย)
+| Endpoint | Purpose |
+|---|---|
+| `POST /api/thai-bill-send` | ส่งบิลค่าส่งไทย พร้อม PromptPay QR |
+| `POST /api/invoice-send` | ส่ง invoice ให้ลูกค้า |
+| `POST /api/etd-broadcast` | Broadcast รอบปิดตู้ทั้งหมด |
+| `POST /api/purchase-orders/send-proof` | ส่งหลักฐานสั่งซื้อ |
+
+## Request Pattern (Laravel side)
+```php
+$response = Http::withHeaders([
+    'X-Chat-Token' => config('services.chat.token'),
+    'Accept' => 'application/json',
+])->timeout(30)->post(
+    rtrim(config('services.chat.url'), '/') . '/api/thai-bill-send',
+    [
+        'customerno' => $customerno,
+        'amount' => $totalAmount,
+        'pdf_url' => $fileUrl,
+        // ...
+    ]
+);
+
+if ($response->successful()) {
+    $statusMsg = $response->json('message');
+} elseif ($response->status() === 404) {
+    // Customer ไม่มี LINE link → fallback
+    $statusMsg = $this->fallbackSendLine(...);
+} else {
+    Log::error('[CHAT-API] failed', ['status' => $response->status(), 'body' => $response->body()]);
+}
+```
+
+## Response Format
+```json
+{ "success": true, "message": "ส่งสำเร็จ", "messageId": "..." }
+{ "success": false, "error": "ไม่พบลูกค้าในระบบแชท" }
+```
+
+## Customer Mapping
+- skjchat ใช้ `customerno` เป็น key หลัก match กับ Laravel
+- ถ้า skjchat return 404 → customer ยังไม่ link LINE → ต้อง fallback
+
+## Logging
+- Tag: `[CHAT-API]` หรือ `[THAI-BILL]` หรือ `[INVOICE]`
+- Log request + response เพื่อ debug
+- ห้าม log secret token
+
+## Timeout & Retry
+- Default timeout: 30s (PDF upload อาจช้า)
+- ห้าม auto-retry สำหรับ POST (กัน duplicate)
+- GET endpoints (status check) → retry สูงสุด 3 ครั้ง พร้อม exponential backoff
