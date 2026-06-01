@@ -7,9 +7,15 @@
         </div>
 
         <div class="form-group">
-            {{ Form::label('cus_unit_price','ราคาต่อหน่วย') }}
-            {{ Form::number('cus_unit_price', $customer->cus_unit_price, ['class' => 'form-control' . ($errors->has('cus_unit_price') ? ' is-invalid' : ''), 'step' => '0.01', 'placeholder' => '','id'=>'cus_unit_price']) }}
+            {{ Form::label('cus_unit_price','ราคาต่อหน่วย (ทางเรือ)') }}
+            {{ Form::number('cus_unit_price', $customer->cus_unit_price, ['class' => 'form-control' . ($errors->has('cus_unit_price') ? ' is-invalid' : ''), 'step' => '0.01', 'placeholder' => 'เช่น 150.00','id'=>'cus_unit_price']) }}
             {!! $errors->first('cus_unit_price', '<div class="invalid-feedback">:message</div>') !!}
+        </div>
+
+        <div class="form-group">
+            {{ Form::label('cus_unit_price_air','ราคาต่อหน่วย (ทางเครื่องบิน)') }}
+            {{ Form::number('cus_unit_price_air', $customer->cus_unit_price_air, ['class' => 'form-control' . ($errors->has('cus_unit_price_air') ? ' is-invalid' : ''), 'step' => '0.01', 'placeholder' => 'เช่น 300.00','id'=>'cus_unit_price_air']) }}
+            {!! $errors->first('cus_unit_price_air', '<div class="invalid-feedback">:message</div>') !!}
         </div>
 
         <div class="form-group">

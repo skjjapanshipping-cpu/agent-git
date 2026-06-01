@@ -95,9 +95,23 @@ class CustomershippingsImport implements ToModel
                 return null;
             }
 
-            $unit_price = !empty($customer->cus_unit_price) ? $customer->cus_unit_price : 150; //default price [ถ้าใน excel มาเป็นค่าว่างหรือ 0]
+            // === อ่าน shipping_method ก่อนคำนวณ unit_price (1=ทางเรือ, 2=ทางเครื่องบิน) ===
+            $shippingMethod = !empty($row['shipping_method'])
+                ? intval($row['shipping_method'])
+                : Customershipping::METHOD_SEA;
+
+            // เลือก unit_price ของลูกค้าตาม mode (เครื่องบิน → cus_unit_price_air, เรือ → cus_unit_price)
+            if ($shippingMethod == Customershipping::METHOD_AIR) {
+                $unitPriceFromCustomer = $customer->cus_unit_price_air ?? null;
+            } else {
+                $unitPriceFromCustomer = $customer->cus_unit_price ?? null;
+            }
+            // Fallback: ถ้าลูกค้าไม่ได้ตั้งราคาของ mode นั้น → ใช้ default ของระบบ (เรือ=150, อากาศ=450)
+            $unit_price = !empty($unitPriceFromCustomer)
+                ? $unitPriceFromCustomer
+                : Customershipping::getDefaultUnitPrice($shippingMethod);
             $import_cost = $unit_price * $weight;
-            
+
             // ตั้งค่า delivery_type_id และข้อมูลที่อยู่ตามลูกค้า
             $delivery_type_id = 1; // default = รับเอง
             $delivery_fullname = '';
@@ -184,7 +198,7 @@ class CustomershippingsImport implements ToModel
                 'itemno'=>$row['itemno'],//ItemNo
                 'iswholeprice'=>$iswholeprice, //ราคาเหมา
                 'note_admin'=>$row['note_admin'], //หมายเหตุจากผู้ดูแลระบบ
-                'shipping_method'=>!empty($row['shipping_method']) ? intval($row['shipping_method']) : 1 //1=ทางเรือ, 2=ทางเครื่องบิน
+                'shipping_method'=>$shippingMethod //1=ทางเรือ, 2=ทางเครื่องบิน
             ]);
         } catch (QueryException $e) {
             $errMsg = "แถว {$this->rowIndex}: {$row['customerno']} (Track: {$row['track_no']}) — " . $this->friendlyDbError($e->getMessage());

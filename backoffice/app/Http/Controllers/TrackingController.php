@@ -9,7 +9,9 @@ class TrackingController extends Controller
 {
     public function index()
     {
-        return view('tracking.index');
+        $brand = \App\Support\Brand::current();
+        $view  = !empty($brand['neutral']) ? 'tracking.neutral' : 'tracking.index';
+        return view($view, ['brand' => $brand]);
     }
     public function submitTracking(Request $request)
     {

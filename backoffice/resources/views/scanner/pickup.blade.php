@@ -405,12 +405,12 @@
         <div class="icon">📅</div>
         <div class="hint">เลือกรอบปิดตู้ที่ต้องการจ่ายของ (เลือกได้หลายรอบ)</div>
     </div>
+    <button class="btn-confirm-rounds" id="btnConfirmRounds" disabled onclick="confirmRounds()" style="position:sticky;top:8px;z-index:20;margin-bottom:12px;">
+        เลือกรอบแล้ว — ถัดไป <i class="fa fa-arrow-right"></i>
+    </button>
     <div id="roundList">
         <div style="text-align:center;color:#64748b;padding:20px;">กำลังโหลด...</div>
     </div>
-    <button class="btn-confirm-rounds" id="btnConfirmRounds" disabled onclick="confirmRounds()">
-        เลือกรอบแล้ว — ถัดไป <i class="fa fa-arrow-right"></i>
-    </button>
 </div>
 
 <!-- ===== STEP 1: เลือกลูกค้า ===== -->
@@ -1068,12 +1068,8 @@ function renderRecheckParcels() {
 }
 
 function doRecheckScan(boxNo) {
-    var found = null;
-    parcelsData.forEach(function(p) {
-        if (p.box_no === boxNo || p.box_no.replace(/^BOX-\d{8}-0*/, '') === boxNo) {
-            found = p;
-        }
-    });
+    // ใช้ตัวจับคู่บาร์โค้ดตัวเดียวกับโหมดจ่ายปกติ (รองรับรูปแบบ DDMM-xxxx, ตัด 0 นำหน้า ฯลฯ)
+    var found = findParcelByBarcode(boxNo);
     if (!found) {
         playErrorSound();
         setStatus('error', '❌ กล่อง ' + boxNo + ' ไม่อยู่ในรายการของลูกค้านี้!');

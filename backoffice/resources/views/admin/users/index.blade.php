@@ -5,6 +5,43 @@
 @endsection
 
 @section('extra-css')
+<style>
+    .user-customer-code {
+        display: inline-block;
+        font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.3px;
+        color: #0c5e8e;
+        background: linear-gradient(135deg, #ecfeff 0%, #eff6ff 100%);
+        border: 1px solid #bae6fd;
+        padding: 3px 9px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.15s;
+        white-space: nowrap;
+        user-select: all;
+    }
+    .user-customer-code:hover {
+        background: linear-gradient(135deg, #cffafe 0%, #dbeafe 100%);
+        border-color: #0ea5e9;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 6px rgba(14,165,233,0.18);
+    }
+    .user-customer-code:active { transform: translateY(0); }
+    .user-code-toast {
+        position: fixed; bottom: 24px; left: 50%;
+        transform: translateX(-50%) translateY(20px);
+        background: #1e293b; color: #fff;
+        padding: 10px 18px; border-radius: 8px;
+        font-size: 13px; font-weight: 600;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+        opacity: 0; pointer-events: none;
+        transition: opacity 0.2s, transform 0.2s;
+        z-index: 9999;
+    }
+    .user-code-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
 @endsection
 
 @section('index')
@@ -22,6 +59,7 @@
                             <thead>
                                 <tr>
                                     <th>Id</th>
+                                    <th>Customer No</th>
                                     <th>Name</th>
                                     <th>Email</th>
                                     <th>Mobile</th>
@@ -33,6 +71,13 @@
                                 @foreach($users as $row)
                                 <tr>
                                     <td>{{ $row->id }}</td>
+                                    <td>
+                                        @if($row->customercode)
+                                            <span class="user-customer-code" title="คัดลอก" data-copy="{{ $row->customercode }}">{{ $row->customercode }}</span>
+                                        @else
+                                            <span class="text-muted" style="font-size:11px;">—</span>
+                                        @endif
+                                    </td>
                                     <td>{{ $row->name }}</td>
                                     <td>{{ $row->email }}</td>
                                     <td>{{ $row->mobile }}</td>
@@ -66,5 +111,36 @@
 @endsection
 
 @section('extra-script')
-
+<script>
+    (function(){
+        var toast = null;
+        function showToast(msg) {
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.className = 'user-code-toast';
+                document.body.appendChild(toast);
+            }
+            toast.textContent = msg;
+            toast.classList.add('show');
+            clearTimeout(toast._t);
+            toast._t = setTimeout(function(){ toast.classList.remove('show'); }, 1600);
+        }
+        document.addEventListener('click', function(e) {
+            var el = e.target.closest('.user-customer-code');
+            if (!el) return;
+            var code = el.getAttribute('data-copy') || el.textContent.trim();
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(code).then(function(){
+                    showToast('คัดลอกแล้ว: ' + code);
+                });
+            } else {
+                var ta = document.createElement('textarea');
+                ta.value = code; document.body.appendChild(ta);
+                ta.select(); try { document.execCommand('copy'); } catch(_){}
+                document.body.removeChild(ta);
+                showToast('คัดลอกแล้ว: ' + code);
+            }
+        });
+    })();
+</script>
 @endsection

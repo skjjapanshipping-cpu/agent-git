@@ -408,6 +408,7 @@
                                 value="{{ old('email') }}"
                                 class="{{ $errors->has('email') ? 'is-invalid' : '' }}"
                                 required autocomplete="username" autofocus
+                                autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="email"
                                 placeholder="example@email.com หรือ ANW-1234">
                             <i class="fa fa-envelope input-icon"></i>
                         </div>
@@ -422,6 +423,7 @@
                             <input id="password" type="password" name="password"
                                 class="{{ $errors->has('password') ? 'is-invalid' : '' }}"
                                 required autocomplete="current-password"
+                                autocapitalize="off" autocorrect="off" spellcheck="false"
                                 placeholder="กรอกรหัสผ่าน">
                             <i class="fa fa-lock input-icon"></i>
                             <button type="button" class="eye-btn" onclick="togglePassword()" aria-label="แสดง/ซ่อนรหัสผ่าน">
@@ -495,6 +497,11 @@
 function togglePassword() {
     var p = document.getElementById('password');
     var i = document.getElementById('password-toggle-icon');
+    // กัน iOS Safari autocorrect/autocapitalize ตอนสลับเป็น type="text"
+    p.setAttribute('autocapitalize', 'off');
+    p.setAttribute('autocorrect', 'off');
+    p.setAttribute('spellcheck', 'false');
+    p.setAttribute('autocomplete', 'current-password');
     if (p.type === 'password') { p.type = 'text';     i.classList.remove('fa-eye');       i.classList.add('fa-eye-slash'); }
     else                       { p.type = 'password'; i.classList.remove('fa-eye-slash'); i.classList.add('fa-eye');       }
 }

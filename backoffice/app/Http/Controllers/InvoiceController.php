@@ -381,7 +381,61 @@ class InvoiceController extends Controller
                         'body'    => substr((string) $response->body(), 0, 500),
                     ]);
                 }
-                return response()->json($response->json(), $response->status());
+
+                // === Override invoiceSent/invoiceStatus ด้วยสถานะจริงจาก Laravel (pay_status) ===
+                // skjchat เก็บ InvoiceSent.status แยกต่างหาก ซึ่งอาจไม่ตรงกับความจริง
+                // (เช่น ลูกค้าชำระแล้ว แต่ slip auto-match ไม่ติด → skjchat ยังเป็น pending)
+                // Laravel pay_status เป็น source of truth: 1=ยังไม่ออกบิล, 5=รอโอน, 2=ชำระแล้ว
+                $data = $response->json();
+                if (is_array($data) && !empty($data['results']) && !empty($request->input('etd'))) {
+                    try {
+                        $etdRaw = trim((string) $request->input('etd'));
+                        $etdDb = $etdRaw;
+                        if (preg_match('#^\d{1,2}/\d{1,2}/\d{4}$#', $etdRaw)) {
+                            // frontend (check_only) ส่ง etd เป็น d/m/Y → แปลงเป็น Y-m-d ให้ตรงกับคอลัมน์ etd
+                            $etdDb = \Carbon\Carbon::createFromFormat('d/m/Y', $etdRaw)->format('Y-m-d');
+                        }
+
+                        $rows = Customershipping::whereIn('customerno', $customerNos)
+                            ->where('etd', $etdDb)
+                            ->where('excel_status', '1')
+                            ->get(['customerno', 'pay_status']);
+
+                        $byCn = []; // lower(customerno) => ['billed'=>int, 'pending'=>int]
+                        foreach ($rows as $r) {
+                            $key = strtolower((string) $r->customerno);
+                            if (!isset($byCn[$key])) {
+                                $byCn[$key] = ['billed' => 0, 'pending' => 0];
+                            }
+                            $ps = (int) $r->pay_status;
+                            if ($ps === 2 || $ps === 5) {
+                                $byCn[$key]['billed']++;
+                                if ($ps === 5) {
+                                    $byCn[$key]['pending']++;
+                                }
+                            }
+                        }
+
+                        foreach ($data['results'] as $cn => $info) {
+                            $key = strtolower((string) $cn);
+                            if (isset($byCn[$key])) {
+                                $agg = $byCn[$key];
+                                if ($agg['billed'] === 0) {
+                                    $data['results'][$cn]['invoiceSent'] = false;
+                                    $data['results'][$cn]['invoiceStatus'] = null;
+                                } else {
+                                    $data['results'][$cn]['invoiceSent'] = true;
+                                    // ยังมีรายการรอโอน → pending, ถ้าทุกใบชำระครบ → paid
+                                    $data['results'][$cn]['invoiceStatus'] = $agg['pending'] > 0 ? 'pending' : 'paid';
+                                }
+                            }
+                        }
+                    } catch (\Throwable $e) {
+                        Log::warning('[INVOICE-CHECK] real-status override failed: ' . $e->getMessage());
+                    }
+                }
+
+                return response()->json($data, $response->status());
             } catch (\Exception $e) {
                 Log::error('checkChatConnection error: ' . $e->getMessage());
                 return response()->json(['error' => $e->getMessage()], 500);
@@ -439,10 +493,18 @@ class InvoiceController extends Controller
             }
 
             $itemCount = $shippings->count();
-            $totalAmount = $shippings->sum(function ($s) {
+            $amountCalc = function ($s) {
                 $codRate = $s->cod_rate ?? 0.25;
                 return $s->import_cost + ($s->cod * $codRate);
-            });
+            };
+            $totalAmount = $shippings->sum($amountCalc);
+
+            // แยกยอด + จำนวนชิ้น ตามวิธีขนส่ง (2=ทางเครื่องบิน, อื่น ๆ/null=ทางเรือ)
+            $airShippings = $shippings->filter(fn($s) => (int) $s->shipping_method === Customershipping::METHOD_AIR);
+            $airAmount = round($airShippings->sum($amountCalc), 2);
+            $airCount  = $airShippings->count();
+            $seaAmount = round($totalAmount - $airAmount, 2);
+            $seaCount  = $itemCount - $airCount;
 
             // Save PDF to public path (ใช้เฉพาะรายการที่เลือก)
             $pdfUrl = null;
@@ -466,7 +528,8 @@ class InvoiceController extends Controller
             // สร้าง Flex Message card สำหรับ LINE
             $flexMessages = $this->buildInvoiceFlexMessages(
                 $customerno, $etdFormatted, $itemCount, round($totalAmount, 2),
-                $pdfUrl, null, $messageTemplate ?: null, $messengerFee
+                $pdfUrl, null, $messageTemplate ?: null, $messengerFee,
+                $seaAmount, $airAmount, $seaCount, $airCount
             );
 
             // Call SKJ Chat API
@@ -479,6 +542,10 @@ class InvoiceController extends Controller
                     'etd' => $etdFormatted,
                     'itemCount' => $itemCount,
                     'totalAmount' => $grandTotal,
+                    'seaAmount' => $seaAmount,
+                    'airAmount' => $airAmount,
+                    'seaCount' => $seaCount,
+                    'airCount' => $airCount,
                     'messengerFee' => $messengerFee,
                     'messageTemplate' => $messageTemplate ?: null,
                     'pdfUrl' => $pdfUrl,
@@ -738,7 +805,8 @@ class InvoiceController extends Controller
      */
     protected function buildInvoiceFlexMessages(
         string $customerno, string $etdFormatted, int $itemCount, float $totalAmount,
-        ?string $pdfUrl, ?string $qrImageUrl, ?string $messageTemplate, float $messengerFee = 0
+        ?string $pdfUrl, ?string $qrImageUrl, ?string $messageTemplate, float $messengerFee = 0,
+        float $seaAmount = 0, float $airAmount = 0, int $seaCount = 0, int $airCount = 0
     ): array {
         // คำนวณยอดรวมทั้งหมด (ค่านำเข้า + ค่าแมสเซ็นเจอร์)
         $grandTotal = round($totalAmount + $messengerFee, 2);
@@ -770,34 +838,75 @@ class InvoiceController extends Controller
                 ],
             ],
             ['type' => 'separator', 'margin' => 'lg'],
-            [
-                'type' => 'box', 'layout' => 'vertical', 'margin' => 'lg', 'spacing' => 'sm',
-                'contents' => [
-                    ['type' => 'text', 'text' => 'ค่านำเข้า', 'size' => 'sm', 'color' => '#555555'],
-                    [
-                        'type' => 'box', 'layout' => 'horizontal',
-                        'contents' => [
-                            ['type' => 'text', 'text' => '฿' . number_format($totalAmount, 2), 'size' => $messengerFee > 0 ? 'lg' : 'xxl', 'color' => '#E53935', 'weight' => 'bold', 'align' => 'center', 'margin' => 'md'],
-                        ],
-                    ],
-                ],
-            ],
         ];
 
-        // ถ้ามีค่าแมสเซ็นเจอร์ แสดงแยกบรรทัดและสรุปยอดรวมทั้งหมด
-        if ($messengerFee > 0) {
+        // === ค่านำเข้า แยกตามวิธีขนส่ง (ทางเรือ / ทางเครื่องบิน) ===
+        // Fallback: ถ้าไม่มีข้อมูลแยก (ทั้งคู่ = 0) ให้ถือว่าเป็นทางเรือทั้งหมด
+        $methodLines = [];
+        if ($seaAmount <= 0 && $airAmount <= 0) {
+            $methodLines[] = ['label' => 'ค่านำเข้า', 'amount' => $totalAmount, 'count' => $itemCount];
+        } else {
+            if ($seaAmount > 0) {
+                $methodLines[] = ['label' => 'ค่านำเข้าทางเรือ', 'amount' => $seaAmount, 'count' => $seaCount];
+            }
+            if ($airAmount > 0) {
+                $methodLines[] = ['label' => 'ค่านำเข้าทางเครื่องบิน', 'amount' => $airAmount, 'count' => $airCount];
+            }
+        }
+
+        $hasMultiple = count($methodLines) > 1;
+        $showGrandTotal = $hasMultiple || $messengerFee > 0;
+
+        if ($hasMultiple) {
+            // หลายวิธีขนส่ง → แสดงเป็นรายการ label + ยอด ต่อบรรทัด
+            $methodRows = [];
+            foreach ($methodLines as $line) {
+                $labelText = $line['label'];
+                if ($line['count'] > 0) {
+                    $labelText .= ' (' . $line['count'] . ' ชิ้น)';
+                }
+                $methodRows[] = [
+                    'type' => 'box', 'layout' => 'horizontal',
+                    'contents' => [
+                        ['type' => 'text', 'text' => $labelText, 'size' => 'sm', 'color' => '#555555', 'flex' => 0, 'wrap' => true],
+                        ['type' => 'text', 'text' => '฿' . number_format($line['amount'], 2), 'size' => 'sm', 'color' => '#E53935', 'weight' => 'bold', 'align' => 'end'],
+                    ],
+                ];
+            }
             $bodyContents[] = [
-                'type' => 'box', 'layout' => 'vertical', 'margin' => 'sm', 'spacing' => 'sm',
+                'type' => 'box', 'layout' => 'vertical', 'margin' => 'lg', 'spacing' => 'md',
+                'contents' => $methodRows,
+            ];
+        } else {
+            // วิธีขนส่งเดียว → แสดงยอดเด่นแบบเดิม
+            $single = $methodLines[0];
+            $bodyContents[] = [
+                'type' => 'box', 'layout' => 'vertical', 'margin' => 'lg', 'spacing' => 'sm',
                 'contents' => [
-                    ['type' => 'text', 'text' => 'ค่าแมสเซ็นเจอร์', 'size' => 'sm', 'color' => '#555555'],
+                    ['type' => 'text', 'text' => $single['label'], 'size' => 'sm', 'color' => '#555555'],
                     [
                         'type' => 'box', 'layout' => 'horizontal',
                         'contents' => [
-                            ['type' => 'text', 'text' => '฿' . number_format($messengerFee, 2), 'size' => 'lg', 'color' => '#E53935', 'weight' => 'bold', 'align' => 'center', 'margin' => 'md'],
+                            ['type' => 'text', 'text' => '฿' . number_format($single['amount'], 2), 'size' => $messengerFee > 0 ? 'lg' : 'xxl', 'color' => '#E53935', 'weight' => 'bold', 'align' => 'center', 'margin' => 'md'],
                         ],
                     ],
                 ],
             ];
+        }
+
+        // ถ้ามีค่าแมสเซ็นเจอร์ แสดงแยกบรรทัด
+        if ($messengerFee > 0) {
+            $bodyContents[] = [
+                'type' => 'box', 'layout' => 'horizontal', 'margin' => 'lg',
+                'contents' => [
+                    ['type' => 'text', 'text' => 'ค่าแมสเซ็นเจอร์', 'size' => 'sm', 'color' => '#555555', 'flex' => 0],
+                    ['type' => 'text', 'text' => '฿' . number_format($messengerFee, 2), 'size' => 'sm', 'color' => '#E53935', 'weight' => 'bold', 'align' => 'end'],
+                ],
+            ];
+        }
+
+        // สรุปยอดรวมทั้งหมด — แสดงเมื่อมีหลายวิธีขนส่ง หรือ มีค่าแมสเซ็นเจอร์
+        if ($showGrandTotal) {
             $bodyContents[] = ['type' => 'separator', 'margin' => 'md'];
             $bodyContents[] = [
                 'type' => 'box', 'layout' => 'vertical', 'margin' => 'md', 'spacing' => 'sm',

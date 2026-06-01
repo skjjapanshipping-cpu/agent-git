@@ -1,6 +1,7 @@
 @extends('layouts.app')
+@php $brand = $brand ?? \App\Support\Brand::current(); @endphp
 @section('title')
-    SKJ JAPAN TRACKING
+    {{ $brand['name'] ?? 'SKJ JAPAN' }} · เช็คเลขพัสดุ
 @endsection
 @section('extra-css')
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -110,6 +111,35 @@
             50% { transform: translateY(-8px); }
         }
 
+        /* Neutral Wordmark (white-label — ไม่มีโลโก้ SKJ) */
+        .brand-wordmark {
+            display: inline-flex;
+            align-items: center;
+            gap: 14px;
+            animation: logoFloat 5s ease-in-out infinite;
+        }
+        .brand-wordmark .bw-icon {
+            width: 60px; height: 60px;
+            border-radius: 18px;
+            background: linear-gradient(135deg, #1D8AC9, #0ea5e9);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.7rem; color: #fff;
+            box-shadow: 0 10px 30px rgba(29, 138, 201, 0.45);
+        }
+        .brand-wordmark .bw-text { text-align: left; }
+        .brand-wordmark .bw-name {
+            font-size: 1.55rem; font-weight: 800; color: #fff;
+            letter-spacing: -0.02em; line-height: 1.05;
+        }
+        .brand-wordmark .bw-sub {
+            font-size: 0.72rem; font-weight: 600; letter-spacing: 0.22em;
+            text-transform: uppercase; color: #38bdf8; margin-top: 3px;
+        }
+        @media (max-width: 576px) {
+            .brand-wordmark .bw-icon { width: 50px; height: 50px; font-size: 1.4rem; border-radius: 15px; }
+            .brand-wordmark .bw-name { font-size: 1.3rem; }
+        }
+
         /* Card */
         .tracking-card {
             background: rgba(255, 255, 255, 0.03);
@@ -206,7 +236,18 @@
             border-color: rgba(29, 138, 201, 0.3);
             transform: translateY(-2px);
         }
-        .service-chip .ico { font-size: 1.15rem; line-height: 1; margin-bottom: 4px; }
+        .service-chip .ico {
+            width: 40px; height: 40px;
+            margin: 0 auto 8px;
+            border-radius: 13px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.1rem; color: #fff;
+            transition: transform 0.25s ease;
+        }
+        .service-chip .ico.ship { background: linear-gradient(135deg,#1D8AC9,#3bb0f5); box-shadow: 0 8px 18px rgba(29,138,201,0.45); }
+        .service-chip .ico.air  { background: linear-gradient(135deg,#e1304b,#ff5c73); box-shadow: 0 8px 18px rgba(225,48,75,0.42); }
+        .service-chip .ico.box  { background: linear-gradient(135deg,#0ea371,#21c98a); box-shadow: 0 8px 18px rgba(16,185,129,0.42); }
+        .service-chip:hover .ico { transform: translateY(-2px) scale(1.06); }
         .service-chip .title {
             font-size: 0.72rem;
             font-weight: 600;
@@ -698,6 +739,7 @@
                 gap: 6px;
             }
             .service-chip { padding: 9px 6px; }
+            .service-chip .ico { width: 34px; height: 34px; font-size: 0.95rem; border-radius: 11px; margin-bottom: 6px; }
             .service-chip .title { font-size: 0.66rem; }
             .service-chip .sub { font-size: 0.6rem; }
 
@@ -843,6 +885,7 @@
             });
 
             // ===== ติดต่อเรา (Contact Us) Modal =====
+            @if(!empty($brand['show_contact']))
             $('#btnContactUs').on('click', function () {
                 var lineUrl  = @json($support['line_url'] ?? '');
                 var lineId   = @json($support['line_id']  ?? '');
@@ -872,15 +915,17 @@
                             <i class="fa fa-angle-right cc-arrow"></i>
                         </a>`;
                 }
+                @if(!empty($brand['website']))
                 channels += `
-                    <a class="contact-channel" href="https://skjjapanshipping.com/" target="_blank" rel="noopener">
+                    <a class="contact-channel" href="{{ $brand['website'] }}" target="_blank" rel="noopener">
                         <div class="cc-icon web"><i class="fa fa-globe"></i></div>
                         <div class="cc-text">
                             <div class="cc-title">เว็บไซต์</div>
-                            <div class="cc-sub">skjjapanshipping.com</div>
+                            <div class="cc-sub">{{ preg_replace('#^https?://#', '', rtrim($brand['website'], '/')) }}</div>
                         </div>
                         <i class="fa fa-angle-right cc-arrow"></i>
                     </a>`;
+                @endif
 
                 if (!channels) {
                     Swal.fire({ title: 'ยังไม่ตั้งค่าช่องทางติดต่อ', icon: 'info' });
@@ -900,6 +945,7 @@
                     width: 460,
                 });
             });
+            @endif
         });
 
         function hideAll() {
@@ -932,9 +978,19 @@
     </div>
 
     <div class="tracking-container">
-        <!-- Logo -->
+        <!-- Logo / Brand -->
         <div class="tracking-logo">
-            <img src="{{ asset('img/skj-logo-full.png') }}" alt="SKJ Japan Shipping">
+            @if(!empty($brand['logo']))
+                <img src="{{ asset($brand['logo']) }}" alt="{{ $brand['name'] }}">
+            @else
+                <div class="brand-wordmark">
+                    <div class="bw-icon"><i class="fa fa-cube"></i></div>
+                    <div class="bw-text">
+                        <div class="bw-name">{{ $brand['name'] }}</div>
+                        <div class="bw-sub">Parcel Tracking</div>
+                    </div>
+                </div>
+            @endif
         </div>
 
         <div class="tracking-card">
@@ -944,23 +1000,23 @@
             <div class="tracking-title">
                 <div class="badge-track"><span class="dot"></span> Live Tracking</div>
                 <h1>เช็คเลขพัสดุ</h1>
-                <p>ติดตามสถานะการขนส่งสินค้าจากญี่ปุ่นมาไทยแบบเรียลไทม์</p>
+                <p>{{ $brand['tagline'] ?? 'ติดตามสถานะการขนส่งสินค้าจากญี่ปุ่นมาไทยแบบเรียลไทม์' }}</p>
             </div>
 
             <!-- Service Highlights -->
             <div class="service-chips">
                 <div class="service-chip">
-                    <div class="ico">🚢</div>
+                    <div class="ico ship"><i class="fa fa-ship"></i></div>
                     <div class="title">ขนส่งทางเรือ</div>
                     <div class="sub">20–25 วัน</div>
                 </div>
                 <div class="service-chip">
-                    <div class="ico">✈️</div>
+                    <div class="ico air"><i class="fa fa-plane"></i></div>
                     <div class="title">ขนส่งทางอากาศ</div>
                     <div class="sub">3–7 วัน</div>
                 </div>
                 <div class="service-chip">
-                    <div class="ico">📦</div>
+                    <div class="ico box"><i class="fa fa-cube"></i></div>
                     <div class="title">สินค้าถึงไทย</div>
                     <div class="sub">แมส · รับเอง · จัดส่ง</div>
                 </div>
@@ -980,12 +1036,16 @@
 
             <!-- Action Buttons -->
             <div class="action-buttons">
+                @if(!empty($brand['show_login']))
                 <a href="{{ route('login') }}" class="btn-outline">
                     <i class="fa fa-sign-in"></i> <span>เข้าสู่ระบบ</span>
                 </a>
+                @endif
+                @if(!empty($brand['show_contact']))
                 <button type="button" class="btn-contact" id="btnContactUs">
                     <i class="fa fa-commenting"></i> <span>ติดต่อเรา</span>
                 </button>
+                @endif
                 <button class="btn-reset" type="button" id="reset">
                     <i class="fa fa-refresh"></i> <span>รีเซ็ต</span>
                 </button>
@@ -1039,6 +1099,7 @@
 
         <!-- Footer -->
         <div class="tracking-footer">
+            @if(!empty($brand['show_contact']))
             <div class="footer-contact">
                 @if(!empty($support['phone']))
                     <a href="tel:{{ preg_replace('/[^\d+]/', '', $support['phone']) }}"><i class="fa fa-phone"></i> {{ $support['phone'] }}</a>
@@ -1048,7 +1109,8 @@
                 @endif
             </div>
             <div class="footer-divider"></div>
-            &copy; {{ date('Y') }} SKJ Japan Shipping Company
+            @endif
+            &copy; {{ date('Y') }} {{ $brand['footer'] ?? 'SKJ Japan Shipping Company' }}
         </div>
     </div>
 @endsection

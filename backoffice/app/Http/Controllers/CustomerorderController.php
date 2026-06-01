@@ -89,12 +89,12 @@ class CustomerorderController extends Controller
                             $query->where('boss_id', $request->boss_id);
 
                         if (!empty($request->start_date) && !empty($request->end_date)) {
-                            // ค้นหาจากวันที่ (DATE) โดยใช้ DATE() function
-                            $query->whereRaw('DATE(order_date) >= ?', [$request->start_date])
-                                  ->whereRaw('DATE(order_date) <= ?', [$request->end_date]);
+                            // ใช้ range แทน DATE(order_date) เพื่อให้ใช้ index ได้
+                            $query->where('order_date', '>=', $request->start_date.' 00:00:00')
+                                  ->where('order_date', '<=', $request->end_date.' 23:59:59');
                         } else if (!empty($request->start_date)) {
-                            // ค้นหาจากวันที่ (DATE) เฉพาะวันเดียว
-                            $query->whereRaw('DATE(order_date) = ?', [$request->start_date]);
+                            $query->where('order_date', '>=', $request->start_date.' 00:00:00')
+                                  ->where('order_date', '<=', $request->start_date.' 23:59:59');
                         }
 
 

@@ -550,6 +550,16 @@
                                 <div style="font-weight:700; font-size:15px; color:{{ $titleColor }};">{{ $w['icon'] }} {{ $w['label'] }}</div>
                                 <button type="button" onclick="copyWh{{ $t }}(event)" style="background:#f1f5f9; border:0; color:#475569; padding:5px 11px; border-radius:8px; cursor:pointer; font-size:12px;">📋 Copy</button>
                             </div>
+                            @php
+                                $noteLines = $t === 'sea'
+                                    ? ['⏱️ 20–25 วัน ญี่ปุ่น → ถึงไทย', '📦 ปิดตู้ทุกวันจันทร์ · เรือออกทุกสัปดาห์']
+                                    : ['⏱️ 3–7 วัน ญี่ปุ่น → ถึงไทย', '📦 ปิดรอบทุกวันพฤหัส (เที่ยวบินสอบถาม Admin ได้โดยตรง)'];
+                            @endphp
+                            <div style="margin-bottom:10px; padding:8px 12px; background:{{ $bg }}; border:1px dashed {{ $border }}; border-radius:10px; font-size:12.5px; color:{{ $titleColor }}; line-height:1.7; font-weight:600;">
+                                @foreach($noteLines as $line)
+                                    <div>{{ $line }}</div>
+                                @endforeach
+                            </div>
                             <div id="wh-{{ $t }}-text" style="background:{{ $bg }}; border:1px solid {{ $border }}; border-radius:10px; padding:14px 16px; line-height:1.6;">
                                 {{-- ENGLISH ADDRESS (PRIMARY) --}}
                                 @if(!empty($w['address_en']))

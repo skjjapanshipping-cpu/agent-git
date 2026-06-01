@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Customershipping;
+use App\Models\ExtraShippingCharge;
 use App\Services\LineMessagingService;
 use App\User;
 use App\MyAuthProvider;
@@ -46,7 +47,9 @@ class ShippopController extends Controller
         }
 
         // รับ parsed_items (JSON) — รายการ shipment ต่อ Box ที่ admin review/แก้แล้ว
-        // schema: [{ refNo, courier, destination, totalPrice, boxes: [int] }, ...]
+        // schema: [{ refNo, courier, destination, recipientName, totalPrice, boxes: [int] }, ...]
+        // - มี box  → update Customershipping per-box ตามเดิม
+        // - ไม่มี box → save เป็น ExtraShippingCharge (ค่าบริการเพิ่มเติม เช่น Repack, ค่าธรรมเนียม)
         $parsedItems = [];
         if ($request->has('parsed_items')) {
             $raw = $request->input('parsed_items');
@@ -58,14 +61,18 @@ class ShippopController extends Controller
                     $boxes = preg_split('/[\s,+]+/u', $boxes);
                 }
                 $boxes = array_values(array_filter(array_map('intval', (array) $boxes), function($x){ return $x > 0; }));
-                $refNo = trim((string) ($row['refNo'] ?? ''));
-                if ($refNo === '' && empty($boxes)) continue;
+                $refNo     = trim((string) ($row['refNo'] ?? ''));
+                $recipient = trim((string) ($row['recipientName'] ?? ($row['recipient'] ?? '')));
+                $price     = (float) ($row['totalPrice'] ?? 0);
+                // เก็บแถวที่มีข้อมูลพอจะตาม trace ได้: ref หรือ box หรือ (recipient + price)
+                if ($refNo === '' && empty($boxes) && ($recipient === '' || $price <= 0)) continue;
                 $parsedItems[] = [
-                    'refNo'       => $refNo,
-                    'courier'     => trim((string) ($row['courier'] ?? '')),
-                    'destination' => trim((string) ($row['destination'] ?? '')),
-                    'totalPrice'  => (float) ($row['totalPrice'] ?? 0),
-                    'boxes'       => $boxes,
+                    'refNo'         => $refNo,
+                    'courier'       => trim((string) ($row['courier'] ?? '')),
+                    'destination'   => trim((string) ($row['destination'] ?? '')),
+                    'recipientName' => $recipient,
+                    'totalPrice'    => $price,
+                    'boxes'         => $boxes,
                 ];
             }
         }
@@ -270,9 +277,50 @@ class ShippopController extends Controller
                 }
 
                 // อัพเดทข้อมูล per-box (เลขอ้างอิง/ราคา/courier) ตามที่ admin review
+                // หา etd_date สำหรับ extra charges (ใช้ etd จาก request → fallback จาก first record)
                 $now = Carbon::now();
+                $etdForExtra = $etd ?: null;
+                if (!$etdForExtra && !empty($selectedIds)) {
+                    $firstRow = Customershipping::whereIn('id', $selectedIds)->first();
+                    if ($firstRow && $firstRow->etd) {
+                        $etdForExtra = Carbon::parse($firstRow->etd)->format('Y-m-d');
+                    }
+                }
+                $adminUserId = Auth::id();
+
+                // === Replace batch strategy ===
+                // ลบ extra เดิมของ (customerno + etd) ทั้งหมด → insert ใหม่ทั้ง batch พร้อม sequence_no
+                // เหตุผล: admin มัก re-upload PDF เพื่อแก้ราคา/รายการ → ต้องการให้ผลตรงเป๊ะ
+                //          และกรณี multi-PDF ที่มีรายการซ้ำกัน (เช่น "1 กล่องเบอร์ C 15.00" 2 รอบ) ต้อง save แยก 100%
+                $extraDeleteQuery = ExtraShippingCharge::where('customerno', $customerno);
+                if ($etdForExtra) {
+                    $extraDeleteQuery->whereDate('etd_date', $etdForExtra);
+                } else {
+                    $extraDeleteQuery->whereNull('etd_date');
+                }
+                $extraDeleteQuery->delete();
+                $extraSeq = 0;
+
                 foreach ($parsedItems as $pItem) {
-                    if (empty($pItem['boxes'])) continue;
+                    // === Case 1: ไม่มี box → บันทึกเป็น "ค่าบริการเพิ่มเติม" (Repack, ค่าธรรมเนียม ฯลฯ) ===
+                    if (empty($pItem['boxes'])) {
+                        if ($pItem['totalPrice'] <= 0 && $pItem['refNo'] === '' && $pItem['recipientName'] === '') continue;
+                        $extraSeq++;
+                        ExtraShippingCharge::create([
+                            'customerno'     => $customerno,
+                            'etd_date'       => $etdForExtra,
+                            'ref_no'         => $pItem['refNo'] !== '' ? $pItem['refNo'] : null,
+                            'courier'        => $pItem['courier'] !== '' ? $pItem['courier'] : null,
+                            'recipient_name' => $pItem['recipientName'] !== '' ? $pItem['recipientName'] : null,
+                            'price'          => round($pItem['totalPrice'], 2),
+                            'description'    => $pItem['destination'] !== '' ? $pItem['destination'] : null,
+                            'sequence_no'    => $extraSeq,
+                            'created_by'     => $adminUserId,
+                        ]);
+                        continue;
+                    }
+
+                    // === Case 2: มี box → update Customershipping per-box ตามเดิม ===
                     $perBox = [
                         'thai_tracking_no'    => $pItem['refNo'] !== '' ? $pItem['refNo'] : null,
                         'thai_courier'        => $pItem['courier'] !== '' ? $pItem['courier'] : null,
@@ -291,7 +339,7 @@ class ShippopController extends Controller
                     }
                     $boxValues = array_values(array_unique($boxValues));
 
-                    Customershipping::where('customerno', $customerno)
+                    $affected = Customershipping::where('customerno', $customerno)
                         ->where(function($q) use ($boxValues) {
                             $q->whereIn('box_no', $boxValues)
                               ->orWhereRaw('CAST(box_no AS UNSIGNED) IN (' . implode(',', array_fill(0, count($boxValues), '?')) . ')',
@@ -299,6 +347,29 @@ class ShippopController extends Controller
                         })
                         ->where('excel_status', '1')
                         ->update($perBox);
+
+                    // === Case 3: มี box แต่ "ไม่ match" กล่องของลูกค้ารายนี้เลย (เช่น Box.715 ที่ไม่ใช่ของลูกค้า) ===
+                    // เดิม update ไม่โดนแถวไหน → ราคาตกหล่น ทำให้ยอดรวมไม่ตรงบิล
+                    // แก้: บันทึกเป็น "ค่าบริการเพิ่มเติม" แทน (คงเลข Box ไว้ใน description เพื่อ trace)
+                    // หมายเหตุ: Thai bill ส่งทีละ 1 ลูกค้าเท่านั้น (guard ด้านบน) → ไม่มี cross-customer
+                    if ($affected === 0) {
+                        $boxLabel = 'Box.' . implode('+', $pItem['boxes']);
+                        $extraDesc = $pItem['destination'] !== ''
+                            ? $boxLabel . ' (' . $pItem['destination'] . ')'
+                            : $boxLabel;
+                        $extraSeq++;
+                        ExtraShippingCharge::create([
+                            'customerno'     => $customerno,
+                            'etd_date'       => $etdForExtra,
+                            'ref_no'         => $pItem['refNo'] !== '' ? $pItem['refNo'] : null,
+                            'courier'        => $pItem['courier'] !== '' ? $pItem['courier'] : null,
+                            'recipient_name' => $pItem['recipientName'] !== '' ? $pItem['recipientName'] : null,
+                            'price'          => round($pItem['totalPrice'], 2),
+                            'description'    => $extraDesc,
+                            'sequence_no'    => $extraSeq,
+                            'created_by'     => $adminUserId,
+                        ]);
+                    }
                 }
 
                 $results['success']++;
@@ -734,38 +805,119 @@ class ShippopController extends Controller
         $lines = preg_split('/\r\n|\r|\n/u', $text);
         if (!$lines) return $items;
 
-        $itemStartRe = '/^\s*(\d+)\s*\.\s*\)\s+\d+\s+(.+?)$/u';
+        // โครงสร้าง PDF Shippop:
+        //   - ขนาดพัสดุ ( ... )              ← marker เริ่ม item ใหม่
+        //   - น้ำหนัก X กรัม      PRICE
+        //   - Additional Fuel    PRICE
+        //   X.) Y COURIER DESTINATION       ← header (อยู่ "หลัง" details ใน PDF text)
+        //   เลขอ้างอิง XXXX
+        //   ผู้รับ: NAME (Box.NNN รวม X กล่อง)
+        //   - ขนาดพัสดุ ...                  ← next item
+        //
+        // Smalot/PdfParser บางทีแทรกช่องว่างใน คำไทย (เช่น "พั สดุ", "น้ำหนั ก") — ต้อง tolerant
+
+        $sizeStartRe = '/^\s*-\s*ขนาด\s*พั?\s*สดุ/u';
+        $itemHeaderRe = '/^\s*(\d+)\s*\.\s*\)\s+\d+\s+(.+?)$/u';
 
         $buckets = [];
         $current = null;
         foreach ($lines as $line) {
-            if (preg_match($itemStartRe, $line, $m)) {
-                if ($current !== null) {
-                    $buckets[] = $current;
-                }
-                $current = [
-                    'idx'        => (int) $m[1],
-                    'header'     => trim($m[2]),
-                    'lines'      => [trim($line)],
-                ];
+            $trim = trim($line);
+            if (preg_match($sizeStartRe, $line)) {
+                if ($current !== null) $buckets[] = $current;
+                $current = ['lines' => [$trim]];
             } elseif ($current !== null) {
-                $current['lines'][] = trim($line);
-                if (count($current['lines']) > 30) {
-                    $buckets[] = $current;
-                    $current = null;
-                }
+                $current['lines'][] = $trim;
             }
         }
-        if ($current !== null) {
-            $buckets[] = $current;
-        }
+        if ($current !== null) $buckets[] = $current;
 
         foreach ($buckets as $bucket) {
+            // หา item header line ("X.) Y ...") ภายใน bucket
+            $idx = null; $header = '';
+            foreach ($bucket['lines'] as $ln) {
+                if (preg_match($itemHeaderRe, $ln, $m)) {
+                    $idx = (int) $m[1];
+                    $header = trim($m[2]);
+                    break;
+                }
+            }
+            if ($idx === null) continue; // ไม่มี header → skip (อาจเป็น dummy block หรือบิลแถวก่อน X.)1)
+            $bucket['idx'] = $idx;
+            $bucket['header'] = $header;
+
             $item = $this->parseShippopBucket($bucket);
             if ($item !== null) {
                 $items[] = $item;
             }
         }
+
+        // === Pass 2: รายการพิเศษ "ค่ากล่อง" (เช่น "12.) 1 กล่องเบอร์ C   15.00") ===
+        // ไม่มี - ขนาดพัสดุ จึงไม่ถูกจับใน Pass 1 → ต้อง scan แยก เป็น extra charge (ไม่ผูก box ลูกค้า)
+        // วิธี: regex header กว้างๆ แล้ว normalize whitespace ก่อนเช็ค "กล่องเบอร์" (กัน Smalot ใส่ space แทรกในคำไทย)
+        $existingIdxs = array_map(function($it){ return $it['idx'] ?? null; }, $items);
+        // header: X.) Y <ข้อความ> [ราคา]?  (Y = qty/index ภายในรายการ)
+        $itemLineRe = '/^\s*(\d+)\s*\.\s*\)\s*(\d+)\s+(.+?)(?:\s+(\d+(?:,\d{3})*\.\d{2}))?\s*$/u';
+        $priceOnlyRe = '/^\s*(\d+(?:,\d{3})*\.\d{2})\s*$/u';
+        $lineCount = count($lines);
+        for ($i = 0; $i < $lineCount; $i++) {
+            $trim = trim($lines[$i]);
+            if (!preg_match($itemLineRe, $trim, $m)) continue;
+            $idx = (int) $m[1];
+            if (in_array($idx, $existingIdxs, true)) continue; // ถูก parse ใน Pass 1 แล้ว
+            $qty = (int) $m[2];
+            $descRaw = trim($m[3]);
+            // Normalize: ลบ whitespace ทั้งหมดเพื่อเทียบคำไทย/อังกฤษ
+            $descCompact = preg_replace('/\s+/u', '', $descRaw);
+            $isBoxNo  = mb_stripos($descCompact, 'กล่องเบอร์') !== false;       // "กล่องเบอร์ C"
+            $isBigBox = mb_stripos($descCompact, 'BigBox') !== false;            // "กล่อง Big Box"
+            if (!$isBoxNo && !$isBigBox) continue; // ไม่ใช่รายการค่ากล่อง
+
+            if ($isBigBox) {
+                // ค่ากล่อง Big Box (ภาษาอังกฤษ ไม่มีเบอร์) → "1 กล่อง Big Box"
+                $desc = trim($qty . ' กล่อง Big Box');
+            } else {
+                // หา label เบอร์กล่อง (token หลัง "กล่องเบอร์" ใน raw)
+                $boxLabel = '';
+                if (preg_match('/ก\s*ล่?\s*อ\s*ง\s*เ\s*บ\s*อ\s*ร์\s*(\S+)/u', $descRaw, $lm)) {
+                    $boxLabel = trim($lm[1]);
+                }
+                $desc = trim($qty . ' กล่องเบอร์ ' . $boxLabel);
+            }
+
+            $price = isset($m[4]) && $m[4] !== '' ? (float) str_replace(',', '', $m[4]) : 0.0;
+            // ราคาอาจอยู่บรรทัดถัดไป → look ahead 1-3 บรรทัด
+            if ($price == 0.0) {
+                for ($j = $i + 1; $j < min($i + 4, $lineCount); $j++) {
+                    $next = trim($lines[$j]);
+                    if ($next === '') continue;
+                    if (preg_match($priceOnlyRe, $next, $pm)) {
+                        $price = (float) str_replace(',', '', $pm[1]);
+                        break;
+                    }
+                    break;
+                }
+            }
+
+            $items[] = [
+                'idx'           => $idx,
+                'refNo'         => '',
+                'courier'       => '',
+                'destination'   => $desc, // ใช้เป็น description ตอน save extra
+                'totalPrice'    => round($price, 2),
+                'boxes'         => [],
+                'recipient'     => '',
+                'recipientName' => $desc, // โชว์ในช่อง "ผู้รับ" บน admin preview
+                'pileNo'        => null,
+                'rawText'       => $trim,
+            ];
+            $existingIdxs[] = $idx;
+        }
+
+        // เรียงตาม idx ให้ admin เห็นเรียงตามบิล
+        usort($items, function($a, $b){
+            return ($a['idx'] ?? 0) <=> ($b['idx'] ?? 0);
+        });
 
         return $items;
     }
@@ -795,7 +947,9 @@ class ShippopController extends Controller
         }
 
         $boxes = [];
-        if (preg_match_all('/Box\.?\s*(\d+)(?:\s*\+\s*\d+)*/u', $rawText, $bxAll)) {
+        // ต้องมี "." หลัง Box (รูปแบบจริง = "Box.96", "Box.834+613") เพื่อไม่ให้ไป match
+        // คำว่า "Box" ใน "Big Box 110.00" (ค่ากล่อง Big Box ที่ไม่มีจุด) → กันเลขราคาหลุดมาเป็นเลขกล่อง
+        if (preg_match_all('/(?<![A-Za-z])Box\.\s*(\d+)(?:\s*\+\s*\d+)*/u', $rawText, $bxAll)) {
             foreach ($bxAll[0] as $boxBlock) {
                 if (preg_match_all('/(\d+)/u', $boxBlock, $nums)) {
                     foreach ($nums[1] as $n) {
@@ -808,12 +962,13 @@ class ShippopController extends Controller
 
         // ผู้รับ: "กอง 1 - Chanidapa Saengsit (Box.66 รวม 1 กล่อง)"
         //   → pileNo=1, recipientName="Chanidapa Saengsit", recipient="กอง 1 - Chanidapa Saengsit"
+        // หมายเหตุ: ผู้รับอาจถูก wrap หลายบรรทัด — รวมก่อนแล้วค่อย match
+        // Early-stop เมื่อเจอ: (Box / รายการถัดไป "X.)" / ยอดรวม / ยอดสุทธิ / Additional Fuel Total / EOL
         $recipient = '';
         $recipientName = '';
         $pileNo = null;
-        if (preg_match('/ผู้รับ\s*[:：]\s*(.+?)(?:\(Box|$)/u', $rawText, $recM)) {
-            $recipient = trim($recM[1]);
-            // แยก "กอง X - Name"
+        if (preg_match('/ผู้รับ\s*[:：]\s*([\s\S]+?)(?:\(\s*Box|\s\d+\s*\.\s*\)|ยอด\s*รวม|ยอด\s*สุท\s*ธิ|Additional\s*Fuel\s*Total|รับเงิน|ทอนเงิน|$)/u', $rawText, $recM)) {
+            $recipient = preg_replace('/\s+/u', ' ', trim($recM[1]));
             if (preg_match('/^กอง\s*(\d+)\s*[-—–]\s*(.+)$/u', $recipient, $rp)) {
                 $pileNo = (int) $rp[1];
                 $recipientName = trim($rp[2]);
@@ -822,13 +977,32 @@ class ShippopController extends Controller
             }
         }
 
+        // คำนวณราคา: หา keyword แล้วเอา ราคา (X.XX) ที่อยู่ใกล้ที่สุดหลัง keyword
+        // ตัดส่วน parentheses ออกก่อน (เช่น ขนาดพัสดุ "( 20.00x35.00x4.00 ซม. )") ป้องกัน 20.00/35.00 ถูกนับ
+        $priceText = preg_replace('/\([^)]*\)/u', ' ', $rawText);
+        // ตัด "Box.NNN+NNN" ทุกตัวด้วย (กันชนเลขใน Box)
+        $priceText = preg_replace('/Box\.?\s*\d+(?:\s*\+\s*\d+)*/u', ' ', $priceText);
+
         $totalPrice = 0.0;
-        foreach ($bucket['lines'] as $line) {
-            if (preg_match('/^\s*-\s*(?:น้ำหนัก|Additional\s*Fuel|ค่า|Fuel|COD|ประกัน|insurance)/iu', $line)) {
-                if (preg_match_all('/([\d,]+\.\d{2})/u', $line, $pm)) {
-                    foreach ($pm[1] as $price) {
-                        $totalPrice += (float) str_replace(',', '', $price);
-                    }
+        // pattern: keyword → ตัวเลขแบบทศนิยม 2 ตำแหน่งตัวแรกที่อยู่หลัง keyword
+        // ใช้ `[\s\S]{0,80}?` แบบ lazy เพื่อข้ามคำ/บรรทัดคั่นได้แต่ไม่ไกลเกินไป
+        // ใช้ ค่า `(\d+(?:,\d{3})*\.\d{2})` เพื่อจับเลขแบบ 25.00, 140.00, 8,000.00
+        // Smalot/PdfParser บางทีแทรกช่องว่างในคำไทย — ใช้ `\s*` ระหว่างพยัญชนะ
+        $patterns = [
+            '/น้ำ\s*หนั\s*ก[\s\S]{0,80}?(\d+(?:,\d{3})*\.\d{2})/u',
+            '/Additional\s*Fuel[\s\S]{0,80}?(\d+(?:,\d{3})*\.\d{2})/iu',
+            '/\bCOD\b[\s\S]{0,80}?(\d+(?:,\d{3})*\.\d{2})/iu',
+            '/ประ\s*กั\s*น[\s\S]{0,80}?(\d+(?:,\d{3})*\.\d{2})/u',
+            '/\bInsurance\b[\s\S]{0,80}?(\d+(?:,\d{3})*\.\d{2})/iu',
+            '/Remote\s*Area[\s\S]{0,80}?(\d+(?:,\d{3})*\.\d{2})/iu',
+            // ค่าบริการพื้นที่พิเศษ (remote area ภาษาไทย) — Smalot แทรก space ในคำ เช่น "พื นที พิเศษ"
+            '/พิ\s*เ\s*ศ\s*ษ[\s\S]{0,80}?(\d+(?:,\d{3})*\.\d{2})/u',
+            '/ภา\s*ษี[\s\S]{0,80}?(\d+(?:,\d{3})*\.\d{2})/u',
+        ];
+        foreach ($patterns as $rx) {
+            if (preg_match_all($rx, $priceText, $pm)) {
+                foreach ($pm[1] as $price) {
+                    $totalPrice += (float) str_replace(',', '', $price);
                 }
             }
         }

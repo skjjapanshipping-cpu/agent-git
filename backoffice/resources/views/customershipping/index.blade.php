@@ -18,6 +18,17 @@
             line-height: 1;
             pointer-events: none;
         }
+        /* Flatpickr airplane icon on Thursdays */
+        .flatpickr-day.is-thursday { position: relative; }
+        .flatpickr-day.is-thursday::after {
+            content: '\2708';
+            position: absolute;
+            bottom: -2px;
+            right: -2px;
+            font-size: 9px;
+            line-height: 1;
+            pointer-events: none;
+        }
         .flatpickr-calendar { font-family: inherit; }
         .table td, .table th {
             white-space: nowrap; /* ปรับให้ข้อมูลในตารางไม่ขึ้นบรรทัดใหม่ */
@@ -320,7 +331,7 @@
                                 <button id="btn-line-notify" class="btn-modern btn-line"><i class="fa fa-commenting"></i> LINE</button>
                                 <button id="btn-thai-shipping-notify" class="btn-modern btn-modern" style="background:linear-gradient(135deg,#0ea5e9,#06b6d4) !important; color:#fff !important;"><i class="fa fa-truck"></i> แจ้งค่าส่งไทย</button>
                                 <button id="btn-thai-remind" class="btn-modern btn-modern" style="background:linear-gradient(135deg,#ef4444,#f97316) !important; color:#fff !important;"><i class="fa fa-bell"></i> แจ้งเตือนค้างจ่าย</button>
-                                <button id="btn-broadcast-etd" class="btn-modern btn-modern" style="background:linear-gradient(135deg,#f59e0b,#d97706) !important; color:#fff !important;" title="ส่งข้อความบรอดแคสให้ลูกค้าทั้งหมดในรอบปิดตู้ที่เลือก"><i class="fa fa-bullhorn"></i> บรอดแคสรอบนี้</button>
+                                <button id="btn-broadcast-etd" class="btn-modern btn-modern" style="background:linear-gradient(135deg,#f59e0b,#d97706) !important; color:#fff !important;" title="ติ๊กเลือกรหัสลูกค้าในตารางก่อน แล้วกดเพื่อส่งบรอดแคสเฉพาะรหัสที่เลือก"><i class="fa fa-bullhorn"></i> บรอดแคสรอบนี้</button>
                             </div>
                         </div>
                     </div>
@@ -516,6 +527,9 @@
                 onDayCreate: function(dObj, dStr, fp, dayElem) {
                     if (dayElem.dateObj.getDay() === 1) {
                         dayElem.classList.add('is-monday');
+                    }
+                    if (dayElem.dateObj.getDay() === 4) {
+                        dayElem.classList.add('is-thursday');
                     }
                 },
                 onReady: function(selectedDates, dateStr, fp) {
@@ -1679,14 +1693,17 @@
                 var thaiDays = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
                 var thaiMonths = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
                 var now = new Date();
-                var thaiDate = thaiDays[now.getDay()] + 'ที่ ' + ('0' + now.getDate()).slice(-2) + ' ' + thaiMonths[now.getMonth()];
+                // วันเข้ารับ = ถัดจากวันนี้ 1 วัน
+                var pickupDate = new Date();
+                pickupDate.setDate(pickupDate.getDate() + 1);
+                var thaiDate = thaiDays[pickupDate.getDay()] + 'ที่ ' + ('0' + pickupDate.getDate()).slice(-2) + ' ' + thaiMonths[pickupDate.getMonth()];
 
                 var messageTemplate = '✨ขออนุญาตแจ้งยอดนะครับ\n'
                     + '🚢ค่านำเข้า (รอบปิดตู้ ' + displayDate + ')\n'
                     + '📌จำนวน: ' + String.fromCharCode(123,123) + 'จำนวน' + String.fromCharCode(125,125) + ' ชิ้น\n'
                     + 'รวม: ' + String.fromCharCode(123,123) + 'รวม' + String.fromCharCode(125,125) + ' บาท\n'
                     + '\n'
-                    + '📍พร้อมให้เข้ารับเอง/เรียกแมส ได้วัน' + thaiDate + ' ตั้งแต่ เวลา 09.30-18.00น.\n'
+                    + '📍พร้อมให้เข้ารับเอง/เรียกแมส ได้วัน' + thaiDate + ' ตั้งแต่ เวลา 10.00-20.00น.\n'
                     + '\n'
                     + '📍จัดส่งในไทยแจ้งที่อยู่จัดส่งผ่านระบบได้เลยครับ\n'
                     + '\n'
@@ -1982,7 +1999,19 @@
                 dataTable.ajax.reload(null, false);
             });
 
-            // === 📢 บรอดแคสรอบปิดตู้ ===
+            // === 📢 บรอดแคสรอบปิดตู้ (ต้องติ๊กเลือกรหัสลูกค้าก่อนเสมอ) ===
+            // อ่านรหัสลูกค้าที่ติ๊กเลือกในตาราง (ไม่ซ้ำ)
+            function getBroadcastSelectedNos() {
+                var nos = [];
+                $('#dt-mant-table-1 tbody').find(':checkbox:checked').each(function() {
+                    var data = dataTable.row($(this).closest('tr')).data();
+                    if (data && data.customerno && nos.indexOf(data.customerno) === -1) {
+                        nos.push(data.customerno);
+                    }
+                });
+                return nos;
+            }
+
             $('#btn-broadcast-etd').on('click', function() {
                 var etdDate = $('#start_date').val();
                 if (!etdDate) {
@@ -1990,19 +2019,28 @@
                     return;
                 }
 
+                // ต้องติ๊กเลือกรหัสลูกค้าก่อน ถึงจะส่งบรอดแคสได้
+                var selectedNos = getBroadcastSelectedNos();
+                if (selectedNos.length === 0) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'ยังไม่ได้เลือกรหัสลูกค้า',
+                        html: 'กรุณา <b>ติ๊กเลือกรหัสลูกค้า</b> ในตารางที่ต้องการส่งบรอดแคสก่อน<br>แล้วจึงกดปุ่ม "บรอดแคสรอบนี้" อีกครั้ง',
+                        confirmButtonColor: '#f59e0b'
+                    });
+                    return;
+                }
+
                 var d = new Date(etdDate);
                 var displayDate = ('0'+d.getDate()).slice(-2) + '/' + ('0'+(d.getMonth()+1)).slice(-2) + '/' + d.getFullYear();
                 $('#bcEtdDisplay').text(displayDate);
 
-                // นับจำนวนลูกค้าในรอบ (จาก dataTable ปัจจุบัน)
-                var customerSet = {};
-                dataTable.rows().every(function() {
-                    var data = this.data();
-                    if (data && data.customerno) {
-                        customerSet[data.customerno] = true;
-                    }
-                });
-                $('#bcCustomerCount').text(Object.keys(customerSet).length);
+                // แสดงจำนวน + รายการรหัสลูกค้าที่ติ๊กเลือก
+                $('#bcCustomerCount').text(selectedNos.length);
+                var chips = selectedNos.map(function(cn) {
+                    return '<span style="display:inline-block; background:#fff7ed; border:1px solid #fde68a; color:#92400e; border-radius:6px; padding:2px 8px; margin:2px; font-size:12px; font-family:\'SF Mono\',monospace; font-weight:600;">' + $('<div>').text(cn).html() + '</span>';
+                }).join('');
+                $('#bcSelectedList').html(chips);
 
                 // reset form ถ้ายังไม่เคยกรอก
                 if (!$('#bcMessage').val()) {
@@ -2070,30 +2108,25 @@
                 var title = $.trim($('#bcTitle').val());
                 var message = $.trim($('#bcMessage').val());
                 var headerColor = $('#bcHeaderColor').val();
-                var onlySelected = $('#bcOnlySelected').is(':checked');
 
                 if (!title) { alert('กรุณากรอกหัวข้อ'); return; }
                 if (!message) { alert('กรุณากรอกข้อความ'); return; }
 
-                var customerNos = [];
-                if (onlySelected) {
-                    var checked = $('tbody').find(':checkbox:checked');
-                    if (checked.length === 0) {
-                        alert('คุณเลือก "ส่งเฉพาะที่ติ๊ก" แต่ยังไม่ได้ติ๊กแถวใดในตาราง');
-                        return;
-                    }
-                    checked.each(function() {
-                        var row = dataTable.row($(this).closest('tr'));
-                        var data = row.data();
-                        if (data && data.customerno && customerNos.indexOf(data.customerno) === -1) {
-                            customerNos.push(data.customerno);
-                        }
+                // ส่งเฉพาะรหัสลูกค้าที่ติ๊กเลือกเท่านั้น (บังคับ)
+                var customerNos = getBroadcastSelectedNos();
+                if (customerNos.length === 0) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'ยังไม่ได้เลือกรหัสลูกค้า',
+                        html: 'กรุณาติ๊กเลือกรหัสลูกค้าในตารางก่อนส่งบรอดแคส',
+                        confirmButtonColor: '#f59e0b'
                     });
+                    return;
                 }
 
                 var d = new Date(etdDate);
                 var displayDate = ('0'+d.getDate()).slice(-2) + '/' + ('0'+(d.getMonth()+1)).slice(-2) + '/' + d.getFullYear();
-                var targetCount = onlySelected ? customerNos.length : $('#bcCustomerCount').text();
+                var targetCount = customerNos.length;
 
                 if (!confirm('ส่งบรอดแคสให้ลูกค้า ' + targetCount + ' ราย\nรอบปิดตู้: ' + displayDate + '\nหัวข้อ: ' + title + '\n\nยืนยันการส่ง?')) {
                     return;
@@ -2266,7 +2299,27 @@
 
             function tsEsc(s) { return String(s == null ? '' : s).replace(/"/g, '&quot;'); }
 
-            function tsRenderPreviewRow(item, idx, allBoxesSet) {
+            // ตรวจว่ารายการนี้จะถูกบันทึกเป็น "ค่าบริการเพิ่มเติม" หรือไม่
+            //   - ไม่มี box  → ค่าบริการเพิ่มเติม (เช่น "กล่องเบอร์ G", Repack)
+            //   - มี box แต่ไม่ match กล่องลูกค้าเลย → ค่าบริการเพิ่มเติม (Box ที่ไม่ใช่ของลูกค้า)
+            function tsIsExtraItem(item, allBoxesSet) {
+                var boxes = Array.isArray(item.boxes) ? item.boxes : [];
+                if (boxes.length === 0) return true;
+                var matched = 0;
+                boxes.forEach(function(b){ if (allBoxesSet.has(String(b))) matched++; });
+                return matched === 0;
+            }
+
+            // แถวหัวข้อ section (ไม่ใช่ข้อมูล — ถูกข้ามตอน collect/นับลำดับ)
+            function tsSectionHeaderRow(label, count, theme) {
+                var bg = theme === 'extra' ? '#fef3c7' : '#e0f2fe';
+                var fg = theme === 'extra' ? '#92400e' : '#0369a1';
+                var bd = theme === 'extra' ? '#fcd34d' : '#bae6fd';
+                return '<tr class="ts-section-row"><td colspan="7" style="padding:6px 10px; background:' + bg + '; color:' + fg + '; font-weight:700; font-size:11px; border-top:2px solid ' + bd + ';">'
+                    + label + ' <span style="font-weight:500;">(' + count + ' รายการ)</span></td></tr>';
+            }
+
+            function tsRenderPreviewRow(item, idx, allBoxesSet, forceExtra) {
                 var refNo = tsEsc(item.refNo);
                 var courier = tsEsc(item.courier);
                 // ผู้รับ: ใช้ recipientName ก่อน → fallback ไป recipient ทั้งบรรทัด → ไป destination
@@ -2280,7 +2333,9 @@
                 var matched = 0;
                 boxes.forEach(function(b){ if (allBoxesSet.has(String(b))) matched++; });
                 var badge = '';
-                if (boxes.length === 0) {
+                if (forceExtra) {
+                    badge = '<span title="บันทึกเป็นค่าบริการเพิ่มเติม" style="color:#d97706;">➕</span>';
+                } else if (boxes.length === 0) {
                     badge = '<span title="ไม่พบ Box" style="color:#94a3b8;">—</span>';
                 } else if (matched === boxes.length) {
                     badge = '<span title="match กับ Box ที่เลือกทุกอัน" style="color:#15803d;">✅</span>';
@@ -2372,8 +2427,20 @@
                         var items = (resp && resp.items) || [];
                         var warnings = (resp && resp.warnings) || [];
                         var allBoxes = tsCollectSelectedBoxes();
+                        // แยกเป็น 2 ส่วน: รายการขนส่ง (ผูกกล่องลูกค้า) กับ ค่าบริการเพิ่มเติม
+                        // ให้ admin เห็นเหมือนหน้าบ้านลูกค้า
+                        var shipItems = [], extraItems = [];
+                        items.forEach(function(it){ (tsIsExtraItem(it, allBoxes) ? extraItems : shipItems).push(it); });
                         var bodyHtml = '';
-                        items.forEach(function(it, i){ bodyHtml += tsRenderPreviewRow(it, i, allBoxes); });
+                        var rowNo = 0;
+                        if (extraItems.length > 0 && shipItems.length > 0) {
+                            bodyHtml += tsSectionHeaderRow('📦 รายการขนส่ง (ผูกกล่องลูกค้า)', shipItems.length, 'ship');
+                        }
+                        shipItems.forEach(function(it){ bodyHtml += tsRenderPreviewRow(it, rowNo++, allBoxes, false); });
+                        if (extraItems.length > 0) {
+                            bodyHtml += tsSectionHeaderRow('➕ ค่าบริการเพิ่มเติม', extraItems.length, 'extra');
+                            extraItems.forEach(function(it){ bodyHtml += tsRenderPreviewRow(it, rowNo++, allBoxes, true); });
+                        }
                         $('#tsParseBody').html(bodyHtml);
                         $('#tsParseCount').text('(' + items.length + ' รายการ)');
                         var sum = (resp.totalAmount || 0).toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2});
@@ -2395,14 +2462,14 @@
             }
 
             $(document).on('click', '#tsAddRow', function() {
-                var idx = $('#tsParseBody tr').length;
+                var idx = $('#tsParseBody .ts-parse-row').length;
                 $('#tsParseBody').append(tsRenderPreviewRow({refNo:'',courier:'',destination:'',boxes:[],totalPrice:0}, idx, tsCollectSelectedBoxes()));
                 $('#tsParseCard').show();
             });
 
             $(document).on('click', '.ts-p-del', function() {
                 $(this).closest('tr').remove();
-                $('#tsParseBody tr').each(function(i){
+                $('#tsParseBody .ts-parse-row').each(function(i){
                     var $first = $(this).find('td:first-child');
                     var badgeHtml = $first.find('span').prop('outerHTML') || '';
                     $first.html((i+1) + ' ' + badgeHtml);
@@ -2411,7 +2478,7 @@
 
             function tsCollectParsedItems() {
                 var items = [];
-                $('#tsParseBody tr').each(function(){
+                $('#tsParseBody .ts-parse-row').each(function(){
                     var $r = $(this);
                     var refNo = ($r.find('.ts-p-ref').val() || '').trim();
                     var courier = ($r.find('.ts-p-courier').val() || '').trim();
@@ -2420,7 +2487,9 @@
                     var boxesStr = ($r.find('.ts-p-boxes').val() || '').trim();
                     var priceVal = parseFloat($r.find('.ts-p-price').val()) || 0;
                     var boxes = boxesStr ? boxesStr.split(/[\s,+]+/).map(function(b){ return parseInt(b,10); }).filter(function(n){ return n>0; }) : [];
-                    if (!refNo && boxes.length === 0) return;
+                    // keep ถ้ามีข้อมูลที่ตามได้: ref OR box OR (price + recipient/dest)  ← ค่ากล่อง/ค่าบริการเพิ่มอาจไม่มี ref+box
+                    var hasIdentity = refNo || boxes.length > 0 || (priceVal > 0 && (recipientName || dest));
+                    if (!hasIdentity) return;
                     items.push({ refNo:refNo, courier:courier, recipientName:recipientName, destination:dest, totalPrice:priceVal, boxes:boxes });
                 });
                 return items;
@@ -2714,6 +2783,28 @@
                     alert('กรุณาอัพโหลดรูปบิล / ใบเสร็จ Shippop (เลือกได้หลายไฟล์)');
                     return;
                 }
+
+                // [Option D] Warning ถ้ามี parsed item ที่ไม่มี Box (จะถูกบันทึกเป็น "ค่าบริการเพิ่มเติม")
+                try {
+                    var _items = (typeof tsCollectParsedItems === 'function') ? tsCollectParsedItems() : [];
+                    var _noBox = _items.filter(function(it){
+                        return (!it.boxes || it.boxes.length === 0) && (it.refNo || (it.totalPrice||0) > 0 || it.recipientName);
+                    });
+                    if (_noBox.length > 0) {
+                        var _lines = _noBox.slice(0, 8).map(function(it, i){
+                            var parts = [];
+                            if (it.refNo) parts.push('Ref ' + it.refNo);
+                            if (it.courier) parts.push(it.courier);
+                            if (it.recipientName) parts.push(it.recipientName);
+                            if ((it.totalPrice||0) > 0) parts.push('฿ ' + Number(it.totalPrice).toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2}));
+                            return '  ' + (i+1) + ') ' + parts.join(' | ');
+                        }).join('\n');
+                        var _extra = _noBox.length > 8 ? ('\n  ...และอีก ' + (_noBox.length - 8) + ' รายการ') : '';
+                        var _warn = '⚠️ พบ ' + _noBox.length + ' รายการที่ไม่มีเลขกล่อง:\n\n' + _lines + _extra +
+                                    '\n\nรายการเหล่านี้จะถูกบันทึกเป็น "ค่าบริการเพิ่มเติม" (เช่น ไม่มีเลข Box. แยกส่งให้ลูกค้าเพิ่มเติม)\nและจะแสดงในหน้าบ้านลูกค้าในรอบปิดตู้นี้\n\nกด OK เพื่อยืนยัน หรือ Cancel เพื่อกลับไปแก้ไข (เพิ่มเลขกล่อง)';
+                        if (!confirm(_warn)) return;
+                    }
+                } catch(e) { /* ignore */ }
 
                 if (!confirm('ต้องการส่งบิล Shippop ผ่าน LINE ให้ลูกค้า ' + selectedCustomers.length + ' ราย?')) {
                     return;
@@ -3200,7 +3291,7 @@
                         <div><strong id="bcEtdDisplay" class="text-primary"></strong></div>
                     </div>
                     <div class="col-md-6">
-                        <small class="text-muted">จำนวนลูกค้าในรอบนี้:</small>
+                        <small class="text-muted">ส่งให้รหัสลูกค้าที่เลือก:</small>
                         <div><strong id="bcCustomerCount" class="text-warning">-</strong> ราย</div>
                     </div>
                 </div>
@@ -3274,9 +3365,11 @@
 
                 <div class="form-group">
                     <label class="d-flex align-items-center" style="gap:6px;">
-                        <input type="checkbox" id="bcOnlySelected">
-                        <span>ส่งเฉพาะลูกค้าที่ติ๊กในตาราง (default = ส่งทุกคนในรอบนี้)</span>
+                        <i class="fa fa-check-square" style="color:#f59e0b;"></i>
+                        <strong>รหัสลูกค้าที่จะได้รับบรอดแคส</strong>
+                        <span class="text-muted" style="font-size:12px; font-weight:400;">(ติ๊กเลือกจากตารางเท่านั้น)</span>
                     </label>
+                    <div id="bcSelectedList" style="max-height:120px; overflow-y:auto; border:1px solid #fde68a; background:#fffdf7; border-radius:8px; padding:8px;"></div>
                 </div>
 
                 <div id="bcPreview" style="background:#fff7ed; border:1px dashed #fde68a; border-radius:10px; padding:12px 14px; font-size:13px; color:#92400e;">

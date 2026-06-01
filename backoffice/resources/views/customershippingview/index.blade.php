@@ -199,6 +199,18 @@
             -webkit-appearance: none;
             -moz-appearance: none;
             appearance: none;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+        /* iOS Safari: ensure native picker opens reliably */
+        #start_date {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+            background-repeat: no-repeat !important;
+            background-position: right 12px center !important;
+            background-size: 12px !important;
+            padding-right: 36px !important;
+            position: relative;
+            z-index: 1;
         }
 
         .dataTables_length select,
@@ -232,23 +244,118 @@
             outline: none !important;
         }
 
-        /* Custom recipient dropdown */
-        .recipient-dropdown { position:relative; display:inline-block; width:100%; }
-        .recipient-dropdown .dd-toggle { padding:0 28px 0 15px; font-size:14px; border:1px solid #e2e8f0; border-radius:10px; min-width:100%; width:100%; height:42px; background:#fff; cursor:pointer; text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; position:relative; appearance:none; color:#475569; box-shadow:0 1px 2px rgba(0,0,0,0.05); box-sizing:border-box; }
-        .recipient-dropdown .dd-toggle::after { content:'\25BC'; position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:9px; color:#94a3b8; pointer-events:none; }
-        .recipient-dropdown .dd-toggle:hover { border-color:#1D8AC9; }
-        .recipient-dropdown .dd-menu { display:none; position:absolute; top:100%; left:0; z-index:9999; background:#fff; border:1.5px solid #e2e8f0; border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,0.15); min-width:280px; width:100%; margin-top:4px; overflow:hidden; }
-        .recipient-dropdown .dd-menu.open { display:block; }
-        .recipient-dropdown .dd-search { display:block; width:calc(100% - 16px); margin:8px auto; padding:7px 12px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px; outline:none; box-sizing:border-box; }
-        .recipient-dropdown .dd-search:focus { border-color:#1D8AC9; }
-        .recipient-dropdown .dd-list { max-height:300px; overflow-y:auto; padding:4px 0; }
-        .recipient-dropdown .dd-list::-webkit-scrollbar { width:6px; }
-        .recipient-dropdown .dd-list::-webkit-scrollbar-track { background:#f1f1f1; }
-        .recipient-dropdown .dd-list::-webkit-scrollbar-thumb { background:#c1c1c1; border-radius:3px; }
-        .recipient-dropdown .dd-list::-webkit-scrollbar-thumb:hover { background:#999; }
-        .recipient-dropdown .dd-item { padding:8px 14px; font-size:13px; cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-        .recipient-dropdown .dd-item:hover { background:#f0f7ff; }
-        .recipient-dropdown .dd-item.active { background:#1D8AC9; color:#fff; font-weight:600; }
+        /* === ETD dropdown (mobile-friendly, with scroll buttons + dynamic positioning) === */
+        .etd-dropdown { position:relative; display:inline-block; width:100%; }
+        .etd-dropdown .dd-toggle { padding:0 28px 0 15px; font-size:14px; border:1px solid #e2e8f0; border-radius:10px; min-width:100%; width:100%; height:42px; background:#fff; cursor:pointer; text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; position:relative; appearance:none; color:#475569; box-shadow:0 1px 2px rgba(0,0,0,0.05); box-sizing:border-box; }
+        .etd-dropdown .dd-toggle::after { content:'\25BC'; position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:9px; color:#94a3b8; pointer-events:none; }
+        .etd-dropdown .dd-toggle:hover { border-color:#1D8AC9; }
+        .etd-dropdown .dd-menu { display:none; position:absolute; top:100%; left:0; z-index:9999; background:#fff; border:1.5px solid #e2e8f0; border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,0.15); min-width:280px; width:100%; margin-top:4px; overflow:hidden; }
+        .etd-dropdown .dd-menu.open { display:block; }
+        .etd-dropdown .dd-list {
+            max-height:300px;
+            overflow-y:auto;
+            overflow-x:hidden;
+            padding:4px 4px 4px 0;
+            scrollbar-gutter: stable;
+            scrollbar-width: thin;
+            scrollbar-color: #94a3b8 #f1f5f9;
+            position: relative;
+        }
+        .etd-dropdown .dd-list::-webkit-scrollbar { width:10px; }
+        .etd-dropdown .dd-list::-webkit-scrollbar-track { background:#f1f5f9; border-radius:8px; margin:6px 2px; }
+        .etd-dropdown .dd-list::-webkit-scrollbar-thumb { background:#94a3b8; border-radius:8px; border:2px solid #f1f5f9; background-clip: padding-box; min-height:32px; }
+        .etd-dropdown .dd-list::-webkit-scrollbar-thumb:hover { background:#64748b; background-clip: padding-box; }
+        .etd-dropdown .dd-item { padding:9px 16px; font-size:13px; cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; border-radius:6px; margin:1px 6px; }
+        .etd-dropdown .dd-scroll-wrap { position: relative; z-index: 1; }
+        .etd-dropdown .dd-scroll-btn {
+            position: absolute; right: 6px; z-index: 10;
+            width: 24px; height: 24px;
+            border-radius: 6px; border: 1px solid #cbd5e1;
+            background: #fff; color: #334155;
+            cursor: pointer; padding: 0;
+            display: none; align-items: center; justify-content: center;
+            box-shadow: 0 2px 8px rgba(15,23,42,0.12);
+            transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.1s, opacity 0.15s;
+        }
+        .etd-dropdown .dd-scroll-btn svg { width: 12px; height: 12px; }
+        .etd-dropdown .dd-scroll-btn.show { display: flex; opacity: 1; }
+        .etd-dropdown .dd-scroll-btn.is-disabled { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
+        .etd-dropdown .dd-scroll-btn:hover:not(.is-disabled) { background: #0ea5e9; color: #fff; border-color: #0ea5e9; box-shadow: 0 3px 10px rgba(14,165,233,0.35); }
+        .etd-dropdown .dd-scroll-btn:active:not(.is-disabled) { transform: scale(0.92); }
+        .etd-dropdown .dd-scroll-btn.up { top: 6px; }
+        .etd-dropdown .dd-scroll-btn.down { bottom: 6px; }
+        .etd-dropdown .dd-item:hover { background:#f0f7ff; }
+        .etd-dropdown .dd-item.active { background:#1D8AC9; color:#fff; font-weight:600; }
+        /* ซ่อนปุ่มลูกศรเลื่อนทุกขนาดจอ (เลื่อนด้วยเมาส์/นิ้วได้ปกติ) กันปุ่มทับรายการรอบ */
+        .etd-dropdown .dd-scroll-btn,
+        .etd-dropdown .dd-scroll-btn.show { display:none !important; }
+
+        /* === Mobile: bottom-sheet สำหรับเลือกรอบปิดตู้ (ใช้งานง่ายบนมือถือ) === */
+        /* ใช้ 991px ให้ตรงกับ breakpoint layout มือถือของหน้านี้ */
+        .etd-dropdown .dd-sheet-head { display:none; }
+        .etd-backdrop { display:none; }
+        @media (max-width: 991px) {
+            /* ใช้ selector อิง ID (#etdMenu/#etdBackdrop) เพราะ JS จะย้าย element ไปไว้ที่ body ตอนเปิด
+               เพื่อหนี ancestor ที่สร้าง containing block ทำให้ fixed ครอบเต็มจอจริง ๆ */
+            #etdBackdrop { display:block; position:fixed; inset:0; background:#0b1220; z-index:99998; opacity:0; visibility:hidden; pointer-events:none; transition:opacity .22s ease, visibility .22s ease; }
+            #etdBackdrop.open { opacity:0.985; visibility:visible; pointer-events:auto; }
+            #etdMenu {
+                position:fixed !important; left:0 !important; right:0 !important; bottom:0 !important; top:auto !important;
+                width:100% !important; min-width:0 !important; max-width:100% !important; margin:0 !important;
+                max-height:88vh !important; display:flex !important; flex-direction:column !important;
+                z-index:99999 !important; background:#fff !important; overflow:hidden !important;
+                border-radius:22px 22px 0 0 !important; border:0 !important;
+                box-shadow:0 -10px 34px rgba(0,0,0,0.28) !important;
+                transform:translateY(100%); transition:transform .26s cubic-bezier(.32,.72,0,1);
+                padding-bottom:env(safe-area-inset-bottom, 0px);
+            }
+            #etdMenu.open { transform:translateY(0); }
+            #etdMenu .dd-sheet-head {
+                flex:0 0 auto;
+                display:flex; align-items:center; justify-content:space-between;
+                padding:20px 20px 12px; border-bottom:1px solid #eef2f7;
+                font-size:16px; font-weight:700; color:#0f172a;
+                position:sticky; top:0; background:#fff; z-index:2;
+            }
+            #etdMenu .dd-scroll-wrap { flex:1 1 auto; min-height:0; display:flex; flex-direction:column; }
+            #etdMenu .dd-sheet-head::before {
+                content:''; position:absolute; top:8px; left:50%; transform:translateX(-50%);
+                width:42px; height:4px; border-radius:99px; background:#cbd5e1;
+            }
+            #etdMenu .dd-sheet-close {
+                border:0; background:#f1f5f9; color:#475569; width:34px; height:34px;
+                border-radius:50%; font-size:16px; cursor:pointer; line-height:1; flex:0 0 auto;
+            }
+            #etdMenu .dd-scroll-btn { display:none !important; }
+            #etdMenu .dd-list { flex:1 1 auto; min-height:0; max-height:none !important; overflow-y:auto; padding:6px 6px 14px; -webkit-overflow-scrolling:touch; }
+            #etdMenu .dd-item {
+                padding:15px 18px; font-size:16px; margin:3px 8px; border-radius:13px;
+                display:flex; align-items:center; min-height:54px; white-space:normal;
+            }
+            #etdMenu .dd-item.active { box-shadow:0 4px 12px rgba(29,138,201,0.35); }
+            #etdMenu .dd-item:active { background:#e0f2fe; }
+            #etdMenu .dd-item.active { background:#1D8AC9; color:#fff; font-weight:600; }
+            #etdMenu .dd-item:hover { background:#f0f7ff; }
+        }
+
+        /* === Recipient dropdown (admin-style: compact, clean, no scroll buttons) === */
+        /* ใช้ !important + specific selector กัน mobile theme/body font override */
+        .recipient-dropdown { position:relative !important; display:inline-block !important; width:100% !important; }
+        .recipient-dropdown .dd-toggle { padding:0 28px 0 15px !important; font-size:14px !important; line-height:1.4 !important; border:1px solid #e2e8f0 !important; border-radius:10px !important; min-width:100% !important; width:100% !important; height:42px !important; min-height:42px !important; background:#fff !important; cursor:pointer !important; text-align:left !important; white-space:nowrap !important; overflow:hidden !important; text-overflow:ellipsis !important; position:relative !important; appearance:none !important; box-sizing:border-box !important; color:#475569 !important; font-weight:400 !important; box-shadow:0 1px 2px rgba(0,0,0,0.05) !important; }
+        .recipient-dropdown .dd-toggle::after { content:'\25BC' !important; position:absolute !important; right:12px !important; top:50% !important; transform:translateY(-50%) !important; font-size:9px !important; color:#94a3b8 !important; pointer-events:none !important; }
+        .recipient-dropdown .dd-toggle:hover { border-color:#dc3545 !important; }
+        .recipient-dropdown .dd-menu { display:none !important; position:absolute !important; top:100% !important; left:0 !important; z-index:9999 !important; background:#fff !important; border:1.5px solid #e2e8f0 !important; border-radius:10px !important; box-shadow:0 8px 24px rgba(0,0,0,0.15) !important; min-width:280px !important; width:max-content !important; max-width:calc(100vw - 32px) !important; margin-top:4px !important; overflow:hidden !important; }
+        .recipient-dropdown .dd-menu.open { display:block !important; }
+        .recipient-dropdown .dd-search { display:block !important; width:calc(100% - 16px) !important; margin:8px auto !important; padding:7px 12px !important; border:1.5px solid #e2e8f0 !important; border-radius:8px !important; font-size:13px !important; line-height:1.4 !important; outline:none !important; box-sizing:border-box !important; }
+        .recipient-dropdown .dd-search:focus { border-color:#dc3545 !important; }
+        .recipient-dropdown .dd-list { max-height:300px !important; overflow-y:auto !important; overflow-x:hidden !important; padding:4px 4px 4px 0 !important; scrollbar-gutter:stable !important; scrollbar-width:thin !important; scrollbar-color:#94a3b8 #f1f5f9 !important; position:relative !important; -webkit-overflow-scrolling:touch !important; }
+        .recipient-dropdown .dd-list::-webkit-scrollbar { width:10px !important; -webkit-appearance:none !important; }
+        .recipient-dropdown .dd-list::-webkit-scrollbar-track { background:#f1f5f9 !important; border-radius:8px !important; margin:6px 2px !important; }
+        .recipient-dropdown .dd-list::-webkit-scrollbar-thumb { background:#94a3b8 !important; border-radius:8px !important; border:2px solid #f1f5f9 !important; background-clip:padding-box !important; min-height:32px !important; }
+        .recipient-dropdown .dd-list::-webkit-scrollbar-thumb:hover { background:#64748b !important; background-clip:padding-box !important; }
+        .recipient-dropdown .dd-item { padding:7px 14px !important; font-size:12px !important; line-height:1.4 !important; cursor:pointer !important; white-space:nowrap !important; overflow:hidden !important; text-overflow:ellipsis !important; margin:0 !important; border-radius:0 !important; color:#1a1a2e !important; font-weight:400 !important; background:transparent !important; border:none !important; min-height:auto !important; height:auto !important; }
+        .recipient-dropdown .dd-item:hover { background:#f0f7ff !important; }
+        .recipient-dropdown .dd-item.active { background:#0084FF !important; color:#fff !important; font-weight:600 !important; }
 
         /* Special Styling for Search Input (Add Icon) */
         .dataTables_filter input {
@@ -1034,7 +1141,8 @@
             
             #date-filter-group { flex: 4; }
             #recipient-filter-group { flex: 3; }
-            #length-container { flex: 2; min-width: 50px; }
+            /* Hide page-length selector on mobile (กัน UI แน่น + ทับช่องค้นหา) — desktop ยังเห็นปกติ */
+            #length-container { display: none !important; }
             #filter-container { flex: 4; }
 
             #recipient_filter {
@@ -1042,6 +1150,23 @@
                 font-size: 13px !important;
                 height: 40px !important;
             }
+
+            /* Mobile: recipient toggle ต้อง height/border-radius เท่ากับ ETD + SHOW + Search (uniform row) */
+            .recipient-dropdown .dd-toggle {
+                height: 42px !important;
+                min-height: 42px !important;
+                padding: 0 28px 0 12px !important;
+                font-size: 13px !important;
+                border: 1px solid #e2e8f0 !important;
+                border-radius: 10px !important;
+                color: #475569 !important;
+                box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
+            }
+            .recipient-dropdown .dd-toggle::after {
+                right: 12px !important;
+                font-size: 9px !important;
+            }
+            /* menu/items ใช้สไตล์เดียวกับ PC ทุกอย่าง (เลือก+เลื่อน เหมือนกัน) — ไม่ override ที่นี่ */
             
             /* Smaller inputs on mobile to fit */
             .dataTables_length select,
@@ -1049,8 +1174,22 @@
             #start_date {
                 padding: 0 5px !important;
                 font-size: 13px !important;
-                height: 40px !important;
-                background-position: 8px center !important; /* Adjust Icon pos */
+                height: 44px !important; /* Apple HIG min tap target */
+                min-height: 44px !important;
+                background-position: right 8px center !important;
+            }
+            /* Mobile: ensure start_date is tappable and on top */
+            #start_date {
+                padding-right: 26px !important;
+                cursor: pointer;
+                touch-action: manipulation;
+                position: relative;
+                z-index: 5;
+                -webkit-tap-highlight-color: rgba(29,138,201,0.15);
+            }
+            #date-filter-group {
+                position: relative;
+                z-index: 3;
             }
             
             /* Show Arrow on select box but with proper spacing to prevent overlap */
@@ -1401,6 +1540,51 @@
         .summary-card-icon.green { background: #f0fdf4; color: #22c55e; }
         .summary-card-icon.orange { background: #fff7ed; color: #f97316; }
         .summary-card-icon.purple { background: #faf5ff; color: #a855f7; }
+        /* Shared gradient icon — ใช้ CSS vars: --grad-from / --grad-to / --grad-shadow */
+        .summary-card-icon.is-gradient {
+            background: linear-gradient(135deg, var(--grad-from, #14b8a6) 0%, var(--grad-to, #0ea5e9) 100%);
+            color: #fff;
+            box-shadow: 0 6px 14px var(--grad-shadow, rgba(14,165,233,0.28)), inset 0 -2px 4px rgba(0,0,0,0.08);
+            position: relative;
+            overflow: hidden;
+        }
+        .summary-card-icon.is-gradient::after {
+            content:''; position:absolute; inset:0;
+            background: radial-gradient(circle at 30% 20%, rgba(255,255,255,0.35), transparent 60%);
+            pointer-events:none;
+        }
+        .summary-card-icon.is-gradient svg { width:24px; height:24px; position:relative; z-index:1; }
+        .summary-card:hover .summary-card-icon.is-gradient {
+            transform: scale(1.04);
+            transition: transform 0.25s;
+        }
+        /* Clickable summary card (e.g. Thai bill) */
+        .summary-card.is-clickable { position: relative; cursor: pointer; }
+        .summary-card.is-clickable::before {
+            content:''; position:absolute; inset:0; border-radius:14px; pointer-events:none;
+            border:1px solid transparent;
+            background: linear-gradient(135deg, rgba(20,184,166,0.25), rgba(14,165,233,0.25)) border-box;
+            -webkit-mask: linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0);
+            -webkit-mask-composite: xor; mask-composite: exclude;
+            opacity: 0; transition: opacity 0.25s;
+        }
+        .summary-card.is-clickable:hover::before { opacity: 1; }
+        .summary-card.is-clickable:hover {
+            box-shadow: 0 8px 24px rgba(14,165,233,0.16);
+        }
+        .summary-card .sc-arrow {
+            margin-left:auto; color:#0ea5e9; font-size:0.85rem;
+            opacity:0; transform: translateX(-4px);
+            transition: opacity 0.25s, transform 0.25s;
+            flex-shrink:0;
+        }
+        .summary-card.is-clickable:hover .sc-arrow { opacity:1; transform: translateX(0); }
+        .summary-card .sc-click-hint {
+            display:inline-flex; align-items:center; gap:3px;
+            font-size:0.6rem; font-weight:700; color:#0ea5e9;
+            background:#ecfeff; padding:2px 6px; border-radius:6px;
+            margin-left:6px; vertical-align: middle;
+        }
         .summary-card-info .sc-label {
             font-size: 0.75rem; color: #94a3b8; font-weight: 600; margin-bottom: 2px;
         }
@@ -1704,6 +1888,8 @@
                 min-width: 0 !important;
                 overflow: hidden !important;
             }
+            .summary-card .sc-arrow { display: none !important; }
+            .summary-card-icon.is-gradient svg { width: 16px !important; height: 16px !important; }
             .summary-card-icon {
                 width: 28px !important;
                 height: 28px !important;
@@ -1869,39 +2055,88 @@
                 <!-- Summary Cards (dynamic - updated on each DataTable load) -->
                 <div class="summary-cards-grid">
                     <div class="summary-card">
-                        <div class="summary-card-icon blue"><i class="fa fa-cube"></i></div>
+                        <div class="summary-card-icon is-gradient" aria-hidden="true" style="--grad-from:#3b82f6;--grad-to:#6366f1;--grad-shadow:rgba(59,130,246,0.28);">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 8 12 2 3 8v8l9 6 9-6V8z"/>
+                                <path d="m3.3 7 8.7 5 8.7-5"/>
+                                <path d="M12 22V12"/>
+                            </svg>
+                        </div>
                         <div class="summary-card-info">
                             <div class="sc-label" id="sc-round-label">รอบปิดตู้</div>
                             <div class="sc-value"><span id="sc-total">-</span> <small>รายการ</small></div>
                         </div>
                     </div>
                     <div class="summary-card">
-                        <div class="summary-card-icon green"><i class="fa fa-money"></i></div>
+                        <div class="summary-card-icon is-gradient" aria-hidden="true" style="--grad-from:#10b981;--grad-to:#22c55e;--grad-shadow:rgba(16,185,129,0.28);">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="2" y="6" width="20" height="12" rx="2"/>
+                                <circle cx="12" cy="12" r="2.5"/>
+                                <path d="M6 12h.5M17.5 12h.5" stroke-linecap="round"/>
+                            </svg>
+                        </div>
                         <div class="summary-card-info">
                             <div class="sc-label">ค่านำเข้ารวม</div>
                             <div class="sc-value"><span id="sc-import-cost">-</span> <small>฿</small></div>
                         </div>
                     </div>
                     <div class="summary-card">
-                        <div class="summary-card-icon purple"><i class="fa fa-balance-scale"></i></div>
+                        <div class="summary-card-icon is-gradient" aria-hidden="true" style="--grad-from:#a855f7;--grad-to:#ec4899;--grad-shadow:rgba(168,85,247,0.28);">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/>
+                                <path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/>
+                                <path d="M7 21h10"/>
+                                <path d="M12 3v18"/>
+                                <path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/>
+                            </svg>
+                        </div>
                         <div class="summary-card-info">
                             <div class="sc-label">น้ำหนักรวม</div>
                             <div class="sc-value"><span id="sc-weight">-</span> <small>kg</small></div>
                         </div>
                     </div>
                     <div class="summary-card">
-                        <div class="summary-card-icon orange"><i class="fa fa-calculator"></i></div>
+                        <div class="summary-card-icon is-gradient" aria-hidden="true" style="--grad-from:#f97316;--grad-to:#f59e0b;--grad-shadow:rgba(249,115,22,0.28);">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="4" y="2" width="16" height="20" rx="2.5"/>
+                                <rect x="7" y="5" width="10" height="3.5" rx="0.6" fill="currentColor" opacity="0.18" stroke="none"/>
+                                <line x1="7" y1="6.75" x2="17" y2="6.75"/>
+                                <circle cx="8.5" cy="12" r="0.7" fill="currentColor"/>
+                                <circle cx="12" cy="12" r="0.7" fill="currentColor"/>
+                                <circle cx="15.5" cy="12" r="0.7" fill="currentColor"/>
+                                <circle cx="8.5" cy="15" r="0.7" fill="currentColor"/>
+                                <circle cx="12" cy="15" r="0.7" fill="currentColor"/>
+                                <rect x="14.5" y="14.3" width="2" height="4" rx="0.4" fill="currentColor"/>
+                                <circle cx="8.5" cy="18" r="0.7" fill="currentColor"/>
+                                <circle cx="12" cy="18" r="0.7" fill="currentColor"/>
+                            </svg>
+                        </div>
                         <div class="summary-card-info">
                             <div class="sc-label">ค่า COD + ค่านำเข้า</div>
                             <div class="sc-value"><span id="sc-price-total">-</span> <small>฿</small></div>
                         </div>
                     </div>
-                    <div class="summary-card" id="thaiBillSummaryCard" style="display:none; cursor:pointer;" onclick="openThaiBillSummaryModal()" title="คลิกเพื่อดูทั้งหมด">
-                        <div class="summary-card-icon" style="background:linear-gradient(135deg,#0ea5e9,#06b6d4);"><i class="fa fa-truck"></i></div>
-                        <div class="summary-card-info">
-                            <div class="sc-label">ค่าส่งในไทย <small style="color:#94a3b8;">(<span id="sc-thai-shipments">0</span> shipment / <span id="sc-thai-boxes">0</span> กล่อง)</small></div>
+                    <div class="summary-card is-clickable" id="thaiBillSummaryCard" style="display:none;" onclick="openThaiBillSummaryModal()" title="คลิกเพื่อดูบิลค่าส่งในไทยทั้งหมด">
+                        <div class="summary-card-icon is-gradient" aria-hidden="true" style="--grad-from:#14b8a6;--grad-to:#0ea5e9;--grad-shadow:rgba(14,165,233,0.28);">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M14 18V7a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h2"/>
+                                <path d="M14 9h3.45a1 1 0 0 1 .78.38l3.55 4.44a1 1 0 0 1 .22.62V17a1 1 0 0 1-1 1h-2"/>
+                                <path d="M9 18h5"/>
+                                <circle cx="7" cy="18" r="2.2"/>
+                                <circle cx="17" cy="18" r="2.2"/>
+                                <path d="M5 10h5M5 13h4" opacity="0.55"/>
+                            </svg>
+                        </div>
+                        <div class="summary-card-info" style="min-width:0;flex:1;">
+                            <div class="sc-label">
+                                ค่าส่งในไทย
+                                <small style="color:#94a3b8;font-weight:500;">
+                                    (<span id="sc-thai-shipments">0</span> shipment / <span id="sc-thai-boxes">0</span> กล่อง<span id="sc-thai-extra-label" style="display:none;"> + <span id="sc-thai-extra-count">0</span> เพิ่ม</span>)
+                                </small>
+                            </div>
                             <div class="sc-value"><span id="sc-thai-total">-</span> <small>฿</small></div>
                         </div>
+                        <span class="sc-arrow" aria-hidden="true"><i class="fa fa-chevron-right"></i></span>
                     </div>
                 </div>
 
@@ -1915,9 +2150,10 @@
                         <div class="qv-body">
                             <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:10px 14px;background:linear-gradient(135deg,#f0f9ff,#ecfeff);border:1px solid #bae6fd;border-radius:10px;margin-bottom:14px;">
                                 <div style="font-size:12px;color:#475569;"><i class="fa fa-calendar"></i> <span id="tb-round-label">รอบปิดตู้</span></div>
-                                <div style="display:flex;gap:14px;font-size:12px;color:#0c5e8e;font-weight:700;">
+                                <div style="display:flex;gap:14px;font-size:12px;color:#0c5e8e;font-weight:700;flex-wrap:wrap;">
                                     <span><i class="fa fa-truck"></i> <span id="tb-shipment-count">0</span> shipment</span>
                                     <span><i class="fa fa-cube"></i> <span id="tb-box-count">0</span> กล่อง</span>
+                                    <span id="tb-extra-summary" style="display:none;color:#92400e;"><i class="fa fa-plus-circle"></i> <span id="tb-extra-count">0</span> ค่าบริการเพิ่ม</span>
                                     <span><i class="fa fa-money"></i> ฿ <span id="tb-total">0.00</span></span>
                                 </div>
                             </div>
@@ -1925,6 +2161,13 @@
                                 <button type="button" class="btn btn-sm" onclick="copyAllThaiShipments()" style="background:#0ea5e9;color:#fff;border:0;padding:5px 14px;border-radius:8px;font-size:12px;font-weight:600;"><i class="fa fa-clone"></i> คัดลอกทั้งหมด (ส่งต่อลูกค้า)</button>
                             </div>
                             <div id="tb-list" style="max-height:400px;overflow-y:auto;"></div>
+                            <div id="tb-extra-section" style="display:none;margin-top:16px;">
+                                <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;margin-bottom:8px;">
+                                    <i class="fa fa-info-circle" style="color:#d97706;"></i>
+                                    <strong style="color:#92400e;font-size:13px;">ค่าบริการเพิ่มเติม</strong>
+                                </div>
+                                <div id="tb-extra-list"></div>
+                            </div>
                         </div>
                         <div class="qv-footer">
                             <button class="btn-qv btn-qv-close" onclick="closeThaiBillSummaryModal()">ปิด</button>
@@ -2072,29 +2315,39 @@
                             <!-- Date Filter -->
                             <div class="control-group" id="date-filter-group">
                                 <label class="control-label d-md-block d-none">DATE ETD:</label>
-                                @if ($date = Session::get('startdate'))
-                                    <select id="start_date" name="start_date">
-                                        <option value="">สถานะทั้งหมด</option>
-                                        @php
-                                            $etdDates = \App\Http\Controllers\CustomerShippingViewController::getETD3Month(strtoupper(Auth::user()->customerno));
-                                        @endphp
-                                        @foreach($etdDates as $value => $display)
-                                            <option value="{{ $value }}" {{ $date == $value ? 'selected' : '' }}>
-                                                {{ $display }}</option>
-                                        @endforeach
-                                    </select>
-                                @else
-                                    <select id="start_date" name="start_date">
-                                        <option value="">สถานะทั้งหมด</option>
-                                        @php
-                                            $etdDates = \App\Http\Controllers\CustomerShippingViewController::getETD3Month(strtoupper(Auth::user()->customerno));
-                                            $latestDate = $etdDates->keys()->first();
-                                        @endphp
-                                        @foreach($etdDates as $value => $display)
-                                            <option value="{{ $value }}" {{ !$date && $value == $latestDate ? 'selected' : '' }}>{{ $display }}</option>
-                                        @endforeach
-                                    </select>
-                                @endif
+                                @php
+                                    $sessionDate = Session::get('startdate');
+                                    $etdDates = \App\Http\Controllers\CustomerShippingViewController::getETD3Month(strtoupper(Auth::user()->customerno));
+                                    $latestDate = $etdDates->keys()->first();
+                                    $defaultEtd = $sessionDate ?: $latestDate;
+                                    $defaultLabel = ($defaultEtd && isset($etdDates[$defaultEtd])) ? $etdDates[$defaultEtd] : 'สถานะทั้งหมด';
+                                @endphp
+                                <!-- Hidden source of truth (form submit + JS .val()) -->
+                                <select id="start_date" name="start_date" style="display:none !important;" aria-hidden="true" tabindex="-1">
+                                    <option value="">สถานะทั้งหมด</option>
+                                    @foreach($etdDates as $value => $display)
+                                        <option value="{{ $value }}" {{ $defaultEtd == $value ? 'selected' : '' }}>{{ $display }}</option>
+                                    @endforeach
+                                </select>
+                                <!-- Custom mobile-friendly dropdown UI -->
+                                <div class="etd-dropdown" id="etdDropdown">
+                                    <button type="button" class="dd-toggle" id="etdToggle">{{ $defaultLabel }}</button>
+                                    <div class="etd-backdrop" id="etdBackdrop"></div>
+                                    <div class="dd-menu" id="etdMenu">
+                                        <div class="dd-sheet-head"><span>📦 เลือกรอบปิดตู้</span><button type="button" class="dd-sheet-close" id="etdSheetClose" aria-label="ปิด">&#10005;</button></div>
+                                        <div class="dd-scroll-wrap">
+                                            <button type="button" class="dd-scroll-btn up" id="etdScrollUp" title="เลื่อนขึ้น" aria-label="เลื่อนขึ้น">
+                                                <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5 6 4.5l3 3"/></svg>
+                                            </button>
+                                            <button type="button" class="dd-scroll-btn down" id="etdScrollDown" title="เลื่อนลง" aria-label="เลื่อนลง">
+                                                <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5 6 7.5l3-3"/></svg>
+                                            </button>
+                                            <div class="dd-list" id="etdList">
+                                                <!-- rendered by JS -->
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                                 <input type="date" id="end_date" class="form-control d-none">
                             </div>
                             
@@ -2724,21 +2977,58 @@
                     },
                     {
                         "targets": 12, // เลขอ้างอิงค่าส่งไทย
-                        "render": function (data) {
+                        "render": function (data, type, full) {
                             if (!data) return '<span style="color:#cbd5e1;">—</span>';
-                            var safe = String(data).replace(/'/g, "\\'");
-                            return '<span class="thai-ref-cell" style="display:inline-flex;align-items:center;gap:4px;">'
+                            var boxes = full.thai_shipment_boxes || [];
+                            var mainBox = full.thai_shipment_main_box;
+                            var isMain = full.thai_is_main !== false; // default true if undefined
+                            // ถ้าเป็นแถวรอง (ไม่ใช่ box หลัก) แสดง — + tooltip
+                            if (!isMain && mainBox) {
+                                return '<span class="thai-merged-sub" title="ค่าส่งและเลขอ้างอิงรวมอยู่ที่ Box.' + mainBox + ' (บิลเดียวกัน ' + boxes.length + ' กล่อง)" style="color:#94a3b8;font-size:11px;cursor:help;">'
+                                    + '<i class="fa fa-link" style="font-size:9px;"></i> รวมกับ Box.' + mainBox
+                                    + '</span>';
+                            }
+                            // Build copy text (เต็ม) — courier/ref/ผู้รับ/box/ราคา
+                            var courier = full.thai_courier || '';
+                            var recipient = full.delivery_fullname || '';
+                            var price = parseFloat(full.thai_shipping_price) || 0;
+                            var fwdLines = [];
+                            if (courier) fwdLines.push(courier + ' เลขพัสดุ: ' + data);
+                            else fwdLines.push('เลขพัสดุ: ' + data);
+                            if (recipient) fwdLines.push('ผู้รับ: ' + recipient);
+                            if (boxes.length > 1) fwdLines.push('Box: ' + boxes.join(', ') + ' (รวม ' + boxes.length + ' กล่องในบิลเดียว)');
+                            else if (full.box_no) fwdLines.push('Box: ' + full.box_no);
+                            if (price > 0) fwdLines.push('ค่าจัดส่ง: ' + price.toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' บาท');
+                            var fwdText = fwdLines.join('\n').replace(/"/g, '&quot;');
+
+                            var html = '<span class="thai-ref-cell" style="display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap;">'
                                 + '<code style="font-size:11px;background:#f1f5f9;color:#0c5e8e;padding:2px 6px;border-radius:4px;">' + data + '</code>'
-                                + '<button type="button" class="thai-ref-copy" data-ref="' + safe + '" title="คัดลอก" style="border:0;background:transparent;color:#64748b;padding:0 4px;cursor:pointer;"><i class="fa fa-clone"></i></button>'
-                                + '</span>';
+                                + '<button type="button" class="thai-ref-copy" data-text="' + fwdText + '" title="คัดลอกข้อมูลครบ พร้อมส่งต่อลูกค้า" style="border:0;background:transparent;color:#64748b;padding:0 4px;cursor:pointer;"><i class="fa fa-clone"></i></button>';
+                            // ถ้ามีหลาย box ในบิลเดียว แสดง badge บอกจำนวน
+                            if (boxes.length > 1) {
+                                var others = boxes.filter(function(b){ return String(b) !== String(full.box_no); }).join(', ');
+                                html += '<span class="thai-shipment-multi" title="รวมในบิลเดียวกับ Box.' + others + '" style="display:inline-block;background:#fef3c7;color:#92400e;font-size:10px;font-weight:700;padding:1px 6px;border-radius:8px;cursor:help;">รวม ' + boxes.length + ' กล่อง</span>';
+                            }
+                            html += '</span>';
+                            return html;
                         }
                     },
                     {
                         "targets": 13, // ค่าส่งไทย
-                        "render": function (data) {
+                        "render": function (data, type, full) {
                             var n = parseFloat(data || 0);
                             if (!n || n <= 0) return '<span style="color:#cbd5e1;">—</span>';
-                            return '<span style="color:#0c5e8e;font-weight:700;white-space:nowrap;">฿ ' + n.toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2}) + '</span>';
+                            var isMain = full.thai_is_main !== false;
+                            var mainBox = full.thai_shipment_main_box;
+                            var boxes = full.thai_shipment_boxes || [];
+                            if (!isMain && mainBox) {
+                                return '<span class="thai-price-sub" title="ค่าส่ง ฿' + n.toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' รวมอยู่ที่ Box.' + mainBox + ' (บิลเดียวกัน ' + boxes.length + ' กล่อง)" style="color:#94a3b8;font-size:11px;cursor:help;">— (รวมที่ Box.' + mainBox + ')</span>';
+                            }
+                            var priceHtml = '<span style="color:#0c5e8e;font-weight:700;white-space:nowrap;">฿ ' + n.toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2}) + '</span>';
+                            if (boxes.length > 1) {
+                                priceHtml += '<div style="font-size:10px;color:#92400e;font-weight:600;margin-top:2px;white-space:nowrap;"><i class="fa fa-info-circle"></i> รวม ' + boxes.length + ' กล่องในบิลนี้</div>';
+                            }
+                            return priceHtml;
                         }
                     },
                     {
@@ -2803,24 +3093,34 @@
                     boxBtn.removeAttribute('data-ready');
                 }
                 // Update Summary Cards
-                var etdLabel = json.start_date ? ('รอบปิดตู้ (' + json.start_date + ')') : 'รอบปิดตู้ (ทั้งหมด)';
+                var roundWord = json.round_is_air ? 'รอบเครื่องบิน' : 'รอบปิดตู้';
+                var etdLabel = json.start_date ? (roundWord + ' (' + json.start_date + ')') : (roundWord + ' (ทั้งหมด)');
                 $('#sc-round-label').text(etdLabel);
                 $('#sc-total').text(json.total_records || 0);
                 $('#sc-import-cost').text(json.import_cost_total || '0');
                 $('#sc-weight').text(json.weight_total || '0');
                 $('#sc-price-total').text(json.price_total || '0');
 
-                // Thai bill summary card
+                // Thai bill summary card (รวม shipment + extra charges)
                 var ts = json.thai_shipping_summary || {};
-                if (ts.shipment_count && ts.shipment_count > 0) {
-                    $('#sc-thai-shipments').text(ts.shipment_count);
+                var hasShipments = (ts.shipment_count && ts.shipment_count > 0);
+                var hasExtras = (ts.extra_count && ts.extra_count > 0);
+                if (hasShipments || hasExtras) {
+                    $('#sc-thai-shipments').text(ts.shipment_count || 0);
                     $('#sc-thai-boxes').text(ts.box_count || 0);
-                    $('#sc-thai-total').text(Number(ts.total_price || 0).toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2}));
+                    if (hasExtras) {
+                        $('#sc-thai-extra-count').text(ts.extra_count);
+                        $('#sc-thai-extra-label').show();
+                    } else {
+                        $('#sc-thai-extra-label').hide();
+                    }
+                    var grand = Number(ts.grand_total != null ? ts.grand_total : ts.total_price || 0);
+                    $('#sc-thai-total').text(grand.toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2}));
                     $('#thaiBillSummaryCard').show();
                     window._thaiBillData = { roundLabel: etdLabel, summary: ts };
                 } else {
                     $('#thaiBillSummaryCard').hide();
-                    window._thaiBillData = { roundLabel: etdLabel, summary: { shipments: [], shipment_count: 0, box_count: 0, total_price: 0 } };
+                    window._thaiBillData = { roundLabel: etdLabel, summary: { shipments: [], shipment_count: 0, box_count: 0, total_price: 0, extra_charges: [], extra_count: 0, extra_total: 0, grand_total: 0 } };
                 }
 
                 // Update invoice data
@@ -2839,16 +3139,17 @@
                 if (rowData) openQuickView(rowData);
             });
 
-            // === Copy เลขอ้างอิงค่าส่งไทย (ในตาราง) ===
+            // === Copy ข้อมูลบิลค่าส่งไทย (ในตาราง) — copy ครบ courier/ref/ผู้รับ/box/ราคา พร้อมส่งต่อลูกค้า ===
             $(document).on('click', '.thai-ref-copy', function(e) {
                 e.preventDefault(); e.stopPropagation();
-                var ref = $(this).data('ref');
-                if (!ref) return;
-                copyTextToClipboard(String(ref));
+                var txt = $(this).data('text') || $(this).data('ref') || ''; // fallback compat
+                if (!txt) return;
+                copyTextToClipboard(String(txt));
                 var $btn = $(this);
                 var html = $btn.html();
                 $btn.html('<i class="fa fa-check" style="color:#16a34a;"></i>');
                 setTimeout(function(){ $btn.html(html); }, 1200);
+                if (typeof _toast === 'function') _toast('คัดลอกข้อมูลครบแล้ว — พร้อมส่งต่อลูกค้า');
             });
 
             // Gallery: openColumnGallery อยู่ใน standalone script (content section)
@@ -2936,22 +3237,69 @@
                 var refNo = d.thai_tracking_no || '';
                 var price = parseFloat(d.thai_shipping_price) || 0;
                 var priceTxt = price > 0 ? ('฿ ' + price.toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2})) : '—';
+                var boxes = d.thai_shipment_boxes || [];
+                var mainBox = d.thai_shipment_main_box;
+                var isMain = d.thai_is_main !== false;
+                var isMerged = boxes.length > 1;
+
+                var recipient = d.delivery_fullname || '';
+
+                // Build copy text
                 var forwardLines = [];
                 if (courier) forwardLines.push(courier + (refNo ? ' เลขพัสดุ: ' + refNo : ''));
                 else if (refNo) forwardLines.push('เลขพัสดุ: ' + refNo);
-                if (price > 0) forwardLines.push('ค่าจัดส่ง: ' + price.toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' บาท');
+                if (recipient) forwardLines.push('ผู้รับ: ' + recipient);
+                if (isMerged) {
+                    forwardLines.push('Box: ' + boxes.join(', ') + ' (รวม ' + boxes.length + ' กล่องในบิลเดียว)');
+                } else {
+                    if (d.box_no) forwardLines.push('Box: ' + d.box_no);
+                }
+                if (price > 0) {
+                    var priceLabel = isMerged ? ('ค่าจัดส่ง (รวมทั้งบิล ' + boxes.length + ' กล่อง): ') : 'ค่าจัดส่ง: ';
+                    forwardLines.push(priceLabel + price.toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' บาท');
+                }
                 var forwardText = forwardLines.join('\n');
 
                 html += '<div style="margin-top:14px;padding:12px 14px;background:linear-gradient(135deg,#f0f9ff,#ecfeff);border:1px solid #bae6fd;border-radius:10px;">';
-                html += '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;">';
-                html += '<span style="color:#0c5e8e;font-weight:700;font-size:0.9rem;"><i class="fa fa-truck"></i> บิลค่าส่งในไทย</span>';
+                html += '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;flex-wrap:wrap;">';
+                html += '<span style="color:#0c5e8e;font-weight:700;font-size:0.9rem;"><i class="fa fa-truck"></i> บิลค่าส่งในไทย';
+                if (isMerged) html += ' <span style="background:#fef3c7;color:#92400e;font-size:10px;font-weight:700;padding:2px 8px;border-radius:8px;margin-left:4px;">รวม ' + boxes.length + ' กล่อง</span>';
+                html += '</span>';
                 if (forwardText) {
                     html += '<button type="button" class="btn-qv-copy-ref" data-text="' + forwardText.replace(/"/g,'&quot;') + '" style="border:0;background:#0c5e8e;color:#fff;padding:4px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;"><i class="fa fa-clone"></i> คัดลอกส่งต่อลูกค้า</button>';
                 }
                 html += '</div>';
+
+                // Merged-bill info banner
+                if (isMerged) {
+                    var boxesHtml = boxes.map(function(b){
+                        var isCurrent = String(b) === String(d.box_no);
+                        var isMainBox = String(b) === String(mainBox);
+                        var style = 'display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;margin:2px;';
+                        if (isCurrent) {
+                            style += 'background:#0c5e8e;color:#fff;';
+                        } else if (isMainBox) {
+                            style += 'background:#fef3c7;color:#92400e;border:1px solid #fcd34d;';
+                        } else {
+                            style += 'background:#fff;color:#475569;border:1px solid #e2e8f0;';
+                        }
+                        return '<span style="' + style + '">Box.' + b + (isMainBox ? ' ★' : '') + '</span>';
+                    }).join('');
+                    html += '<div style="background:#fffbeb;border:1px dashed #fcd34d;border-radius:8px;padding:8px 10px;margin-bottom:8px;">';
+                    html += '<div style="font-size:11px;color:#92400e;font-weight:700;margin-bottom:4px;"><i class="fa fa-info-circle"></i> บิลนี้รวม ' + boxes.length + ' กล่องในเลขอ้างอิงเดียว — ค่าส่ง ' + priceTxt + ' เป็นยอดรวมของทั้งบิล</div>';
+                    html += '<div>' + boxesHtml + '</div>';
+                    html += '<div style="font-size:10px;color:#a16207;margin-top:4px;">★ = กล่องหลักที่ระบบเก็บค่าส่ง</div>';
+                    html += '</div>';
+                }
+
                 if (courier) html += '<div class="qv-row" style="border:0;padding:3px 0;"><span class="qv-label">ผู้ขนส่ง</span><span class="qv-value">' + courier + '</span></div>';
                 if (refNo) html += '<div class="qv-row" style="border:0;padding:3px 0;"><span class="qv-label">เลขอ้างอิง</span><span class="qv-value" style="font-family:monospace;color:#0c5e8e;font-weight:700;">' + refNo + '</span></div>';
-                if (price > 0) html += '<div class="qv-row" style="border:0;padding:3px 0;"><span class="qv-label">ค่าส่งไทย</span><span class="qv-value" style="color:#0c5e8e;font-weight:800;">' + priceTxt + '</span></div>';
+                if (recipient) html += '<div class="qv-row" style="border:0;padding:3px 0;"><span class="qv-label">ผู้รับ</span><span class="qv-value"><i class="fa fa-user" style="color:#94a3b8;font-size:11px;"></i> ' + recipient + '</span></div>';
+                if (price > 0) {
+                    var priceLine = priceTxt;
+                    if (isMerged) priceLine += ' <span style="font-size:10px;color:#92400e;font-weight:600;">(ยอดรวมทั้งบิล)</span>';
+                    html += '<div class="qv-row" style="border:0;padding:3px 0;"><span class="qv-label">ค่าส่งไทย</span><span class="qv-value" style="color:#0c5e8e;font-weight:800;">' + priceLine + '</span></div>';
+                }
                 html += '</div>';
             }
 
@@ -2998,22 +3346,36 @@
         $(function(){ $('#thaiBillOverlay').appendTo('body'); });
 
         function openThaiBillSummaryModal() {
-            var d = window._thaiBillData || { roundLabel:'-', summary:{shipments:[],shipment_count:0,box_count:0,total_price:0} };
+            var d = window._thaiBillData || { roundLabel:'-', summary:{shipments:[],shipment_count:0,box_count:0,total_price:0,extra_charges:[],extra_count:0,extra_total:0,grand_total:0} };
             var s = d.summary || {};
             $('#tb-round-label').text(d.roundLabel || '-');
             $('#tb-shipment-count').text(s.shipment_count || 0);
             $('#tb-box-count').text(s.box_count || 0);
-            $('#tb-total').text(Number(s.total_price || 0).toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2}));
+            var grand = Number(s.grand_total != null ? s.grand_total : s.total_price || 0);
+            $('#tb-total').text(grand.toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2}));
+            // Extra charges (Repack ฯลฯ)
+            var extras = s.extra_charges || [];
+            if (extras.length > 0) {
+                $('#tb-extra-count').text(extras.length);
+                $('#tb-extra-summary').show();
+                renderExtraChargesList(extras);
+                $('#tb-extra-section').show();
+            } else {
+                $('#tb-extra-summary').hide();
+                $('#tb-extra-section').hide();
+            }
 
             var html = '';
             var ships = s.shipments || [];
-            if (ships.length === 0) {
+            if (ships.length === 0 && extras.length === 0) {
                 html = '<div style="padding:24px;text-align:center;color:#94a3b8;"><i class="fa fa-inbox" style="font-size:32px;"></i><br><br>ยังไม่มีข้อมูลค่าส่งในไทยในรอบนี้</div>';
+            } else if (ships.length === 0) {
+                html = '<div style="padding:14px;text-align:center;color:#94a3b8;font-size:12px;">ไม่มีค่าส่งผูกกล่อง — ดูค่าบริการเพิ่มเติมด้านล่าง</div>';
             } else {
                 html = '<table style="width:100%;border-collapse:collapse;font-size:13px;">';
                 html += '<thead style="background:#f1f5f9;"><tr>';
                 html += '<th style="padding:8px;text-align:left;border-bottom:1px solid #e2e8f0;font-size:11px;color:#475569;">#</th>';
-                html += '<th style="padding:8px;text-align:left;border-bottom:1px solid #e2e8f0;font-size:11px;color:#475569;">Courier / เลขอ้างอิง</th>';
+                html += '<th style="padding:8px;text-align:left;border-bottom:1px solid #e2e8f0;font-size:11px;color:#475569;">Courier / เลขอ้างอิง / ผู้รับ</th>';
                 html += '<th style="padding:8px;text-align:left;border-bottom:1px solid #e2e8f0;font-size:11px;color:#475569;">Box</th>';
                 html += '<th style="padding:8px;text-align:right;border-bottom:1px solid #e2e8f0;font-size:11px;color:#475569;">ราคา</th>';
                 html += '<th style="padding:8px;text-align:center;border-bottom:1px solid #e2e8f0;font-size:11px;color:#475569;">Copy</th>';
@@ -3021,20 +3383,27 @@
                 ships.forEach(function(sh, i){
                     var courier = sh.courier || '-';
                     var ref = sh.refNo || '';
+                    var recipient = sh.recipient_name || '';
                     var boxesStr = (sh.boxes || []).join(', ');
                     var price = parseFloat(sh.price) || 0;
                     var priceTxt = price > 0 ? ('฿ ' + price.toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2})) : '—';
                     var fwd = [];
                     if (courier && courier !== '-') fwd.push(courier + (ref ? ' เลขพัสดุ: ' + ref : ''));
                     else if (ref) fwd.push('เลขพัสดุ: ' + ref);
+                    if (recipient) fwd.push('ผู้รับ: ' + recipient);
+                    if (boxesStr) fwd.push('Box: ' + boxesStr);
                     if (price > 0) fwd.push('ค่าจัดส่ง: ' + price.toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' บาท');
                     var fwdText = fwd.join('\n').replace(/"/g, '&quot;');
                     html += '<tr style="border-bottom:1px solid #f1f5f9;">';
-                    html += '<td style="padding:8px;color:#64748b;font-weight:600;">' + (i+1) + '</td>';
-                    html += '<td style="padding:8px;"><div style="font-weight:700;color:#0c5e8e;">' + courier + '</div><div style="font-family:monospace;font-size:11px;color:#475569;">' + ref + '</div></td>';
-                    html += '<td style="padding:8px;font-family:monospace;font-size:11px;color:#475569;">' + (boxesStr || '—') + '</td>';
-                    html += '<td style="padding:8px;text-align:right;color:#0c5e8e;font-weight:700;white-space:nowrap;">' + priceTxt + '</td>';
-                    html += '<td style="padding:8px;text-align:center;"><button type="button" class="tb-row-copy" data-text="' + fwdText + '" style="border:0;background:#f1f5f9;color:#0c5e8e;padding:4px 8px;border-radius:6px;cursor:pointer;" title="คัดลอก"><i class="fa fa-clone"></i></button></td>';
+                    html += '<td style="padding:8px;color:#64748b;font-weight:600;vertical-align:top;">' + (i+1) + '</td>';
+                    html += '<td style="padding:8px;">';
+                    html +=   '<div style="font-weight:700;color:#0c5e8e;">' + courier + '</div>';
+                    html +=   '<div style="font-family:monospace;font-size:11px;color:#475569;">' + ref + '</div>';
+                    if (recipient) html += '<div style="font-size:11px;color:#475569;margin-top:2px;"><i class="fa fa-user" style="color:#94a3b8;font-size:10px;"></i> ' + recipient + '</div>';
+                    html += '</td>';
+                    html += '<td style="padding:8px;font-family:monospace;font-size:11px;color:#475569;vertical-align:top;">' + (boxesStr || '—') + '</td>';
+                    html += '<td style="padding:8px;text-align:right;color:#0c5e8e;font-weight:700;white-space:nowrap;vertical-align:top;">' + priceTxt + '</td>';
+                    html += '<td style="padding:8px;text-align:center;vertical-align:top;"><button type="button" class="tb-row-copy" data-text="' + fwdText + '" style="border:0;background:#f1f5f9;color:#0c5e8e;padding:4px 8px;border-radius:6px;cursor:pointer;" title="คัดลอก"><i class="fa fa-clone"></i></button></td>';
                     html += '</tr>';
                 });
                 html += '</tbody></table>';
@@ -3059,27 +3428,87 @@
             _toast('คัดลอก shipment นี้แล้ว');
         });
 
+        function renderExtraChargesList(extras) {
+            var html = '<table style="width:100%;border-collapse:collapse;font-size:13px;">';
+            html += '<thead style="background:#fef3c7;"><tr>';
+            html += '<th style="padding:8px;text-align:left;border-bottom:1px solid #fcd34d;font-size:11px;color:#92400e;">#</th>';
+            html += '<th style="padding:8px;text-align:left;border-bottom:1px solid #fcd34d;font-size:11px;color:#92400e;">รายละเอียด</th>';
+            html += '<th style="padding:8px;text-align:right;border-bottom:1px solid #fcd34d;font-size:11px;color:#92400e;">ราคา</th>';
+            html += '<th style="padding:8px;text-align:center;border-bottom:1px solid #fcd34d;font-size:11px;color:#92400e;">Copy</th>';
+            html += '</tr></thead><tbody>';
+            extras.forEach(function(ec, i){
+                var price = parseFloat(ec.price) || 0;
+                var priceTxt = price > 0 ? ('฿ ' + price.toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2})) : '—';
+                var courier = ec.courier || '';
+                var ref = ec.refNo || '';
+                var recipient = ec.recipient_name || '';
+                var desc = ec.description || '';
+                var detailParts = [];
+                if (courier) detailParts.push('<strong style="color:#92400e;">' + courier + '</strong>');
+                if (ref) detailParts.push('<span style="font-family:monospace;font-size:11px;color:#475569;">' + ref + '</span>');
+                if (recipient) detailParts.push('<span style="color:#475569;">' + recipient + '</span>');
+                if (desc) detailParts.push('<span style="color:#a16207;font-size:11px;font-style:italic;">' + desc + '</span>');
+                var detailHtml = detailParts.length ? detailParts.join('<br>') : '<span style="color:#94a3b8;">ค่าบริการเพิ่มเติม</span>';
+                var fwd = [];
+                if (courier) fwd.push(courier + (ref ? ' เลขพัสดุ: ' + ref : ''));
+                else if (ref) fwd.push('เลขพัสดุ: ' + ref);
+                if (recipient) fwd.push('ผู้รับ: ' + recipient);
+                if (desc) fwd.push(desc);
+                if (price > 0) fwd.push('ค่าจัดส่ง: ' + price.toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' บาท');
+                var fwdText = fwd.join('\n').replace(/"/g, '&quot;');
+                html += '<tr style="border-bottom:1px solid #fef3c7;">';
+                html += '<td style="padding:8px;color:#92400e;font-weight:600;">' + (i+1) + '</td>';
+                html += '<td style="padding:8px;">' + detailHtml + '</td>';
+                html += '<td style="padding:8px;text-align:right;color:#92400e;font-weight:700;white-space:nowrap;">' + priceTxt + '</td>';
+                html += '<td style="padding:8px;text-align:center;"><button type="button" class="tb-row-copy" data-text="' + fwdText + '" style="border:0;background:#fef3c7;color:#92400e;padding:4px 8px;border-radius:6px;cursor:pointer;" title="คัดลอก"><i class="fa fa-clone"></i></button></td>';
+                html += '</tr>';
+            });
+            html += '</tbody></table>';
+            $('#tb-extra-list').html(html);
+        }
+
         function copyAllThaiShipments() {
             var d = window._thaiBillData || {};
             var s = d.summary || {};
             var ships = s.shipments || [];
-            if (ships.length === 0) { _toast('ไม่มีข้อมูลให้คัดลอก', 'error'); return; }
+            var extras = s.extra_charges || [];
+            if (ships.length === 0 && extras.length === 0) { _toast('ไม่มีข้อมูลให้คัดลอก', 'error'); return; }
             var lines = ['📦 บิลค่าส่งในไทย — ' + (d.roundLabel || ''), ''];
             ships.forEach(function(sh, i){
                 var courier = sh.courier || '-';
                 var ref = sh.refNo || '';
-                var price = parseFloat(sh.price) || 0;
+                var recipient = sh.recipient_name || '';
                 var boxesStr = (sh.boxes || []).join(', ');
+                var price = parseFloat(sh.price) || 0;
                 lines.push((i+1) + ') ' + courier + (ref ? ' เลขพัสดุ: ' + ref : ''));
+                if (recipient) lines.push('   ผู้รับ: ' + recipient);
                 if (boxesStr) lines.push('   Box: ' + boxesStr);
                 if (price > 0) lines.push('   ค่าจัดส่ง: ' + price.toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' บาท');
                 lines.push('');
             });
-            if ((s.total_price || 0) > 0) {
-                lines.push('รวมทั้งหมด: ' + Number(s.total_price).toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' บาท');
+            if (extras.length > 0) {
+                lines.push('— ค่าบริการเพิ่มเติม —');
+                extras.forEach(function(ec, i){
+                    var idx = ships.length + i + 1;
+                    var courier = ec.courier || '';
+                    var ref = ec.refNo || '';
+                    var recipient = ec.recipient_name || '';
+                    var desc = ec.description || 'ค่าบริการเพิ่มเติม';
+                    var price = parseFloat(ec.price) || 0;
+                    var header = courier ? (courier + (ref ? ' เลขพัสดุ: ' + ref : '')) : (ref ? ('เลขพัสดุ: ' + ref) : desc);
+                    lines.push(idx + ') ' + header);
+                    if (recipient) lines.push('   ผู้รับ: ' + recipient);
+                    if (courier && desc && !ref) lines.push('   ' + desc);
+                    if (price > 0) lines.push('   ค่าจัดส่ง: ' + price.toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' บาท');
+                    lines.push('');
+                });
+            }
+            var grand = s.grand_total != null ? s.grand_total : s.total_price;
+            if ((grand || 0) > 0) {
+                lines.push('รวมทั้งหมด: ' + Number(grand).toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' บาท');
             }
             copyTextToClipboard(lines.join('\n'));
-            _toast('คัดลอกทั้งหมด ' + ships.length + ' รายการ พร้อมส่งต่อ');
+            _toast('คัดลอกทั้งหมด ' + (ships.length + extras.length) + ' รายการ พร้อมส่งต่อ');
         }
 
         // === Invoice Summary + QR PromptPay ===
@@ -3090,7 +3519,8 @@
             _invData.importCost = json.import_cost_total || '0';
             _invData.codCost = json.cod_total || '0';
             _invData.priceTotal = json.price_total || '0';
-            _invData.roundLabel = json.start_date ? ('รอบปิดตู้ (' + json.start_date + ')') : 'รอบปิดตู้ (ทั้งหมด)';
+            var _invRoundWord = json.round_is_air ? 'รอบเครื่องบิน' : 'รอบปิดตู้';
+            _invData.roundLabel = json.start_date ? (_invRoundWord + ' (' + json.start_date + ')') : (_invRoundWord + ' (ทั้งหมด)');
             _invData.priceTotalRaw = parseFloat(String(json.price_total || '0').replace(/,/g, ''));
         }
 
@@ -3288,7 +3718,182 @@
         }
     </script>
 <script>
-    // === Recipient Filter Logic ===
+    // === ETD Custom Dropdown ===
+    function rebuildEtdDropdown() {
+        var list = $('#etdList');
+        var currentVal = $('#start_date').val() || '';
+        var html = '';
+        $('#start_date option').each(function() {
+            var $opt = $(this);
+            var val = $opt.attr('value') || '';
+            var label = $opt.text();
+            var isActive = (String(val) === String(currentVal)) ? ' active' : '';
+            html += '<div class="dd-item' + isActive + '" data-value="' + $('<div>').text(val).html() + '">' + $('<div>').text(label).html() + '</div>';
+        });
+        list.html(html);
+    }
+    function updateEtdScrollHint() {
+        var list = document.getElementById('etdList');
+        var upBtn = document.getElementById('etdScrollUp');
+        var downBtn = document.getElementById('etdScrollDown');
+        if (!list) return;
+        var isScrollable = list.scrollHeight - list.clientHeight > 4;
+        var atTop = list.scrollTop <= 4;
+        var atBottom = list.scrollHeight - list.clientHeight - list.scrollTop <= 4;
+        if (upBtn) {
+            upBtn.classList.toggle('show', isScrollable);
+            upBtn.classList.toggle('is-disabled', atTop);
+        }
+        if (downBtn) {
+            downBtn.classList.toggle('show', isScrollable);
+            downBtn.classList.toggle('is-disabled', atBottom);
+        }
+    }
+    function positionEtdMenu() {
+        var toggle = document.getElementById('etdToggle');
+        var menu = document.getElementById('etdMenu');
+        var list = document.getElementById('etdList');
+        if (!toggle || !menu || !list) return;
+        if (window.innerWidth <= 991) {
+            // โหมดมือถือ: เป็น bottom-sheet ให้ CSS จัดตำแหน่งเอง (ล้าง inline style)
+            menu.style.top = ''; menu.style.bottom = ''; menu.style.marginTop = ''; menu.style.marginBottom = '';
+            list.style.maxHeight = '';
+            return;
+        }
+        var rect = toggle.getBoundingClientRect();
+        var vh = window.innerHeight;
+        var pad = 16, minH = 160, prefMax = 360;
+        var spaceBelow = vh - rect.bottom - pad;
+        var spaceAbove = rect.top - pad;
+        if (spaceBelow >= Math.min(prefMax, minH) || spaceBelow >= spaceAbove) {
+            menu.style.top = '100%'; menu.style.bottom = 'auto';
+            menu.style.marginTop = '4px'; menu.style.marginBottom = '';
+            list.style.maxHeight = Math.max(minH, Math.min(prefMax, spaceBelow - 20)) + 'px';
+        } else {
+            menu.style.top = 'auto'; menu.style.bottom = '100%';
+            menu.style.marginTop = ''; menu.style.marginBottom = '4px';
+            list.style.maxHeight = Math.max(minH, Math.min(prefMax, spaceAbove - 20)) + 'px';
+        }
+    }
+    function openEtdMenu() {
+        var menuEl = document.getElementById('etdMenu');
+        var bdEl = document.getElementById('etdBackdrop');
+        var ddEl = document.getElementById('etdDropdown');
+        if (window.innerWidth <= 991) {
+            // มือถือ: ย้ายแผง+ฉากหลังไปไว้ที่ body เพื่อให้ fixed ครอบเต็มจอจริง (หนี containing block)
+            if (bdEl && bdEl.parentNode !== document.body) document.body.appendChild(bdEl);
+            if (menuEl && menuEl.parentNode !== document.body) document.body.appendChild(menuEl);
+        } else if (ddEl) {
+            // เดสก์ท็อป: ย้ายกลับเข้า #etdDropdown เพื่อให้ตำแหน่ง dropdown ปกติ
+            if (bdEl && bdEl.parentNode !== ddEl) ddEl.appendChild(bdEl);
+            if (menuEl && menuEl.parentNode !== ddEl) ddEl.appendChild(menuEl);
+        }
+        var menu = $('#etdMenu');
+        rebuildEtdDropdown();
+        menu.addClass('open');
+        $('#etdBackdrop').addClass('open');
+        positionEtdMenu();
+        // เปิดมาให้เห็นรอบล่าสุด (บนสุด) เสมอ ทุกอุปกรณ์ — บังคับซ้ำหลัง layout/animation นิ่ง (iOS)
+        var _le = document.getElementById('etdList');
+        if (_le) {
+            _le.scrollTop = 0;
+            requestAnimationFrame(function(){ _le.scrollTop = 0; });
+            setTimeout(function(){ _le.scrollTop = 0; }, 60);
+            setTimeout(function(){ _le.scrollTop = 0; updateEtdScrollHint(); }, 260);
+        }
+        updateEtdScrollHint();
+    }
+    function closeEtdMenu() { $('#etdMenu').removeClass('open'); $('#etdBackdrop').removeClass('open'); }
+    // ปิด bottom-sheet เมื่อแตะปุ่มปิด หรือฉากหลังมืด (มือถือ)
+    $(document).on('click touchend', '#etdSheetClose, #etdBackdrop', function(e) {
+        e.preventDefault(); e.stopPropagation();
+        closeEtdMenu();
+    });
+
+    // Toggle button — รองรับทั้ง click และ touch (LIFF/iOS webview)
+    $(document).on('click touchend', '#etdToggle', function(e) {
+        e.preventDefault(); e.stopPropagation();
+        if ($('#etdMenu').hasClass('open')) closeEtdMenu(); else openEtdMenu();
+    });
+    // Item select — แยก "แตะเพื่อเลือก" ออกจาก "ลากเพื่อเลื่อน"
+    function selectEtdItem($item) {
+        var val = $item.attr('data-value') || '';
+        var label = $item.text();
+        $('#start_date').val(val).trigger('change');
+        $('#etdToggle').text(label);
+        $('#etdList .dd-item').removeClass('active');
+        $item.addClass('active');
+        closeEtdMenu();
+    }
+    var _etdTap = { x:0, y:0, t:0, moved:false };
+    $(document).on('touchstart', '#etdList', function(e) {
+        var t = (e.originalEvent.touches && e.originalEvent.touches[0]) || null;
+        if (!t) return;
+        _etdTap = { x:t.clientX, y:t.clientY, t:Date.now(), moved:false };
+    });
+    $(document).on('touchmove', '#etdList', function(e) {
+        var t = (e.originalEvent.touches && e.originalEvent.touches[0]) || null;
+        if (!t) return;
+        if (Math.abs(t.clientY - _etdTap.y) > 10 || Math.abs(t.clientX - _etdTap.x) > 10) _etdTap.moved = true;
+    });
+    $(document).on('touchend', '#etdList .dd-item', function(e) {
+        // ถ้านิ้วเลื่อน (scroll) หรือกดค้างนานเกินไป = ไม่ใช่การแตะเลือก
+        if (_etdTap.moved || (Date.now() - _etdTap.t) > 700) return;
+        e.preventDefault(); e.stopPropagation();
+        selectEtdItem($(this));
+    });
+    $(document).on('click', '#etdList .dd-item', function(e) {
+        e.preventDefault(); e.stopPropagation();
+        selectEtdItem($(this));
+    });
+    // Sync UI when select changes externally
+    $(document).on('change', '#start_date', function() {
+        var val = $(this).val();
+        var label = $(this).find('option:selected').text();
+        $('#etdToggle').text(label);
+        $('#etdList .dd-item').removeClass('active');
+        $('#etdList .dd-item').filter(function(){ return String($(this).attr('data-value')) === String(val); }).addClass('active');
+    });
+    // Close on outside click
+    $(document).on('click touchend', function(e) {
+        if (!$(e.target).closest('#etdDropdown, #etdMenu').length) closeEtdMenu();
+    });
+    // Scroll buttons for ETD
+    (function setupEtdScrollButtons(){
+        var holdTimer = null;
+        function startScroll(dir) {
+            var list = document.getElementById('etdList');
+            if (!list) return;
+            list.scrollTop += dir * 40;
+            updateEtdScrollHint();
+        }
+        function bind(id, dir) {
+            $(document).on('mousedown touchstart', '#' + id, function(e) {
+                e.preventDefault();
+                startScroll(dir);
+                if (holdTimer) clearInterval(holdTimer);
+                holdTimer = setInterval(function(){ startScroll(dir); }, 120);
+            });
+            $(document).on('mouseup mouseleave touchend touchcancel', '#' + id, function() {
+                if (holdTimer) { clearInterval(holdTimer); holdTimer = null; }
+            });
+            $(document).on('click', '#' + id, function(e){ e.stopPropagation(); });
+        }
+        bind('etdScrollUp', -1);
+        bind('etdScrollDown', 1);
+    })();
+    $('#etdList').on('scroll', updateEtdScrollHint);
+    var _etdReposTimer = null;
+    $(window).on('resize scroll', function() {
+        if (!$('#etdMenu').hasClass('open')) return;
+        if (_etdReposTimer) return;
+        _etdReposTimer = setTimeout(function() {
+            _etdReposTimer = null;
+            if ($('#etdMenu').hasClass('open')) positionEtdMenu();
+        }, 80);
+    });
+
+    // === Recipient Filter Logic (admin-style) ===
     var _lastRecipientEtd = null;
     function loadRecipients(force) {
         var etd = $('#start_date').val();
@@ -3318,36 +3923,60 @@
         });
     }
 
-    // === Custom Recipient Dropdown ===
-    $('#recipientToggle').on('click', function(e) {
-        e.stopPropagation();
+    // === Custom Recipient Dropdown (UX เหมือน ETD: เลือก+เลื่อน เหมือนกันทั้ง PC/มือถือ) ===
+    function scrollRecipientToActive() {
+        var $list = $('#recipientList');
+        if (!$list.length) return;
+        var $active = $list.find('.dd-item.active').first();
+        if ($active.length) {
+            var listEl = $list[0], activeEl = $active[0];
+            var targetTop = activeEl.offsetTop - (listEl.clientHeight / 2) + (activeEl.offsetHeight / 2);
+            listEl.scrollTop = Math.max(0, targetTop);
+        } else {
+            $list[0].scrollTop = 0;
+        }
+    }
+    function openRecipientMenu() {
         var menu = $('#recipientMenu');
-        menu.toggleClass('open');
-        if (menu.hasClass('open')) {
-            $('#recipientSearch').val('').trigger('input');
-            setTimeout(function(){ $('#recipientSearch').focus(); }, 50);
-        }
+        menu.addClass('open');
+        $('#recipientSearch').val('').trigger('input');
+        // เลื่อนไปยังรายการที่เลือกไว้ให้อยู่กลางจอ (เหมือน ETD)
+        scrollRecipientToActive();
+        setTimeout(function(){ $('#recipientSearch').focus(); scrollRecipientToActive(); }, 50);
+    }
+    function closeRecipientMenu() { $('#recipientMenu').removeClass('open'); }
+
+    // Toggle — รองรับทั้ง click และ touch (LIFF/iOS webview)
+    $(document).on('click touchend', '#recipientToggle', function(e) {
+        e.preventDefault(); e.stopPropagation();
+        if ($('#recipientMenu').hasClass('open')) closeRecipientMenu(); else openRecipientMenu();
     });
-    $(document).on('click', function(e) {
+
+    $(document).on('click touchend', function(e) {
         if (!$(e.target).closest('#recipientDropdown').length) {
-            $('#recipientMenu').removeClass('open');
+            closeRecipientMenu();
         }
     });
+
     $('#recipientSearch').on('input', function() {
         var q = $(this).val().toLowerCase();
         $('#recipientList .dd-item').each(function() {
-            $(this).toggle($(this).text().toLowerCase().indexOf(q) !== -1);
+            var text = $(this).text().toLowerCase();
+            $(this).toggle(text.indexOf(q) !== -1);
         });
     });
-    $(document).on('click', '#recipientList .dd-item', function() {
+
+    $(document).on('click touchend', '#recipientList .dd-item', function(e) {
+        e.preventDefault(); e.stopPropagation();
         var val = $(this).data('value');
         var label = $(this).text();
         $('#recipient_filter').val(val === undefined ? '' : val).trigger('change');
         $('#recipientToggle').text(label);
         $('#recipientList .dd-item').removeClass('active');
         $(this).addClass('active');
-        $('#recipientMenu').removeClass('open');
+        closeRecipientMenu();
     });
+
     function syncRecipientDropdown(val) {
         $('#recipientList .dd-item').removeClass('active');
         $('#recipientList .dd-item').filter(function() {

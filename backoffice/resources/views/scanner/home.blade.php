@@ -679,6 +679,7 @@ function lookupBox(boxNo) {
 // บันทึก scanned_at + รอ DB ยืนยันก่อนแสดงผล
 function confirmAndUpdate(boxNo, parcel) {
     var payload = { box_no: boxNo };
+    if (parcel && parcel.id) payload.id = parcel.id;
     if (getSelectedEtd()) payload.etd = getSelectedEtd();
     fetch(apiBase + '/qr-scan/api/update-status', {
         method: 'POST',

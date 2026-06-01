@@ -6,6 +6,7 @@ use App\Exports\CustomershippigviewHtmlExport;
 use App\Models\Customershipping;
 use App\Models\Customerorder;
 use App\Models\DeliveryType;
+use App\Models\ExtraShippingCharge;
 use App\Models\ShippingStatus;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -30,7 +31,12 @@ class CustomerShippingViewController extends Controller
             return redirect('/home');
         }
 
-        return view('customershippingview.index');
+        // ห้าม cache หน้านี้ (กัน browser/bfcache ค้างเวอร์ชันเก่า → รอบปิดตู้ล่าสุดไม่ขึ้น)
+        return response()
+            ->view('customershippingview.index')
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+            ->header('Pragma', 'no-cache')
+            ->header('Expires', '0');
     }
 
     public function clearSession()
@@ -192,10 +198,14 @@ class CustomerShippingViewController extends Controller
                         if (!empty($request->status))
                             $query->where('status', '=', $request->status);
 
+                        // ใช้ช่วงเวลาแบบ SARGable (etd >= 00:00 และ <= 23:59) เพื่อให้ใช้ index idx_cs_customerno_etd ได้
+                        // (เดิมใช้ DATE(etd) ทำให้ index ใช้ไม่ได้ → ช้ากับลูกค้าที่มีรายการเยอะ)
                         if (!empty($request->start_date) && !empty($request->end_date))
-                            $query->whereRaw("DATE(etd) BETWEEN ? AND ?", [$request->start_date, $request->end_date]);
+                            $query->where('etd', '>=', $request->start_date.' 00:00:00')
+                                  ->where('etd', '<=', $request->end_date.' 23:59:59');
                         else if (!empty($request->start_date))
-                            $query->whereRaw("DATE(etd) BETWEEN ? AND ?", [$request->start_date, $request->start_date]);
+                            $query->where('etd', '>=', $request->start_date.' 00:00:00')
+                                  ->where('etd', '<=', $request->start_date.' 23:59:59');
 
                     })->take(1000)->get();
 
@@ -226,31 +236,88 @@ class CustomerShippingViewController extends Controller
             $startDate= !empty($request->start_date)?Carbon::parse($request->start_date)->format('d/m/Y'):'';
             $startDateRaw = $request->start_date;
 
+            // ตรวจว่ารอบนี้เป็น "ทางเครื่องบิน" หรือไม่ (METHOD_AIR=2) เพื่อสลับ label เป็น "รอบเครื่องบิน"
+            $airCount = $data->filter(function($r){ return (int) $r->shipping_method === Customershipping::METHOD_AIR; })->count();
+            $seaCount = $totalRecords - $airCount;
+            $roundIsAir = $airCount > 0 && $airCount >= $seaCount;
+
             // สร้าง summary บิลค่าส่งไทย (group by thai_tracking_no — 1 ref = 1 shipment)
+            // และสร้าง map สำหรับ dedup ค่าส่ง/ref ในตาราง (กล่องหลัก = box_no น้อยที่สุดในกลุ่ม)
             $thaiShipments = [];
             $thaiShippingTotal = 0.0;
             $thaiBoxCount = 0;
-            $rowsWithRef = $data->filter(function($r){ return !empty($r->thai_tracking_no); });
+            $thaiShipmentMap = []; // tracking_no => ['main_box'=>X, 'boxes'=>[...]]
+            // แสดง "ค่าส่งในไทย" เฉพาะกล่องที่ "สินค้าถึงไทยแล้ว" (status >= 3) ขึ้นไปเท่านั้น
+            // กันเคสที่ admin จอง Shippop ล่วงหน้าตั้งแต่ยัง "อยู่ระหว่างขนส่ง" (status 2) → ลูกค้าเห็นบิลทั้งที่ยังไม่ถึงไทย
+            // หมายเหตุ: ด้านบน $r->status ถูกแปลงเป็นชื่อแล้ว เลข status เดิมอยู่ที่ $r->status_id
+            $rowsWithRef = $data->filter(function($r){
+                $statusId = (int) ($r->status_id ?? $r->status);
+                return !empty($r->thai_tracking_no) && $statusId >= 3;
+            });
             $grouped = $rowsWithRef->groupBy('thai_tracking_no');
             foreach ($grouped as $refNo => $rows) {
                 $first = $rows->first();
                 $boxes = $rows->pluck('box_no')->filter()->unique()->values()->all();
+                // เรียง box_no จากน้อย→มาก (cast เป็น int เพื่อให้ "066" < "100")
+                usort($boxes, function($a, $b){ return ((int)$a) <=> ((int)$b); });
+                $mainBox = $boxes[0] ?? null;
                 $price = (float) ($first->thai_shipping_price ?? 0);
                 $thaiShippingTotal += $price;
                 $thaiBoxCount += count($boxes);
+                // ชื่อผู้รับ: ดึงจาก delivery_fullname ที่ไม่ว่างเปล่าใน group (1 shipment = 1 ผู้รับ)
+                $recipientName = $rows->pluck('delivery_fullname')
+                    ->filter(function($n){ return !empty(trim((string) $n)); })
+                    ->first();
                 $thaiShipments[] = [
-                    'refNo'       => $refNo,
-                    'courier'     => $first->thai_courier,
-                    'price'       => $price,
-                    'boxes'       => $boxes,
-                    'billed_at'   => $first->thai_billed_at ? Carbon::parse($first->thai_billed_at)->format('d/m/Y') : null,
+                    'refNo'          => $refNo,
+                    'courier'        => $first->thai_courier,
+                    'recipient_name' => $recipientName,
+                    'price'          => $price,
+                    'boxes'          => $boxes,
+                    'main_box'       => $mainBox,
+                    'billed_at'      => $first->thai_billed_at ? Carbon::parse($first->thai_billed_at)->format('d/m/Y') : null,
+                ];
+                $thaiShipmentMap[(string) $refNo] = [
+                    'main_box' => $mainBox,
+                    'boxes'    => $boxes,
+                    'courier'  => $first->thai_courier,
+                    'price'    => $price,
                 ];
             }
+            // ดึง "ค่าบริการเพิ่มเติม" (Repack, ค่าธรรมเนียม ฯลฯ) ที่ผูกกับ customer + etd ปัจจุบัน
+            $extraCharges = [];
+            $extraTotal = 0.0;
+            $etdFilter = $request->start_date ?? null;
+            if (!empty($authUser->customerno)) {
+                $extraQuery = ExtraShippingCharge::where('customerno', $authUser->customerno);
+                if ($etdFilter) {
+                    $extraQuery->where('etd_date', $etdFilter);
+                }
+                $extraRows = $extraQuery->orderBy('sequence_no', 'asc')->orderBy('created_at', 'asc')->orderBy('id', 'asc')->get();
+                foreach ($extraRows as $ec) {
+                    $price = (float) ($ec->price ?? 0);
+                    $extraTotal += $price;
+                    $extraCharges[] = [
+                        'id'             => $ec->id,
+                        'refNo'          => $ec->ref_no,
+                        'courier'        => $ec->courier,
+                        'recipient_name' => $ec->recipient_name,
+                        'description'    => $ec->description,
+                        'price'          => $price,
+                        'etd_date'       => $ec->etd_date ? Carbon::parse($ec->etd_date)->format('d/m/Y') : null,
+                    ];
+                }
+            }
+
             $thaiShippingSummary = [
                 'shipment_count' => count($thaiShipments),
                 'box_count'      => $thaiBoxCount,
                 'total_price'    => round($thaiShippingTotal, 2),
                 'shipments'      => $thaiShipments,
+                'extra_charges'  => $extraCharges,
+                'extra_count'    => count($extraCharges),
+                'extra_total'    => round($extraTotal, 2),
+                'grand_total'    => round($thaiShippingTotal + $extraTotal, 2),
             ];
 //            dd($data);
             return Datatables::of($data)
@@ -264,6 +331,20 @@ class CustomerShippingViewController extends Controller
                 ->addColumn('edit_url', function($row) {
                     return route('customershippingview.edit', $row->id);
                 })
+                ->addColumn('thai_is_main', function($row) use ($thaiShipmentMap) {
+                    if (empty($row->thai_tracking_no)) return false;
+                    $info = $thaiShipmentMap[(string) $row->thai_tracking_no] ?? null;
+                    if (!$info) return true; // มี ref แต่หา map ไม่เจอ → fail-safe ให้แสดงเต็ม
+                    return (string) $row->box_no === (string) $info['main_box'];
+                })
+                ->addColumn('thai_shipment_main_box', function($row) use ($thaiShipmentMap) {
+                    if (empty($row->thai_tracking_no)) return null;
+                    return $thaiShipmentMap[(string) $row->thai_tracking_no]['main_box'] ?? null;
+                })
+                ->addColumn('thai_shipment_boxes', function($row) use ($thaiShipmentMap) {
+                    if (empty($row->thai_tracking_no)) return [];
+                    return $thaiShipmentMap[(string) $row->thai_tracking_no]['boxes'] ?? [];
+                })
                 ->with(['cod_total' => number_format($codTotal, 2, '.', ',')
                     ,'weight_total'=>number_format($weightTotal, 2, '.', ',')
                     ,'import_cost_total'=>number_format($import_costTotal, 2, '.', ',')
@@ -272,6 +353,7 @@ class CustomerShippingViewController extends Controller
                     ,'start_date'=>$startDate
                     ,'data_export_link'=>url('customershippingsviewexport2',['customerno'=>!empty($request->customerno)?$request->customerno:'','start_date'=>$startDateRaw]) . (!empty($request->recipient_filter) ? '?recipient_filter=' . urlencode($request->recipient_filter) : '')
                     ,'thai_shipping_summary'=>$thaiShippingSummary
+                    ,'round_is_air'=>$roundIsAir
 
                     ,'query'=>config('app.debug') ? $sqlQuery : null
                 ])// แสดงผลรวมของค่า COD])
@@ -603,7 +685,9 @@ class CustomerShippingViewController extends Controller
             ->where('customerno', $authUser->customerno);
 
         if (!empty($request->etd)) {
-            $query->whereRaw('DATE(etd) = ?', [$request->etd]);
+            // SARGable range แทน DATE(etd)=? เพื่อให้ใช้ index idx_cs_customerno_etd
+            $query->where('etd', '>=', $request->etd.' 00:00:00')
+                  ->where('etd', '<=', $request->etd.' 23:59:59');
         }
 
         $rows = $query->selectRaw("COALESCE(NULLIF(TRIM(delivery_fullname), ''), '__empty__') as recipient_name")

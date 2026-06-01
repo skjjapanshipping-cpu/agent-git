@@ -167,7 +167,15 @@ class QrScanController extends Controller
         $box_no = $request->input('box_no');
         $etdDates = $this->parseEtdDates($request->input('etd'));
 
-        $parcel = $this->findParcelSmart($box_no, $etdDates);
+        // Fast path: ใช้ id ที่ frontend ได้จาก lookup รอบแรก เพื่อไม่ต้องค้นซ้ำ
+        $parcel = null;
+        $reqId = $request->input('id');
+        if ($reqId) {
+            $parcel = Customershipping::where('id', $reqId)->where('excel_status', '1')->first();
+        }
+        if (!$parcel) {
+            $parcel = $this->findParcelSmart($box_no, $etdDates);
+        }
 
         if (!$parcel) {
             return response()->json([
@@ -197,27 +205,9 @@ class QrScanController extends Controller
             ]);
         }
 
-        // Sync สถานะไปที่ customerorder (shipping_status = 3)
-        try {
-            \App\Models\Customerorder::where('customerno', $parcel->customerno)
-                ->where('itemno', $parcel->itemno)
-                ->update(['shipping_status' => 3]);
-        } catch (\Exception $e) {
-            \Log::error('Scan sync customerorder error: ' . $e->getMessage());
-        }
-
-        // Sync destination_date ไปที่ tracks (หน้าเช็คเลขพัสดุ)
-        try {
-            if ($parcel->track_no) {
-                $trackNoClean = str_replace('-', '', $parcel->track_no);
-                \App\Models\Track::where('status', 1)
-                    ->whereRaw("REPLACE(track_no, '-', '') = ?", [$trackNoClean])
-                    ->whereNull('destination_date')
-                    ->update(['destination_date' => now()->toDateString()]);
-            }
-        } catch (\Exception $e) {
-            \Log::error('Scan sync track destination_date error: ' . $e->getMessage());
-        }
+        // Sync customerorder (shipping_status=3) + tracks.destination_date เบื้องหลัง
+        // ให้ response กลับทันที ไม่ต้องรอ sync (worker: queue 'scan-sync')
+        \App\Jobs\SyncScanStatusJob::dispatch($parcel->customerno, $parcel->itemno, $parcel->track_no, 3, true);
 
         return response()->json([
             'success' => true,
@@ -473,7 +463,7 @@ class QrScanController extends Controller
             ->selectRaw('SUM(CASE WHEN scanned_at IS NOT NULL THEN 1 ELSE 0 END) as scanned')
             ->groupBy('etd')
             ->orderBy('etd', 'desc')
-            ->limit(10)
+            ->limit(30)
             ->get();
 
         return response()->json([
@@ -647,14 +637,8 @@ class QrScanController extends Controller
             ]);
         }
 
-        // Sync สถานะไปที่ customerorder (shipping_status = 4)
-        try {
-            \App\Models\Customerorder::where('customerno', $parcel->customerno)
-                ->where('itemno', $parcel->itemno)
-                ->update(['shipping_status' => 4]);
-        } catch (\Exception $e) {
-            \Log::error('Pickup sync customerorder error: ' . $e->getMessage());
-        }
+        // Sync customerorder (shipping_status=4) เบื้องหลัง — ไม่ต้องรอ
+        \App\Jobs\SyncScanStatusJob::dispatch($parcel->customerno, $parcel->itemno, null, 4, false);
 
         // นับ progress ใหม่ (เฉพาะรอบที่เลือก)
         $progQuery = Customershipping::where('excel_status', '1')

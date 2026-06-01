@@ -14,6 +14,11 @@ use Illuminate\Support\Facades\Schema;
 use App\Http\Controllers\InvoiceController;
 Route::get('/', function () {
 
+    // White-label: โดเมน tracking (เช่น japantracking.org) → root '/' = หน้าเช็คพัสดุทันที
+    if (\App\Support\Brand::isTrackingRoot()) {
+        return app(\App\Http\Controllers\TrackingController::class)->index();
+    }
+
     //number of user connected or viewed
     $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
     Tracker::firstOrCreate([

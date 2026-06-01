@@ -81,9 +81,13 @@ class LoginController extends Controller
         $login = trim((string) $request->input($this->username()));
         $field = filter_var($login, FILTER_VALIDATE_EMAIL) ? 'email' : 'customerno';
 
+        // Trim password เผื่อ copy-paste จาก LINE/email ติด whitespace มา (เช่น \u00A0, space, \n, \t)
+        $password = (string) $request->input('password');
+        $password = preg_replace('/^[\s\xc2\xa0]+|[\s\xc2\xa0]+$/u', '', $password);
+
         return [
             $field     => $login,
-            'password' => $request->input('password'),
+            'password' => $password,
         ];
     }
 
