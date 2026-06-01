@@ -18,9 +18,69 @@ class PriceCalculatorController extends Controller
     /**
      * Scrape product info from a given URL.
      */
+    /**
+     * โดเมนตลาดญี่ปุ่นที่อนุญาตให้ดึงข้อมูลได้ (กัน SSRF — ไม่ให้ยิง URL อะไรก็ได้)
+     */
+    private const ALLOWED_HOSTS = [
+        'mercari.com',
+        'jp.mercari.com',
+        'yahoo.co.jp',          // auctions / paypayfleamarket / paypaymall (subdomain ของ yahoo.co.jp)
+        'rakuten.co.jp',
+        'amazon.co.jp',
+    ];
+
+    /**
+     * ตรวจว่า URL ปลอดภัยต่อการ fetch ฝั่ง server (กัน SSRF)
+     * - อนุญาตเฉพาะ http/https
+     * - host ต้องอยู่ใน allowlist (รวม subdomain)
+     * - IP ที่ resolve ได้ต้องไม่ใช่ private/reserved/loopback
+     */
+    private function assertSafeUrl($url)
+    {
+        $parts = parse_url($url);
+        if (!$parts || empty($parts['scheme']) || empty($parts['host'])) {
+            throw new \RuntimeException('URL ไม่ถูกต้อง');
+        }
+        $scheme = strtolower($parts['scheme']);
+        if (!in_array($scheme, ['http', 'https'], true)) {
+            throw new \RuntimeException('รองรับเฉพาะ http/https');
+        }
+        $host = strtolower($parts['host']);
+
+        $allowed = false;
+        foreach (self::ALLOWED_HOSTS as $base) {
+            if ($host === $base || substr($host, -strlen('.' . $base)) === '.' . $base) {
+                $allowed = true;
+                break;
+            }
+        }
+        if (!$allowed) {
+            throw new \RuntimeException('ไม่รองรับเว็บไซต์นี้ (รองรับเฉพาะ Mercari, Yahoo, Rakuten, Amazon JP)');
+        }
+
+        // resolve IP แล้วบล็อก private/reserved range (กันยิงเข้า network ภายใน / cloud metadata)
+        $ips = [];
+        $recs = @dns_get_record($host, DNS_A + DNS_AAAA);
+        if ($recs) {
+            foreach ($recs as $r) {
+                if (!empty($r['ip'])) $ips[] = $r['ip'];
+                if (!empty($r['ipv6'])) $ips[] = $r['ipv6'];
+            }
+        }
+        if (empty($ips)) {
+            $resolved = gethostbyname($host);
+            if ($resolved && $resolved !== $host) $ips[] = $resolved;
+        }
+        foreach ($ips as $ip) {
+            if (!filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+                throw new \RuntimeException('ปลายทางไม่ได้รับอนุญาต');
+            }
+        }
+    }
+
     public function scrapeProduct(Request $request)
     {
-        $request->validate(['url' => 'required|url']);
+        $request->validate(['url' => 'required|url|max:2048']);
 
         $url = $request->input('url');
         $result = [
@@ -40,6 +100,9 @@ class PriceCalculatorController extends Controller
                 $url = preg_replace('#/en/(item|search)#', '/$1', $url);
             }
 
+            // กัน SSRF: ตรวจ URL ก่อนยิง
+            $this->assertSafeUrl($url);
+
             // Use Googlebot UA for SPA sites (Mercari, PayPay) to get SSR content
             $isSPA = (strpos($url, 'mercari.com') !== false);
             $ua = $isSPA
@@ -53,7 +116,17 @@ class PriceCalculatorController extends Controller
                     'Accept-Language' => 'ja,en;q=0.9',
                     'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
                 ],
-                'verify' => false,
+                'verify' => true,
+                // จำกัด redirect และ re-validate ทุก hop (กัน redirect ไปปลายทางภายใน)
+                'allow_redirects' => [
+                    'max' => 3,
+                    'strict' => true,
+                    'referer' => false,
+                    'protocols' => ['http', 'https'],
+                    'on_redirect' => function ($req, $resp, $uri) {
+                        $this->assertSafeUrl((string) $uri);
+                    },
+                ],
             ]);
 
             $response = $client->get($url);

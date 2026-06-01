@@ -98,8 +98,15 @@ class AddressBookController extends Controller
     public function setDefault($id)
     {
         $userId = Auth::id();
+
+        // ตรวจว่าที่อยู่นี้เป็นของผู้ใช้จริงก่อน (กันเคลียร์ default ทิ้งทั้งที่ id ผิด/ไม่ใช่ของตัวเอง)
+        $target = AddressBook::where('user_id', $userId)->where('id', $id)->first();
+        if (!$target) {
+            return response()->json(['success' => false, 'message' => 'ไม่พบที่อยู่'], 404);
+        }
+
         AddressBook::where('user_id', $userId)->update(['is_default' => false]);
-        AddressBook::where('user_id', $userId)->where('id', $id)->update(['is_default' => true]);
+        $target->update(['is_default' => true]);
 
         return response()->json(['success' => true]);
     }

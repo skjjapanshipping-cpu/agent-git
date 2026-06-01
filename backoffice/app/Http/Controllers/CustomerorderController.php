@@ -309,7 +309,11 @@ class CustomerorderController extends Controller
      */
     public function destroy($id)
     {
-        $customerorder = Customerorder::find($id)->delete();
+        $customerorder = Customerorder::find($id);
+        if (!$customerorder) {
+            return redirect()->route('customerorders.index')->with('error', 'ไม่พบรายการที่ต้องการลบ');
+        }
+        $customerorder->delete();
 
         return redirect()->route('customerorders.index')
             ->with('success', 'ลบรายการสั่งซื้อสำเร็จ');

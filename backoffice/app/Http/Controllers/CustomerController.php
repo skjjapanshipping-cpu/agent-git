@@ -139,6 +139,14 @@ class CustomerController extends Controller
         $customer = User::findOrFail($id);
         $credentials = session('new_customer_credentials');
 
+        // แสดง credentials เฉพาะของลูกค้าที่ตรงกับ session เท่านั้น (กันโชว์รหัสผ่านลูกค้าคนอื่น)
+        if (!$credentials || (int) ($credentials['id'] ?? 0) !== (int) $id) {
+            $credentials = null;
+        } else {
+            // ใช้ครั้งเดียวแล้วล้างทิ้ง (รหัสผ่าน plaintext ไม่ควรค้างใน session)
+            session()->forget('new_customer_credentials');
+        }
+
         $warehouses = SystemSetting::warehouses($customer->customerno);
         $contactNote = SystemSetting::contactNote();
         $support = SystemSetting::support();
@@ -190,13 +198,13 @@ class CustomerController extends Controller
 
     public function show($id)
     {
-        $customer = User::find($id);
+        $customer = User::findOrFail($id);
         return view('customer.show', compact('customer'));
     }
 
     public function edit($id)
     {
-        $customer = User::find($id);
+        $customer = User::findOrFail($id);
         $provinces = Tambon::getCachedProvinces();
         $amphoes = Tambon::getCachedAmphoes();
         $tambons = Tambon::getCachedTambons();
@@ -206,7 +214,15 @@ class CustomerController extends Controller
 
     public function update(Request $request, User $customer)
     {
-        $customer->update($request->all());
+        // ห้าม mass-assign password แบบ plaintext — แยกจัดการ + hash เสมอ
+        $data = $request->except(['password', 'password_confirmation', '_token', '_method', 'id', 'roles']);
+        $customer->update($data);
+
+        if ($request->filled('password')) {
+            $customer->password = \Illuminate\Support\Facades\Hash::make($request->input('password'));
+            $customer->save();
+        }
+
         return redirect()->route('customers.index')->with('success', 'อัปเดตลูกค้าสำเร็จ');
     }
 

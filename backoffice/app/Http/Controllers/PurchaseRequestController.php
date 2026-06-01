@@ -136,7 +136,8 @@ class PurchaseRequestController extends Controller
             'quantity' => 'required|integer|min:1',
         ]);
 
-        $data = $request->all();
+        // กัน mass-assignment ทับฟิลด์ระบบ (เลขคำขอ/ผู้ดูแล/timestamps)
+        $data = $request->except(['_token', '_method', 'id', 'request_no', 'admin_id', 'created_at', 'updated_at']);
         $data['site'] = PurchaseRequest::detectSite($request->product_url);
 
         // If status changed to purchased and no rate set, use current rate

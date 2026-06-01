@@ -59,10 +59,15 @@ class CustomerviewController extends Controller
                     return $row->order_date ? \Carbon\Carbon::parse($row->order_date)->format('d/m/Y') : '';
                 })
                 ->addColumn('link_display', function ($row) {
-                    return '<div class="link-cell" title="' . $row->link . '">
-                                <button class="btn btn-sm btn-outline-secondary copy-link d-none" data-clipboard-text="' . $row->link . '">คัดลอก</button>
-                                <a href="' . $row->link . '" target="_blank">
-                                    <span class="domain-name" data-url="' . $row->link . '"></span>
+                    // escape กัน XSS + อนุญาตเฉพาะ http/https ใน href (กัน javascript:)
+                    $link = (string) ($row->link ?? '');
+                    $safeHref = preg_match('#^https?://#i', $link) ? $link : '#';
+                    $eLink = e($link);
+                    $eHref = e($safeHref);
+                    return '<div class="link-cell" title="' . $eLink . '">
+                                <button class="btn btn-sm btn-outline-secondary copy-link d-none" data-clipboard-text="' . $eLink . '">คัดลอก</button>
+                                <a href="' . $eHref . '" target="_blank" rel="noopener noreferrer">
+                                    <span class="domain-name" data-url="' . $eLink . '"></span>
                                 </a>
                             </div>';
                 })

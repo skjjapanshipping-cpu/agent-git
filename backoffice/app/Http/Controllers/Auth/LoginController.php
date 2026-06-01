@@ -137,7 +137,15 @@ class LoginController extends Controller
             if ($finduser) {
                 // LINE เคยเชื่อมแล้ว → login เข้าระบบ
                 $appUser = User::where('id', $finduser->userid)->first();
+
+                // กัน Auth::login(null): ถ้า user ถูกลบไปแล้ว ให้เคลียร์ provider ที่ค้าง
+                if (!$appUser) {
+                    $finduser->delete();
+                    return redirect('/login')->with('error', 'ไม่พบบัญชีที่เชื่อมกับ LINE นี้ กรุณาติดต่อแอดมิน');
+                }
+
                 Auth::login($appUser);
+                request()->session()->regenerate(); // กัน session fixation
 
                 return redirect('/');
             } else {
@@ -151,25 +159,14 @@ class LoginController extends Controller
 
                     return redirect('/shippingview')->with('success', 'เชื่อมต่อ LINE สำเร็จ! คุณจะได้รับการแจ้งเตือนผ่าน LINE');
                 } else {
-                    // ยังไม่ได้ login → สร้าง user ใหม่
-                    $newUser = new User();
-                    $newUser->name = $lineUser->name ? $lineUser->name : $lineUser->nickname;
-                    $newUser->email = $lineUser->email;
-                    $newUser->save();
-                    $newUser->assignRole('user');
-
-                    $new_provider = new MyAuthProvider();
-                    $new_provider->userid = $newUser->id;
-                    $new_provider->provider = 'line';
-                    $new_provider->providerid = $lineUser->id;
-                    $new_provider->save();
-                    Auth::login($newUser);
-                    return redirect('/');
+                    // ระบบไม่เปิดให้สมัครสมาชิกเอง (ลูกค้าต้องมี customerno ที่แอดมินกำหนด)
+                    // จึงไม่สร้างบัญชีใหม่อัตโนมัติ — ให้ลูกค้า login ก่อนแล้วค่อยเชื่อม LINE
+                    return redirect('/login')->with('info', 'กรุณาเข้าสู่ระบบด้วยบัญชีของคุณก่อน แล้วจึงเชื่อมต่อ LINE จากหน้าการจัดส่งของฉัน');
                 }
             }
         } catch (\Exception $e) {
             Log::error('LINE Callback Error: ' . $e->getMessage() . ' | File: ' . $e->getFile() . ':' . $e->getLine());
-            return redirect('/login')->with('error', 'LINE login error: ' . $e->getMessage());
+            return redirect('/login')->with('error', 'เชื่อมต่อ LINE ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
         }
     }
 

@@ -726,7 +726,28 @@ class CustomerShippingViewController extends Controller
      */
     public function generateInvoiceQr(Request $request)
     {
-        $amount = floatval($request->amount);
+        // คำนวณยอดใหม่ฝั่ง server จากข้อมูลของลูกค้าที่ login เอง (ห้ามเชื่อ amount จาก client → กันจ่ายขาด)
+        $authUser = Auth::user();
+        if (!$authUser || empty($authUser->customerno)) {
+            return response()->json(['success' => false, 'message' => 'ไม่พบข้อมูลลูกค้า'], 403);
+        }
+
+        $query = Customershipping::where('excel_status', '1')
+            ->where('customerno', $authUser->customerno);
+
+        $etd = $request->input('etd');
+        if (!empty($etd)) {
+            $query->where('etd', '>=', $etd . ' 00:00:00')
+                  ->where('etd', '<=', $etd . ' 23:59:59');
+        }
+
+        $rows = $query->get(['cod', 'cod_rate', 'import_cost']);
+        $codTotal = $rows->sum(function ($r) {
+            return $r->cod * ($r->cod_rate ?? 0.25);
+        });
+        $importTotal = $rows->sum('import_cost');
+        $amount = round($importTotal + $codTotal, 2);
+
         if ($amount <= 0) {
             return response()->json(['success' => false, 'message' => 'ยอดเงินไม่ถูกต้อง'], 400);
         }

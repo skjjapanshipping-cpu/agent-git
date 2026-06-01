@@ -2953,7 +2953,7 @@
                             }
                             var html = `<span class="delivery-badge ${badgeClass}"><i class="fa ${icon}"></i> ${text}</span>`;
                             if (full.delivery_fullname && full.delivery_fullname.trim()) {
-                                html += '<br><span style="color:#dc2626;font-size:10px;font-weight:600;"><i class="fa fa-user"></i> ' + full.delivery_fullname + '</span>';
+                                html += '<br><span style="color:#dc2626;font-size:10px;font-weight:600;"><i class="fa fa-user"></i> ' + escHtml(full.delivery_fullname) + '</span>';
                             }
                             return html;
                         }
@@ -3186,6 +3186,11 @@
         }
 
         // === Quick View Modal Functions ===
+        // escape HTML กัน XSS เวลาเอาข้อมูลจาก server (ชื่อผู้รับ/ที่อยู่/หมายเหตุ ฯลฯ) มาต่อเป็น HTML
+        function escHtml(s) {
+            return $('<div>').text(s == null ? '' : String(s)).html();
+        }
+
         function openQuickView(d) {
             var boxImgs = parseImages(d.box_image || '');
             var prodImgs = parseImages(d.product_image || '');
@@ -3219,15 +3224,15 @@
             if (d.delivery_fullname || d.delivery_address) {
                 html += '<div style="margin-top:10px;"><span class="qv-label">ที่อยู่จัดส่ง</span>';
                 html += '<div class="qv-address-block">';
-                if (d.delivery_fullname) html += '<strong>' + d.delivery_fullname + '</strong><br>';
-                if (d.delivery_mobile) html += '<i class="fa fa-phone" style="color:#94a3b8;"></i> ' + d.delivery_mobile + '<br>';
-                if (d.delivery_address) html += d.delivery_address + '<br>';
+                if (d.delivery_fullname) html += '<strong>' + escHtml(d.delivery_fullname) + '</strong><br>';
+                if (d.delivery_mobile) html += '<i class="fa fa-phone" style="color:#94a3b8;"></i> ' + escHtml(d.delivery_mobile) + '<br>';
+                if (d.delivery_address) html += escHtml(d.delivery_address) + '<br>';
                 var addr2 = '';
-                if (d.delivery_subdistrict) addr2 += (d.delivery_province === 'กรุงเทพมหานคร' ? 'แขวง' : 'ต.') + d.delivery_subdistrict + ' ';
-                if (d.delivery_district) addr2 += (d.delivery_province === 'กรุงเทพมหานคร' ? 'เขต' : 'อ.') + d.delivery_district + ' ';
+                if (d.delivery_subdistrict) addr2 += (d.delivery_province === 'กรุงเทพมหานคร' ? 'แขวง' : 'ต.') + escHtml(d.delivery_subdistrict) + ' ';
+                if (d.delivery_district) addr2 += (d.delivery_province === 'กรุงเทพมหานคร' ? 'เขต' : 'อ.') + escHtml(d.delivery_district) + ' ';
                 if (addr2) html += addr2 + '<br>';
-                if (d.delivery_province) html += d.delivery_province + ' ';
-                if (d.delivery_postcode) html += d.delivery_postcode;
+                if (d.delivery_province) html += escHtml(d.delivery_province) + ' ';
+                if (d.delivery_postcode) html += escHtml(d.delivery_postcode);
                 html += '</div></div>';
             }
 
@@ -3292,9 +3297,9 @@
                     html += '</div>';
                 }
 
-                if (courier) html += '<div class="qv-row" style="border:0;padding:3px 0;"><span class="qv-label">ผู้ขนส่ง</span><span class="qv-value">' + courier + '</span></div>';
-                if (refNo) html += '<div class="qv-row" style="border:0;padding:3px 0;"><span class="qv-label">เลขอ้างอิง</span><span class="qv-value" style="font-family:monospace;color:#0c5e8e;font-weight:700;">' + refNo + '</span></div>';
-                if (recipient) html += '<div class="qv-row" style="border:0;padding:3px 0;"><span class="qv-label">ผู้รับ</span><span class="qv-value"><i class="fa fa-user" style="color:#94a3b8;font-size:11px;"></i> ' + recipient + '</span></div>';
+                if (courier) html += '<div class="qv-row" style="border:0;padding:3px 0;"><span class="qv-label">ผู้ขนส่ง</span><span class="qv-value">' + escHtml(courier) + '</span></div>';
+                if (refNo) html += '<div class="qv-row" style="border:0;padding:3px 0;"><span class="qv-label">เลขอ้างอิง</span><span class="qv-value" style="font-family:monospace;color:#0c5e8e;font-weight:700;">' + escHtml(refNo) + '</span></div>';
+                if (recipient) html += '<div class="qv-row" style="border:0;padding:3px 0;"><span class="qv-label">ผู้รับ</span><span class="qv-value"><i class="fa fa-user" style="color:#94a3b8;font-size:11px;"></i> ' + escHtml(recipient) + '</span></div>';
                 if (price > 0) {
                     var priceLine = priceTxt;
                     if (isMerged) priceLine += ' <span style="font-size:10px;color:#92400e;font-weight:600;">(ยอดรวมทั้งบิล)</span>';
@@ -3306,7 +3311,7 @@
             // Note
             if (d.note) {
                 html += '<div style="margin-top:12px;"><span class="qv-label">หมายเหตุ</span>';
-                html += '<div style="margin-top:4px;padding:10px 14px;background:#fffbeb;border-radius:8px;font-size:0.85rem;color:#92400e;">' + d.note + '</div></div>';
+                html += '<div style="margin-top:4px;padding:10px 14px;background:#fffbeb;border-radius:8px;font-size:0.85rem;color:#92400e;">' + escHtml(d.note) + '</div></div>';
             }
 
             // Images
@@ -3544,11 +3549,15 @@
                 $.ajax({
                     url: "{{ route('generate.invoice.qr') }}",
                     type: "POST",
-                    data: { amount: _invData.priceTotalRaw, _token: "{{ csrf_token() }}" },
+                    data: { etd: $('#start_date').val(), _token: "{{ csrf_token() }}" },
                     success: function(res) {
                         if (res.success && res.qr_url) {
                             $('#inv-qr-img').attr('src', res.qr_url).show();
                             $('#inv-qr-loading').hide();
+                            // แสดงยอดที่ server คำนวณจริง (กันยอดบนจอกับยอดใน QR ไม่ตรงกัน)
+                            if (res.formatted_amount) $('#inv-qr-amount').text('฿ ' + res.formatted_amount);
+                        } else if (res.message) {
+                            $('#inv-qr-loading').html('<span style="color:#94a3b8;">' + res.message + '</span>');
                         }
                     },
                     error: function() {
@@ -3911,8 +3920,9 @@
                 list.find('.dd-item:not(:first)').remove();
                 if (res.recipients && res.recipients.length > 0) {
                     res.recipients.forEach(function(r) {
-                        sel.append('<option value="' + r.value + '">' + r.label + ' (' + r.count + ')</option>');
-                        list.append('<div class="dd-item" data-value="' + r.value + '">' + r.label + ' (' + r.count + ')</div>');
+                        var v = escHtml(r.value), l = escHtml(r.label), c = escHtml(r.count);
+                        sel.append('<option value="' + v + '">' + l + ' (' + c + ')</option>');
+                        list.append('<div class="dd-item" data-value="' + v + '">' + l + ' (' + c + ')</div>');
                     });
                 }
                 if (currentVal) {
@@ -4368,7 +4378,7 @@
             clearTimeout(debounceTimer);
             if (query.length < 2) { $('#batch_fullname-results').hide().empty(); return; }
             debounceTimer = setTimeout(function() {
-                $.get('/skjtrack/api/address/searchCustomerAddress', { term: query, field: 'delivery_fullname' }, function(data) {
+                $.get("{{ route('search.customer.address') }}", { term: query, field: 'delivery_fullname' }, function(data) {
                     var $results = $('#batch_fullname-results').empty();
                     if (data.length > 0) {
                         data.forEach(function(c) {
@@ -4388,7 +4398,7 @@
             clearTimeout(debounceTimer);
             if (query.length < 3) { $('#batch_mobile-results').hide().empty(); return; }
             debounceTimer = setTimeout(function() {
-                $.get('/skjtrack/api/address/searchCustomerAddress', { term: query, field: 'delivery_mobile' }, function(data) {
+                $.get("{{ route('search.customer.address') }}", { term: query, field: 'delivery_mobile' }, function(data) {
                     var $results = $('#batch_mobile-results').empty();
                     if (data.length > 0) {
                         data.forEach(function(c) {

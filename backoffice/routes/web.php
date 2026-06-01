@@ -208,11 +208,13 @@ Route::middleware('auth')->get('/api/address/searchCustomerShippingAddress', 'AP
 
 Route::middleware('auth')->get('/get-customer-delivery-type', 'CustomershippingController@getCustomerDeliveryType');
 
-// Shippop — ส่งบิลค่าส่งไทยผ่าน LINE
-Route::middleware('auth')->post('/shippop/notify-shipping', 'ShippopController@notifyThaiShipping')->name('shippop.notify.shipping');
-Route::middleware('auth')->get('/shippop/unpaid-customers', 'ShippopController@getUnpaidCustomers')->name('shippop.unpaid.customers');
-Route::middleware('auth')->post('/shippop/send-reminder', 'ShippopController@sendReminder')->name('shippop.send.reminder');
-Route::middleware('auth')->post('/shippop/parse-preview', 'ShippopController@parsePreview')->name('shippop.parse-preview');
+// Shippop — ส่งบิลค่าส่งไทยผ่าน LINE (admin เท่านั้น — กันลูกค้าทั่วไปเรียกส่งบิล/ทวงเงินคนอื่น)
+Route::middleware(['auth', 'role:admin'])->group(function () {
+    Route::post('/shippop/notify-shipping', 'ShippopController@notifyThaiShipping')->name('shippop.notify.shipping');
+    Route::get('/shippop/unpaid-customers', 'ShippopController@getUnpaidCustomers')->name('shippop.unpaid.customers');
+    Route::post('/shippop/send-reminder', 'ShippopController@sendReminder')->name('shippop.send.reminder');
+    Route::post('/shippop/parse-preview', 'ShippopController@parsePreview')->name('shippop.parse-preview');
+});
 
 // Price Calculator (public)
 Route::get('/calc', 'PriceCalculatorController@index')->name('price.calculator');

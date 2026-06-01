@@ -17,10 +17,13 @@ class Brand
             $host = '';
         }
 
+        // ตัด www. นำหน้า เพื่อให้ www.japantracking.org map เป็นแบรนด์เดียวกับ japantracking.org
+        $lookupHost = preg_replace('/^www\./', '', $host);
+
         $domains = (array) config('brands.domains', []);
         $default = (array) config('brands.default', []);
 
-        $brand = $domains[$host] ?? $default;
+        $brand = $domains[$host] ?? ($domains[$lookupHost] ?? $default);
         $brand = array_merge($default, $brand); // เติม key ที่ขาดจาก default
         $brand['host'] = $host;
 

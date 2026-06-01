@@ -142,7 +142,9 @@ class QrScanController extends Controller
      */
     public function scanResult($box_no)
     {
-        $parcel = $this->findParcelByBarcode($box_no, function ($q) {
+        // ใช้ findParcelSmart เพื่อรองรับเลขกล่องแบบตัวเลขล้วน (เช่น "880") ซึ่งเป็นรูปแบบจริงใน production
+        // (เดิมใช้ findParcelByBarcode ที่รองรับเฉพาะ DDMM-NNN → สแกน QR เลขกล่องจริงแล้วขึ้น "ไม่พบพัสดุ")
+        $parcel = $this->findParcelSmart($box_no, null, function ($q) {
             $q->orderBy('etd', 'desc')->orderBy('id', 'desc');
         });
 
@@ -168,10 +170,14 @@ class QrScanController extends Controller
         $etdDates = $this->parseEtdDates($request->input('etd'));
 
         // Fast path: ใช้ id ที่ frontend ได้จาก lookup รอบแรก เพื่อไม่ต้องค้นซ้ำ
+        // แต่ต้องยืนยันว่า box_no ของ record ตรงกับที่สแกนจริง (กันการส่ง id ที่ไม่ตรงกล่อง → มาร์คผิดกล่อง)
         $parcel = null;
         $reqId = $request->input('id');
         if ($reqId) {
-            $parcel = Customershipping::where('id', $reqId)->where('excel_status', '1')->first();
+            $candidate = Customershipping::where('id', $reqId)->where('excel_status', '1')->first();
+            if ($candidate && $this->boxNoMatches($candidate->box_no, $box_no)) {
+                $parcel = $candidate;
+            }
         }
         if (!$parcel) {
             $parcel = $this->findParcelSmart($box_no, $etdDates);
@@ -350,6 +356,28 @@ class QrScanController extends Controller
             ];
         }
         return null;
+    }
+
+    /**
+     * Helper: ตรวจว่า box_no ที่เก็บใน DB ตรงกับค่าที่สแกนมาหรือไม่
+     * รองรับทั้งบาร์โค้ด DDMM-NNN และเลขกล่องตัวเลขล้วน (ตัด 0 นำหน้า)
+     */
+    private function boxNoMatches($storedBoxNo, $scanned)
+    {
+        $storedNorm = ltrim((string) $storedBoxNo, '0');
+        $storedNorm = $storedNorm === '' ? '0' : $storedNorm;
+
+        $parsed = $this->parseBarcodeValue($scanned);
+        if ($parsed) {
+            return $parsed['box_no'] === $storedNorm;
+        }
+        if (preg_match('/^\d+$/', (string) $scanned)) {
+            $scannedNorm = ltrim((string) $scanned, '0');
+            $scannedNorm = $scannedNorm === '' ? '0' : $scannedNorm;
+            return $scannedNorm === $storedNorm;
+        }
+        // รูปแบบอื่น: เทียบตรงตัว
+        return (string) $scanned === (string) $storedBoxNo;
     }
 
     /**

@@ -1157,8 +1157,9 @@
                         list.find('.dd-item:not(:first)').remove();
                         if (res.recipients && res.recipients.length > 0) {
                             res.recipients.forEach(function(r) {
-                                sel.append('<option value="' + r.value + '">' + r.label + ' (' + r.count + ')</option>');
-                                list.append('<div class="dd-item" data-value="' + r.value + '">' + r.label + ' (' + r.count + ')</div>');
+                                var v = escHtml(r.value), l = escHtml(r.label), c = escHtml(r.count);
+                                sel.append('<option value="' + v + '">' + l + ' (' + c + ')</option>');
+                                list.append('<div class="dd-item" data-value="' + v + '">' + l + ' (' + c + ')</div>');
                             });
                         }
                         if (currentVal) {
@@ -3680,7 +3681,7 @@
             clearTimeout(debounceTimer);
             if (query.length < 2) { $('#batch_fullname-results').hide().empty(); return; }
             debounceTimer = setTimeout(function() {
-                $.get('/skjtrack/api/address/searchCustomerAddress', { term: query, field: 'delivery_fullname' }, function(data) {
+                $.get("{{ route('search.customer.address') }}", { term: query, field: 'delivery_fullname' }, function(data) {
                     var $results = $('#batch_fullname-results').empty();
                     if (data.length > 0) {
                         data.forEach(function(c) {
@@ -3700,7 +3701,7 @@
             clearTimeout(debounceTimer);
             if (query.length < 3) { $('#batch_mobile-results').hide().empty(); return; }
             debounceTimer = setTimeout(function() {
-                $.get('/skjtrack/api/address/searchCustomerAddress', { term: query, field: 'delivery_mobile' }, function(data) {
+                $.get("{{ route('search.customer.address') }}", { term: query, field: 'delivery_mobile' }, function(data) {
                     var $results = $('#batch_mobile-results').empty();
                     if (data.length > 0) {
                         data.forEach(function(c) {

@@ -143,8 +143,10 @@ class InvoiceController extends Controller
         $ids = explode(',', $customerorderids);
         
         // ใช้การดึงข้อมูลแบบปกติแทน chunking เพื่อความสม่ำเสมอ
+        // ป้องกัน IDOR: ผูกกับ customerno ของใบแจ้งหนี้เสมอ (กันการส่ง id ของลูกค้าคนอื่นเข้ามา)
         $customerorders = Customerorder::query()
             ->whereIn('id', $ids)
+            ->where('customerno', $customerno)
             ->orderBy('created_at', 'desc')
             ->get();
         
@@ -163,6 +165,7 @@ class InvoiceController extends Controller
 
         // Batch update status แทนวน save() ทีละแถว (ลด N queries เหลือ 1)
         Customerorder::whereIn('id', $ids)
+            ->where('customerno', $customerno)
             ->where('status', '!=', 2)
             ->update(['status' => 5]);
 

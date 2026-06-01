@@ -260,12 +260,21 @@ class CustomershippingController extends Controller
                 return redirect()->route('customershippings.index')->with('error', 'ไม่พบรายการที่เลือก');
             }
 
-            // ป้องกัน null pointer: บางรายการอาจไม่มี etd
-            if ($customershippings[0]->etd) {
-                $searchDate = '%' . $customershippings[0]->etd->format('d/m/Y') . '%';
-                Track::WhereRaw("DATE_FORMAT(ship_date, '%d/%m/%Y') like ?", [$searchDate])
+            // อัปเดต tracks.destination_date เฉพาะ track_no ของรายการที่เลือกเท่านั้น
+            // (เดิมกรองด้วย DATE(ship_date) อย่างเดียว → ไปโดน track ของลูกค้าคนอื่นที่ส่งวันเดียวกันทั้งหมด)
+            $variants = [];
+            foreach ($customershippings as $cs) {
+                $raw = (string) $cs->track_no;
+                if ($raw === '') continue;
+                $variants[] = $raw;
+                $variants[] = str_replace('-', '', $raw);
+            }
+            $variants = array_values(array_unique(array_filter($variants, 'strlen')));
+            if (!empty($variants)) {
+                Track::whereIn('track_no', $variants)
+                    ->whereNull('destination_date')
                     ->update([
-                        'destination_date' =>  Carbon::now()->format('Y-m-d'),
+                        'destination_date' => Carbon::now()->format('Y-m-d'),
                     ]);
             }
             foreach ($customershippings as $shipping) {
@@ -516,7 +525,7 @@ class CustomershippingController extends Controller
      */
     public function show($id)
     {
-        $customershipping = Customershipping::find($id);
+        $customershipping = Customershipping::findOrFail($id);
 
         return view('customershipping.show', compact('customershipping'));
     }
@@ -530,7 +539,7 @@ class CustomershippingController extends Controller
     public function edit($id)
     {
         //        dd(\request('search'));
-        $customershipping = Customershipping::find($id);
+        $customershipping = Customershipping::findOrFail($id);
         $provinces = Tambon::getCachedProvinces();
         $amphoes = Tambon::getCachedAmphoes();
         $tambons = Tambon::getCachedTambons();
@@ -700,7 +709,9 @@ class CustomershippingController extends Controller
             $customershippings = Customershipping::whereIn('id', $trackIds)->get();
             Log::info('Found customershippings count: ' . $customershippings->count());
 
-            $orderUdate = true;
+            // sync customerorder ของทุกแถว — กันเคสที่ batch มีหลาย (customerno, etd) ที่ไม่มี itemno
+            // (เดิมใช้ flag $orderUdate ทำให้ sync แค่แถวแรกของทั้ง batch)
+            $processedNoItemno = [];
             foreach ($customershippings as $shipping) {
                 if (!empty($shipping->itemno)) {
                     $customerOrder = Customerorder::where('customerno', $shipping->customerno)
@@ -714,21 +725,25 @@ class CustomershippingController extends Controller
                         $customerOrder->save();
                     }
                 } else {
-                    // ถ้าไม่มี itemno จะอัปเดตหลายแถวที่ตรงกับเงื่อนไข
-                    if ($orderUdate) {
+                    // ไม่มี itemno → อัปเดตตาม (customerno, etd) ครั้งเดียวต่อคู่ (กันรันซ้ำ)
+                    $key = $shipping->customerno . '|' . $shipping->etd;
+                    if (!in_array($key, $processedNoItemno, true)) {
                         Customerorder::where('customerno', $shipping->customerno)
                             ->where('cutoff_date', $shipping->etd)
                             ->update([
                                 'cutoff_date' => $shipping->etd,
                                 'shipping_status' => $shipping->status,
                             ]);
-                        $orderUdate = false;
+                        $processedNoItemno[] = $key;
                     }
                 }
             }
 
+            // สร้างชุด (customerno, etd) ของ batch นี้ ไว้จำกัดการลบ draft ไม่ให้ไปโดนของ admin คนอื่น
+            $batchByCustomer = $customershippings->groupBy('customerno');
+
             // แยก transaction สำหรับการอัพเดท excel_status
-            DB::transaction(function() use ($trackIds) {
+            DB::transaction(function() use ($trackIds, $batchByCustomer) {
                 // ตรวจสอบก่อนอัพเดท
                 $beforeUpdate = Customershipping::whereIn('id', $trackIds)
                     ->pluck('excel_status', 'id')
@@ -746,11 +761,23 @@ class CustomershippingController extends Controller
                 Log::info('Status after update:', $afterUpdate);
                 Log::info('Updated records count: ' . $updated);
 
-                // ลบรายการ draft ที่สร้างภายใน 2 ชม. (ป้องกันลบ draft ของ admin คนอื่น)
-                $deleted = Customershipping::where('excel_status', 0)
-                    ->where('created_at', '>=', now()->subHours(2))
-                    ->delete();
-                Log::info('Deleted records count: ' . $deleted);
+                // ลบ draft ที่เหลือ เฉพาะ (customerno, etd) ที่อยู่ใน batch นี้ + สร้างภายใน 2 ชม.
+                // (เดิมลบ draft ทั้งหมดทั่วระบบ → ไปโดน draft ของ admin คนอื่นที่กำลัง import พร้อมกัน)
+                if ($batchByCustomer->isNotEmpty()) {
+                    $deleted = Customershipping::where('excel_status', 0)
+                        ->where('created_at', '>=', now()->subHours(2))
+                        ->where(function($q) use ($batchByCustomer) {
+                            foreach ($batchByCustomer as $cn => $rows) {
+                                $etds = $rows->pluck('etd')->filter()->unique()->values()->all();
+                                $q->orWhere(function($qq) use ($cn, $etds) {
+                                    $qq->where('customerno', $cn);
+                                    if (!empty($etds)) $qq->whereIn('etd', $etds);
+                                });
+                            }
+                        })
+                        ->delete();
+                    Log::info('Deleted records count: ' . $deleted);
+                }
             });
 
             return redirect()->route('customershippings.index')

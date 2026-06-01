@@ -1061,7 +1061,7 @@ function renderRecheckParcels() {
         var icon = verified ? '<span class="check">✅</span>' : '<span class="pending-dot" style="border-color:#d97706;"></span>';
         html += '<div class="parcel-item ' + cls + '">' +
             '<div><div class="box">กล่อง ' + p.box_no + '</div>' +
-            '<div class="track">' + (p.tracking || '-') + '</div></div>' +
+            '<div class="track">' + (p.track_no || '-') + '</div></div>' +
             icon + '</div>';
     });
     list.innerHTML = html;

@@ -201,7 +201,10 @@ class TrackController extends Controller
             Track::whereIn('id', $trackIds)->update([
                 'status' => 1,
             ]);
-            Track::where('status', 0)->delete();
+            // ลบเฉพาะ draft ที่เพิ่ง import (ภายใน 2 ชม.) — กันลบ draft ของ admin คนอื่นที่ import พร้อมกัน
+            Track::where('status', 0)
+                ->where('created_at', '>=', now()->subHours(2))
+                ->delete();
             return redirect()->route('tracks.index')
                 ->with('success', 'นำเข้าข้อมูลสำเร็จ');
 
@@ -215,9 +218,10 @@ class TrackController extends Controller
 
 
         try{
-            // ทำสิ่งที่คุณต้องการกับข้อมูลที่ได้รับ
-            // ตัวอย่าง: อัปเดต status ของ tracks ในฐานข้อมูล
-            Track::where('status', 0)->delete();
+            // เคลียร์ draft ที่เพิ่ง import (ภายใน 2 ชม.) — กันลบ draft ของ admin คนอื่น
+            Track::where('status', 0)
+                ->where('created_at', '>=', now()->subHours(2))
+                ->delete();
             return redirect()->route('tracks.index')
                 ->with('success', 'เคลียร์ข้อมูลสำเร็จ');
 
@@ -241,7 +245,7 @@ class TrackController extends Controller
 
         } catch (\Exception $e) {
             return redirect()->route('tracks.index')
-                ->with('success', 'อัปเดตสินค้าถึงไทยไม่สำเร็จ');
+                ->with('error', 'อัปเดตสินค้าถึงไทยไม่สำเร็จ');
         }
     }
 
@@ -261,7 +265,7 @@ class TrackController extends Controller
 
         } catch (\Exception $e) {
             return redirect()->route('tracks.index')
-                ->with('success', 'อัปเดตสETD ไม่สำเร็จ');
+                ->with('error', 'อัปเดต ETD ไม่สำเร็จ');
         }
     }
 
@@ -289,7 +293,11 @@ class TrackController extends Controller
      */
     public function destroy($id)
     {
-        $track = Track::find($id)->delete();
+        $track = Track::find($id);
+        if (!$track) {
+            return redirect()->route('tracks.index')->with('error', 'ไม่พบรายการที่ต้องการลบ');
+        }
+        $track->delete();
 
         return redirect()->route('tracks.index')
             ->with('success', 'ลบรายการสำเร็จ');
