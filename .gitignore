@@ -57,3 +57,26 @@ Thumbs.db
 .cursor/*.local.md
 .cursor/*.local
 
+# Ad-hoc diagnostic / one-off ops scripts (local only — keep on disk, don't commit)
+# Underscore-prefixed throwaway PHP scripts anywhere (e.g. backoffice/_perfcheck.php)
+_*.php
+# Root-level helper/ops scripts (the real app lives under backoffice/)
+/*.sh
+/*.py
+/check-*.php
+/check_*.php
+/check-*.js
+/fix-*.php
+/fix-*.js
+/fix-*.py
+/test-*.php
+/add-security.js
+/block-ip.js
+/cleanup-old-scanned.php
+/create-scanners.php
+/final-check.php
+/reset-scanner-pw.php
+/rollback-0903.php
+/nginx-scanner.conf
+/new-logo.png.png
+
